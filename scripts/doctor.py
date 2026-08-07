@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Validate Codemium repository/adapters and report locally available hosts."""
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import sys
+import tomllib
+from pathlib import Path
+
+HOST_BINARIES = {
+    "codex": "codex",
+    "claude-code": "claude",
+    "gemini-cli": "gemini",
+    "cursor": "cursor",
+    "opencode": "opencode",
+}
+
+
+def check(condition: bool, message: str, errors: list[str]) -> None:
+    if not condition:
+        errors.append(message)
+
+
+def load_json(path: Path, errors: list[str]) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"invalid JSON {path}: {exc}")
+        return {}
+
+
+def validate(root: Path) -> tuple[list[str], dict]:
+    errors: list[str] = []
+    version_path = root / "VERSION"
+    check(version_path.exists(), "VERSION missing", errors)
+    version = version_path.read_text(encoding="utf-8").strip() if version_path.exists() else "unknown"
+
+    # Codex
+    codex_market = load_json(root / ".agents/plugins/marketplace.json", errors)
+    codex_manifest = load_json(root / "plugins/codemium/.codex-plugin/plugin.json", errors)
+    check(codex_manifest.get("version") == version, "Codex manifest version mismatch", errors)
+    check(codex_manifest.get("name") == "codemium", "Codex plugin name mismatch", errors)
+    codex_skill = root / "plugins/codemium/skills/codemium/SKILL.md"
+    check(codex_skill.exists(), "Codex cm skill missing", errors)
+    if codex_skill.exists():
+        text = codex_skill.read_text(encoding="utf-8")
+        check("# Codemium — $cm" in text, "Codex skill must document native $cm invocation", errors)
+        check("# Codemium — @cm" not in text, "stale @cm Codex invocation remains", errors)
+    if codex_market:
+        entries = codex_market.get("plugins", [])
+        check(any(p.get("name") == "codemium" for p in entries), "Codex marketplace entry missing", errors)
+
+    # Claude Code: repository root is the plugin root so shared engine is available.
+    claude_market = load_json(root / ".claude-plugin/marketplace.json", errors)
+    claude_manifest = load_json(root / ".claude-plugin/plugin.json", errors)
+    check(claude_manifest.get("version") == version, "Claude plugin version mismatch", errors)
+    claude_entries = [p for p in claude_market.get("plugins", []) if p.get("name") == "codemium"]
+    check(len(claude_entries) == 1, "Claude marketplace must contain one codemium entry", errors)
+    if claude_entries:
+        check(claude_entries[0].get("source") == "./", "Claude plugin source must be repository root", errors)
+        check(claude_entries[0].get("version") == version, "Claude marketplace version mismatch", errors)
+    check((root / "skills/cm/SKILL.md").exists(), "Claude cm skill missing", errors)
+    check((root / "commands/cm.md").exists(), "Claude /codemium:cm command missing", errors)
+
+    # Gemini CLI
+    gemini = load_json(root / "gemini-extension.json", errors)
+    check(gemini.get("version") == version, "Gemini extension version mismatch", errors)
+    check(gemini.get("contextFileName") == "GEMINI.md", "Gemini contextFileName must be GEMINI.md", errors)
+    try:
+        command = tomllib.loads((root / "commands/cm.toml").read_text(encoding="utf-8"))
+        check("{{args}}" in command.get("prompt", ""), "Gemini /cm must forward {{args}}", errors)
+    except Exception as exc:
+        errors.append(f"invalid Gemini command TOML: {exc}")
+
+    # Portable Agent Skill for Cursor/OpenCode.
+    portable = root / "adapters/agent-skill/cm/SKILL.md"
+    check(portable.exists(), "portable cm Agent Skill missing", errors)
+    if portable.exists():
+        t = portable.read_text(encoding="utf-8")
+        check("name: cm" in t, "portable skill name must be cm", errors)
+        check('opencode/slash: "true"' in t, "OpenCode slash metadata missing", errors)
+    check((root / "scripts/install_host.py").exists(), "host installer missing", errors)
+
+    # Shared core.
+    required_engine = [
+        "project_brain.py", "repo_graph.py", "working_set.py", "impact.py",
+        "scope_guard.py", "test_map.py", "cache.py", "telemetry.py",
+        "health.py", "reasoning_profile.py", "task_compiler.py",
+    ]
+    for name in required_engine:
+        check((root / "plugins/codemium/engine" / name).exists(), f"engine/{name} missing", errors)
+
+    available = {host: bool(shutil.which(binary)) for host, binary in HOST_BINARIES.items()}
+    return errors, {"version": version, "host_binaries": available}
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
+    ap.add_argument("--require-host", choices=sorted(HOST_BINARIES))
+    ns = ap.parse_args()
+    root = ns.repo.resolve()
+    errors, report = validate(root)
+    if ns.require_host and not report["host_binaries"].get(ns.require_host):
+        errors.append(f"required host binary not found: {HOST_BINARIES[ns.require_host]}")
+    report["status"] = "pass" if not errors else "fail"
+    report["errors"] = errors
+    print(json.dumps(report, indent=2))
+    if errors:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
