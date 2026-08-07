@@ -9,11 +9,13 @@ import tomllib
 from pathlib import Path
 
 HOST_BINARIES = {
-    "codex": "codex",
-    "claude-code": "claude",
-    "gemini-cli": "gemini",
-    "cursor": "cursor",
-    "opencode": "opencode",
+    "codex": ["codex"],
+    "claude-code": ["claude"],
+    "gemini-cli": ["gemini"],
+    # Cursor renamed the primary CLI entrypoint to `agent`; `cursor-agent`
+    # remains a backward-compatible alias on supported releases.
+    "cursor": ["agent", "cursor-agent"],
+    "opencode": ["opencode"],
 }
 
 
@@ -28,6 +30,14 @@ def load_json(path: Path, errors: list[str]) -> dict:
     except Exception as exc:
         errors.append(f"invalid JSON {path}: {exc}")
         return {}
+
+
+def detect_binary(candidates: list[str]) -> dict:
+    for binary in candidates:
+        resolved = shutil.which(binary)
+        if resolved:
+            return {"available": True, "command": binary, "path": resolved}
+    return {"available": False, "command": None, "path": None, "candidates": candidates}
 
 
 def validate(root: Path) -> tuple[list[str], dict]:
@@ -94,8 +104,8 @@ def validate(root: Path) -> tuple[list[str], dict]:
     for name in required_engine:
         check((root / "plugins/codemium/engine" / name).exists(), f"engine/{name} missing", errors)
 
-    available = {host: bool(shutil.which(binary)) for host, binary in HOST_BINARIES.items()}
-    return errors, {"version": version, "host_binaries": available}
+    detected = {host: detect_binary(candidates) for host, candidates in HOST_BINARIES.items()}
+    return errors, {"version": version, "host_binaries": detected}
 
 
 def main() -> None:
@@ -105,8 +115,9 @@ def main() -> None:
     ns = ap.parse_args()
     root = ns.repo.resolve()
     errors, report = validate(root)
-    if ns.require_host and not report["host_binaries"].get(ns.require_host):
-        errors.append(f"required host binary not found: {HOST_BINARIES[ns.require_host]}")
+    if ns.require_host and not report["host_binaries"][ns.require_host]["available"]:
+        candidates = ", ".join(HOST_BINARIES[ns.require_host])
+        errors.append(f"required host binary not found (tried: {candidates})")
     report["status"] = "pass" if not errors else "fail"
     report["errors"] = errors
     print(json.dumps(report, indent=2))
