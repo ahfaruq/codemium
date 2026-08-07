@@ -27,6 +27,8 @@ def main():
         assert model_profile['generic_reasoning']['CRITICAL']['preferred_class']=='frontier'
         assert model_profile['host_profiles']['codex']['effort_by_depth']['FAST']['preferred_effort']=='low'
         assert model_profile['host_profiles']['codex']['effort_by_depth']['CRITICAL']['preferred_effort']=='xhigh'
+        for host in ['claude-code','gemini-cli','cursor','opencode']:
+            assert model_profile['host_profiles'][host]['control']=='host_owned_unless_documented_per_task_control'
 
         out=json.loads(run(sys.executable,ENGINE/'project_brain.py','--root',r,'add-decision','--text','Auth sessions rotate in the auth module','--source','src/auth/session.py'))
         assert out['id']=='D0001'
@@ -63,19 +65,19 @@ def main():
         assert deep['depth']=='DEEP' and deep['reasoning']['preferred_effort']=='high'
 
         # Non-Codex hosts retain portable depth without inventing vendor effort changes.
-        claude=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--host','claude-code','--depth','deep','--request','Build profile preferences page'))
-        assert claude['depth']=='DEEP' and claude['reasoning']['host']=='claude-code'
-        assert claude['reasoning']['reasoning_class']=='strong'
-        assert claude['reasoning']['preferred_effort'] is None and claude['reasoning']['alignment']=='host_owned'
-
-        gemini=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--host','gemini-cli','--request','Build profile preferences page'))
-        assert gemini['depth']=='NORMAL' and gemini['reasoning']['host']=='gemini-cli'
-        assert gemini['reasoning']['reasoning_class']=='balanced' and gemini['reasoning']['preferred_effort'] is None
+        for host in ['claude-code','gemini-cli','cursor','opencode']:
+            portable=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--host',host,'--depth','deep','--request','Build profile preferences page'))
+            assert portable['depth']=='DEEP' and portable['reasoning']['host']==host
+            assert portable['reasoning']['reasoning_class']=='strong'
+            assert portable['reasoning']['preferred_effort'] is None
+            assert portable['reasoning']['alignment']=='host_owned'
 
         standalone=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','fast','--host','codex','--model','gpt-5.6-sol','--host-effort','xhigh'))
         assert standalone['preferred_effort']=='low' and standalone['alignment']=='host_above_preferred'
-        portable=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','critical','--host','claude-code'))
-        assert portable['reasoning_class']=='frontier' and portable['preferred_effort'] is None
+        for host in ['claude-code','gemini-cli','cursor','opencode']:
+            portable=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','critical','--host',host))
+            assert portable['host']==host and portable['reasoning_class']=='frontier'
+            assert portable['preferred_effort'] is None and portable['alignment']=='host_owned'
 
         ws=json.loads(run(sys.executable,ENGINE/'working_set.py','--root',r,'--query','auth refresh session','--top','5'))
         assert any(x['path']=='src/auth/session.py' for x in ws['files'])
