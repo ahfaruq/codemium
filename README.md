@@ -128,6 +128,26 @@ Codemium turns a repository into persistent engineering memory:
 - **Stop Engine** — stops once requested behavior is proven and material uncertainty is resolved.
 - **Model capability abstraction** — no permanent dependency on one GPT generation.
 
+## Numbers
+
+The honest measurement is a **real coding agent doing real work on the same repository state and task set**, scored on the code, tests, safety, token usage, cost, and wall-clock time it leaves behind.
+
+Codemium now includes a Ponytail-style benchmark dashboard, but **no real Codemium performance numbers are published yet**. The visual below is generated from synthetic demo data and is permanently watermarked so it cannot be confused with product performance.
+
+![Codemium Numbers dashboard — synthetic demo](benchmarks/demo-numbers.svg)
+
+A measured public chart must pass the benchmark publication gate (`meta.kind = measured`). The renderer refuses `--publish` for synthetic datasets.
+
+Real studies should compare at least:
+
+- **vanilla** — same Codex host/model/reasoning without Codemium;
+- **codemium-auto** — `@cm` on the same tasks and repository state;
+- optional external controls such as Ponytail, only when they are run on the exact same task set.
+
+Core public metrics mirror the dashboard: **LOC, total tokens, measured cost, time, quality pass rate, and safety pass rate**. Lower is better for the first four; higher is better for quality and safety.
+
+See [`benchmarks/README.md`](benchmarks/README.md) for the protocol and [`benchmarks/demo-NUMBERS.md`](benchmarks/demo-NUMBERS.md) for the generated demo summary.
+
 ## Install
 
 ```sh
@@ -240,7 +260,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.3.0` adds adaptive reasoning profiles and host-effort alignment on top of the short `@cm` UX and persistent project intelligence.
+`v0.4.0` adds the Numbers benchmark dashboard, measured-vs-synthetic publication gate, and reproducible benchmark renderer on top of adaptive reasoning profiles and persistent project intelligence.
 
 ## License
 

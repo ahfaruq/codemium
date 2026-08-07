@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="810" viewBox="0 0 1280 810">
+<rect width="100%" height="100%" fill="#080b10"/>
+<style>text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial;fill:#f5f7fa}.muted{fill:#9ca8b7}.grid{stroke:#29313d;stroke-width:1}.base{stroke:#7b8794;stroke-dasharray:6 6}.title{font-weight:700}.small{font-size:13px}.label{font-size:15px}</style>
+<text x="50" y="54" class="title" font-size="32">Numbers</text>
+<line x1="50" y1="72" x2="1230" y2="72" stroke="#818896"/>
+<text x="50" y="115" font-size="18">Codemium benchmark dashboard demo — demo-repo; Codex-style agent; example only; n=2</text>
+<rect x="50" y="135" width="1180" height="44" rx="8" fill="#5b2b00" stroke="#ff9b36"/>
+<text x="70" y="163" font-size="17" fill="#ffd19b">SYNTHETIC / DEMO DATA — NOT CODEMIUM PRODUCT PERFORMANCE</text>
+<rect x="285" y="194" width="16" height="16" rx="3" fill="#9aa4b0"/><text x="309" y="207" class="small">vanilla</text>
+<rect x="475" y="194" width="16" height="16" rx="3" fill="#33b75b"/><text x="499" y="207" class="small">codemium-auto</text>
+<rect x="665" y="194" width="16" height="16" rx="3" fill="#1f9df0"/><text x="689" y="207" class="small">codemium-deep</text>
+<line x1="95" y1="595" x2="1195" y2="595" class="grid"/><text x="83" y="600" text-anchor="end" class="muted small">0%</text>
+<line x1="95" y1="523" x2="1195" y2="523" class="grid"/><text x="83" y="528" text-anchor="end" class="muted small">25%</text>
+<line x1="95" y1="451" x2="1195" y2="451" class="grid"/><text x="83" y="456" text-anchor="end" class="muted small">50%</text>
+<line x1="95" y1="379" x2="1195" y2="379" class="grid"/><text x="83" y="384" text-anchor="end" class="muted small">75%</text>
+<line x1="95" y1="307" x2="1195" y2="307" class="base"/><text x="83" y="312" text-anchor="end" class="muted small">100%</text>
+<line x1="95" y1="235" x2="1195" y2="235" class="grid"/><text x="83" y="240" text-anchor="end" class="muted small">125%</text>
+<rect x="123" y="307" width="42" height="288" rx="3" fill="#9aa4b0"/><text x="144" y="299" text-anchor="middle" font-size="13">100%</text>
+<rect x="173" y="382.8" width="42" height="212.2" rx="3" fill="#33b75b"/><text x="194" y="374.8" text-anchor="middle" font-size="13">74%</text>
+<rect x="223" y="373.7" width="42" height="221.3" rx="3" fill="#1f9df0"/><text x="244" y="365.7" text-anchor="middle" font-size="13">77%</text><text x="232.5" y="627" text-anchor="middle" font-size="18">LOC</text><text x="232.5" y="648" text-anchor="middle" class="muted small">base 95</text>
+<rect x="398" y="307" width="42" height="288" rx="3" fill="#9aa4b0"/><text x="419" y="299" text-anchor="middle" font-size="13">100%</text>
+<rect x="448" y="385.6" width="42" height="209.4" rx="3" fill="#33b75b"/><text x="469" y="377.6" text-anchor="middle" font-size="13">73%</text>
+<rect x="498" y="330.2" width="42" height="264.8" rx="3" fill="#1f9df0"/><text x="519" y="322.2" text-anchor="middle" font-size="13">92%</text><text x="507.5" y="627" text-anchor="middle" font-size="18">tokens</text><text x="507.5" y="648" text-anchor="middle" class="muted small">base 119k</text>
+<rect x="673" y="307" width="42" height="288" rx="3" fill="#9aa4b0"/><text x="694" y="299" text-anchor="middle" font-size="13">100%</text>
+<rect x="723" y="375.2" width="42" height="219.8" rx="3" fill="#33b75b"/><text x="744" y="367.2" text-anchor="middle" font-size="13">76%</text>
+<rect x="773" y="329.7" width="42" height="265.3" rx="3" fill="#1f9df0"/><text x="794" y="321.7" text-anchor="middle" font-size="13">92%</text><text x="782.5" y="627" text-anchor="middle" font-size="18">cost</text><text x="782.5" y="648" text-anchor="middle" class="muted small">base $0.095</text>
+<rect x="948" y="307" width="42" height="288" rx="3" fill="#9aa4b0"/><text x="969" y="299" text-anchor="middle" font-size="13">100%</text>
+<rect x="998" y="366.1" width="42" height="228.9" rx="3" fill="#33b75b"/><text x="1019" y="358.1" text-anchor="middle" font-size="13">79%</text>
+<rect x="1048" y="343.9" width="42" height="251.1" rx="3" fill="#1f9df0"/><text x="1069" y="335.9" text-anchor="middle" font-size="13">87%</text><text x="1057.5" y="627" text-anchor="middle" font-size="18">time</text><text x="1057.5" y="648" text-anchor="middle" class="muted small">base 585s</text>
+<line x1="75" y1="637" x2="1205" y2="637" class="grid"/><text x="75" y="665" class="muted small">Quality / safety gates (higher is better):</text>
+<text x="330" y="665" class="small">vanilla: quality 100% · safe 100%</text><text x="610" y="665" class="small" fill="#33b75b">codemium-auto: quality 100% · safe 100%</text><text x="890" y="665" class="small" fill="#1f9df0">codemium-deep: quality 100% · safe 100%</text>
+<text x="75" y="720" class="title" font-size="17">vs vanilla baseline</text><text x="365" y="720" class="muted small">LOC</text><text x="525" y="720" class="muted small">tokens</text><text x="685" y="720" class="muted small">cost</text><text x="845" y="720" class="muted small">time</text>
+<text x="75" y="748" class="label" fill="#33b75b">codemium-auto</text><text x="365" y="748" class="label">-26%</text><text x="525" y="748" class="label">-27%</text><text x="685" y="748" class="label">-24%</text><text x="845" y="748" class="label">-21%</text>
+<text x="75" y="776" class="label" fill="#1f9df0">codemium-deep</text><text x="365" y="776" class="label">-23%</text><text x="525" y="776" class="label">-8%</text><text x="685" y="776" class="label">-8%</text><text x="845" y="776" class="label">-13%</text>
+</svg>

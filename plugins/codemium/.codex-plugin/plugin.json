@@ -1,19 +1,19 @@
 {
   "name": "codemium",
-  "version": "0.3.0",
-  "description": "Persistent coding intelligence for Codex with short @cm tags, adaptive engineering depth, reasoning profiles, project memory, bounded working sets, scoped changes, impact-aware testing, and deterministic reuse.",
+  "version": "0.4.0",
+  "description": "Persistent coding intelligence for Codex with short @cm tags, adaptive engineering depth, reasoning profiles, project memory, bounded working sets, scoped changes, impact-aware testing, deterministic reuse, and evidence-gated benchmark dashboards.",
   "license": "MIT",
   "keywords": ["codex", "coding-agent", "context-engineering", "repository-intelligence", "token-efficiency", "developer-tools"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Codemium",
     "shortDescription": "The senior engineer who already knows your codebase.",
-    "longDescription": "Codemium gives Codex persistent project intelligence. Use @cm for automatic task, depth, and preferred reasoning-profile selection, or fast, deep, and critical overrides. Codemium maintains durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work on unchanged state, and stops when sufficient evidence proves completion.",
+    "longDescription": "Codemium gives Codex persistent project intelligence. Use @cm for automatic task, depth, and preferred reasoning-profile selection. Codemium maintains durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work, stops when sufficient evidence proves completion, and publishes benchmark dashboards only from clearly classified measured data.",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "defaultPrompt": [
       "Use @cm for this coding task. Auto-detect the task type, engineering depth, and preferred reasoning profile; preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
-      "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Do not claim the host reasoning effort changed unless the runtime confirms it."
+      "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Do not claim host reasoning changes or benchmark savings unless the runtime/data confirms them."
     ]
   }
 }

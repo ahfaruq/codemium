@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "kind": "synthetic",
+    "title": "Codemium benchmark dashboard demo",
+    "repository": "demo-repo",
+    "agent": "Codex-style agent",
+    "model": "example only",
+    "runs_per_arm": 2
+  },
+  "runs": [
+    {"task_id":"t1","system":"vanilla","quality_pass":true,"safety_pass":true,"input_tokens":100000,"reasoning_tokens":20000,"output_tokens":5000,"cost_usd":0.1,"loc_changed":100,"seconds":600},
+    {"task_id":"t2","system":"vanilla","quality_pass":true,"safety_pass":true,"input_tokens":90000,"reasoning_tokens":18000,"output_tokens":4500,"cost_usd":0.09,"loc_changed":90,"seconds":570},
+    {"task_id":"t1","system":"codemium-auto","quality_pass":true,"safety_pass":true,"input_tokens":70000,"reasoning_tokens":16000,"output_tokens":3500,"cost_usd":0.075,"loc_changed":72,"seconds":480},
+    {"task_id":"t2","system":"codemium-auto","quality_pass":true,"safety_pass":true,"input_tokens":65000,"reasoning_tokens":15000,"output_tokens":3200,"cost_usd":0.07,"loc_changed":68,"seconds":450},
+    {"task_id":"t1","system":"codemium-deep","quality_pass":true,"safety_pass":true,"input_tokens":85000,"reasoning_tokens":24000,"output_tokens":3800,"cost_usd":0.09,"loc_changed":75,"seconds":520},
+    {"task_id":"t2","system":"codemium-deep","quality_pass":true,"safety_pass":true,"input_tokens":80000,"reasoning_tokens":22000,"output_tokens":3600,"cost_usd":0.085,"loc_changed":71,"seconds":500}
+  ]
+}

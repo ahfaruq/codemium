@@ -45,15 +45,7 @@ Codemium separates three decisions that should not be conflated:
 2. **Depth** — how broadly/deeply the project must be investigated and verified.
 3. **Reasoning profile** — how much model reasoning effort is preferred for the effective depth when the host supports it.
 
-Task axis:
-
-- BUILD
-- FIX
-- TEST
-- REFACTOR
-- REVIEW
-- MIGRATION
-- SECURITY
+Task axis: BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, SECURITY.
 
 Depth axis:
 
@@ -73,50 +65,11 @@ Default reasoning profile:
 
 ## Host reasoning control
 
-Codemium must never assume a skill can silently change the active Codex model/reasoning setting.
-
-Requirements:
-
-- derive and record preferred/minimum effort in the task contract;
-- compare against current host effort when that value is known;
-- request per-task effort only when the runtime exposes a safe confirmed mechanism;
-- otherwise leave the host setting unchanged and apply depth through context/tool/verification policy;
-- never silently rewrite global Codex configuration for a task-local preference;
-- never claim the host effort changed until the runtime confirms the effective value.
-
-Example:
-
-```text
-Host: GPT-5.6 Sol / xhigh
-Request: @cm fast adjust card padding
-```
-
-Expected contract:
-
-```text
-Depth: FAST
-Preferred reasoning: low
-Host alignment: host_above_preferred
-```
-
-The task immediately uses FAST orchestration. The host reasoning effort changes only if the runtime supports and confirms the per-task request.
+Codemium must never assume a skill can silently change the active Codex model/reasoning setting. It derives and records preferred/minimum effort, compares against known host effort, requests per-task effort only when the runtime exposes a safe confirmed mechanism, otherwise leaves host settings unchanged, never silently rewrites global Codex configuration, and never claims a change until runtime confirmation.
 
 ## Safety floor
 
-A user override may increase depth but cannot reduce the minimum safe depth. A request such as `@cm fast` on authentication, payments, migrations, or other critical surfaces must automatically escalate. The reasoning profile follows the **effective** depth after escalation.
-
-Example:
-
-```text
-@cm fast change authentication flow
-```
-
-must resolve to:
-
-```text
-Depth: CRITICAL
-Preferred reasoning: xhigh
-```
+A user override may increase depth but cannot reduce the minimum safe depth. `@cm fast` on authentication, payments, migrations, or other critical surfaces must automatically escalate, and the reasoning profile follows the effective depth after escalation.
 
 ## Core systems
 
@@ -150,6 +103,28 @@ Avoids equivalent reads/searches/tests on unchanged state; uses git/hash identit
 ### Model Capability Layer
 Core policies are model-independent. New model generations are promoted only after representative benchmarks meet the quality floor and improve useful efficiency. Model capability changes and reasoning labels must be verified before the registry is updated.
 
+### Benchmark Evidence System
+
+Codemium must make performance claims reproducible and visibly separate measured evidence from demos.
+
+Requirements:
+
+- provide a stdlib-only benchmark summarizer and SVG/Markdown Numbers renderer;
+- normalize LOC, total tokens, measured cost, and wall-clock time against a named baseline;
+- report quality and safety pass rates separately because lower resource use is not a win if correctness or safety drops;
+- require identical task/repository conditions across compared systems within a study;
+- support external controls such as Ponytail only when they are run on the same task population;
+- label all synthetic/demo datasets prominently in the chart;
+- refuse `--publish` unless `meta.kind` is exactly `measured`;
+- never derive measured cost from stale hard-coded pricing when billing telemetry is available;
+- preserve raw run records so aggregate bars remain auditable.
+
+Public benchmark wording should follow the principle:
+
+> The honest measurement is a real coding agent doing real work, scored on the diff, tests, safety, tokens, cost, and time it leaves behind.
+
+Depth-specific benchmark arms must not be compared across different task populations as though FAST, NORMAL, DEEP, and CRITICAL were interchangeable systems.
+
 ## Task lifecycle
 
 User request → task/depth contract → reasoning profile → project state lookup → working set → investigation → root cause/design → implementation → diff inspection → impact analysis → depth/risk-based verification → scope guard → durable memory update → stop.
@@ -165,8 +140,9 @@ User request → task/depth contract → reasoning profile → project state loo
 - active context grows slower than total project knowledge across long-running project benchmarks;
 - reasoning profiles reduce unnecessary compute without lowering the quality floor;
 - host-effort changes are never reported without runtime confirmation;
-- token savings are reported only from actual host telemetry or clearly labeled proxies.
+- benchmark dashboards never present synthetic data as measured performance;
+- token/cost savings are reported only from actual host/billing telemetry or clearly labeled proxies.
 
 ## Non-goals
 
-Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, replacement for CI, or license to skip tests/security. FAST does not mean careless. CRITICAL does not mean loading the entire repository. A reasoning preference is not permission to rewrite global Codex configuration. Codemium does not bind permanently to one model generation.
+Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, replacement for CI, or license to skip tests/security. FAST does not mean careless. CRITICAL does not mean loading the entire repository. A reasoning preference is not permission to rewrite global Codex configuration. A synthetic dashboard is not a performance claim. Codemium does not bind permanently to one model generation.
