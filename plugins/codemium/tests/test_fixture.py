@@ -30,6 +30,16 @@ def main():
         for host in ['claude-code','gemini-cli','cursor','opencode']:
             assert model_profile['host_profiles'][host]['control']=='host_owned_unless_documented_per_task_control'
 
+        # Project Brain initialization must migrate transient ignore rules without
+        # destroying user-owned .codemium/.gitignore entries.
+        state_ignore=r/'.codemium/.gitignore'
+        state_ignore.write_text('custom-local-rule/\n')
+        run(sys.executable,ENGINE/'project_brain.py','--root',r,'init')
+        ignored=set(x.strip() for x in state_ignore.read_text().splitlines() if x.strip())
+        assert 'custom-local-rule/' in ignored
+        for entry in ['runtime/','repository/','tasks/active.json','tasks/completed/']:
+            assert entry in ignored, entry
+
         out=json.loads(run(sys.executable,ENGINE/'project_brain.py','--root',r,'add-decision','--text','Auth sessions rotate in the auth module','--source','src/auth/session.py'))
         assert out['id']=='D0001'
         run(sys.executable,ENGINE/'repo_graph.py','build','--root',r)
@@ -93,5 +103,5 @@ def main():
         assert hit['hit'] is True
         health=json.loads(run(sys.executable,ENGINE/'health.py','--root',r)); assert health['initialized'] is True
         tel=json.loads(run(sys.executable,ENGINE/'telemetry.py','--root',r)); assert 'approx_text_tokens_if_all_loaded' in tel
-    print('PASS: Codemium fixture + portable host/depth/reasoning policy')
+    print('PASS: Codemium fixture + Project Brain privacy + portable host/depth/reasoning policy')
 if __name__=='__main__': main()
