@@ -1,19 +1,19 @@
 {
   "name": "codemium",
-  "version": "0.4.0",
-  "description": "Persistent coding intelligence for Codex with short @cm tags, adaptive engineering depth, reasoning profiles, project memory, bounded working sets, scoped changes, impact-aware testing, and deterministic reuse.",
+  "version": "0.5.0",
+  "description": "Codemium adapter for OpenAI Codex: persistent project intelligence, bounded working sets, scoped changes, risk-aware verification, and adaptive Codex reasoning preferences.",
   "license": "MIT",
   "keywords": ["codex", "coding-agent", "context-engineering", "repository-intelligence", "token-efficiency", "developer-tools"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Codemium",
     "shortDescription": "The senior engineer who already knows your codebase.",
-    "longDescription": "Codemium gives Codex persistent project intelligence. Use @cm for automatic task, depth, and preferred reasoning-profile selection. Codemium maintains durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work, and stops when sufficient evidence proves completion.",
+    "longDescription": "The Codex adapter for Codemium. Use @cm for automatic task/depth selection. Codemium maintains durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work, and stops when sufficient evidence proves completion.",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "defaultPrompt": [
-      "Use @cm for this coding task. Auto-detect the task type, engineering depth, and preferred reasoning profile; preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
-      "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Do not claim host reasoning changes unless the runtime confirms them."
+      "Use @cm for this coding task. Auto-detect the task type and engineering depth; preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
+      "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Codex reasoning preferences are advisory unless the runtime confirms a per-task change."
     ]
   }
 }
