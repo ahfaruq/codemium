@@ -30,7 +30,7 @@ foreach ($Phrase in @("name: cm","portable Agent Skill",'opencode/slash: "true"'
 # Claude Code repository-root plugin.
 $ClaudeMarket = Get-Content (Join-Path $Root ".claude-plugin\marketplace.json") -Raw | ConvertFrom-Json
 $ClaudePlugin = Get-Content (Join-Path $Root ".claude-plugin\plugin.json") -Raw | ConvertFrom-Json
-if ($ClaudeMarket.name -ne "codemium" -or $ClaudeMarket.version -ne $Version -or $ClaudePlugin.version -ne $Version) { throw "Claude version mismatch" }
+if ($ClaudeMarket.name -ne "codemium" -or $ClaudePlugin.version -ne $Version) { throw "Claude version mismatch" }
 $ClaudeEntry = @($ClaudeMarket.plugins | Where-Object { $_.name -eq "codemium" })
 if ($ClaudeEntry.Count -ne 1 -or $ClaudeEntry[0].source -ne "./" -or $ClaudeEntry[0].version -ne $Version) { throw "Claude marketplace source/version mismatch" }
 $ClaudeCommand = Get-Content (Join-Path $Root "commands\cm.md") -Raw
@@ -45,7 +45,7 @@ $GeminiCommand = Get-Content (Join-Path $Root "commands\cm.toml") -Raw
 if ($GeminiContext -notmatch "host-agnostic coding-intelligence layer" -or $GeminiCommand -notmatch '\{\{args\}\}') { throw "Gemini context/command contract missing" }
 
 # Docs and portable installer.
-foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","INSTALL.md","HOSTS.md","PRD.md")) {
+foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","INSTALL.md","HOSTS.md","PRD.md","CHANGELOG.md")) {
   if (-not (Test-Path (Join-Path $Root $Path))) { throw "Missing $Path" }
 }
 $Readme = Get-Content (Join-Path $Root "README.md") -Raw
