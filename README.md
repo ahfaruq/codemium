@@ -54,16 +54,61 @@ Focused shortcuts can also receive a depth override when it makes sense:
 @cm-review deep
 ```
 
-## Depth model
+## Depth + reasoning profile
 
-Depth controls **engineering investigation and verification depth**, not a promise to switch the host model's reasoning setting.
+Depth controls engineering investigation/context/verification. Codemium also derives a **preferred reasoning effort** for the effective depth:
 
-- **FAST** — obvious, localized, low-risk work; narrow context and targeted verification.
-- **NORMAL** — default project-aware engineering for ordinary tasks.
-- **DEEP** — complex debugging, concurrency, distributed/cross-boundary behavior, performance, or material uncertainty.
-- **CRITICAL** — authentication/authorization, payments, migrations, secrets, production data, destructive operations, infrastructure/deployment, or breaking public interfaces.
+| Codemium depth | Preferred reasoning | Typical use |
+| --- | --- | --- |
+| FAST | `low` | obvious localized low-risk work |
+| NORMAL | `medium` | ordinary project-aware engineering |
+| DEEP | `high` | complex, cross-boundary, intermittent, concurrency/performance work |
+| CRITICAL | `xhigh` | auth/security, payments, migrations, production data, destructive or breaking changes |
 
-Explicit depth can increase rigor, but it cannot lower the safety floor. For example, `@cm fast` on an authentication change is automatically escalated to CRITICAL.
+For GPT-5.6 Sol/Terra/Luna these effort labels are supported. GPT-5.6 also supports `max`, but Codemium does **not** make `max` the automatic CRITICAL default. Use it only for the hardest quality-first workloads after representative benchmarks show a material gain over `xhigh`.
+
+### Important host-control rule
+
+`@cm fast` does not magically rewrite the current Codex model selector.
+
+Codemium treats reasoning as a per-task preference:
+
+1. resolve the effective depth;
+2. resolve preferred/minimum reasoning effort;
+3. if the Codex runtime exposes confirmed safe **per-task** effort control, request it;
+4. otherwise keep the host setting and apply Codemium's bounded-context/tool/verification policy;
+5. never silently rewrite global Codex configuration;
+6. never claim reasoning changed unless the runtime confirms the effective setting.
+
+So if the current host is GPT-5.6 Sol `xhigh` and you run:
+
+```text
+@cm fast adjust card padding
+```
+
+Codemium resolves:
+
+```text
+Depth: FAST
+Preferred reasoning: low
+Host: xhigh
+Alignment: host_above_preferred
+```
+
+The orchestration becomes FAST immediately. The model effort only changes if the host supports and confirms that per-task switch.
+
+Safety escalation always wins. For example:
+
+```text
+@cm fast change authentication flow
+```
+
+resolves to:
+
+```text
+Depth: CRITICAL
+Preferred reasoning: xhigh
+```
 
 ## Why Codemium
 
@@ -73,11 +118,12 @@ Codemium turns a repository into persistent engineering memory:
 
 - **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs.
 - **Repository Intelligence** — lightweight file/symbol/import/test graph built deterministically.
-- **Task Compiler** — detects BUILD/FIX/TEST/REFACTOR/REVIEW/MIGRATION/SECURITY plus FAST/NORMAL/DEEP/CRITICAL depth.
+- **Task Compiler** — detects BUILD/FIX/TEST/REFACTOR/REVIEW/MIGRATION/SECURITY plus FAST/NORMAL/DEEP/CRITICAL depth and reasoning profile.
 - **Working Set Engine** — ranks only files and project knowledge relevant to the task.
 - **Scope Guard** — detects files changed outside the allowed surface.
 - **Impact Engine** — estimates affected code/tests and blast radius.
 - **Test Intelligence** — testing follows behavior and risk, never production-code minimalism.
+- **Reasoning Profile Engine** — maps effective depth to preferred/minimum effort and compares it with a known host setting.
 - **Read/Search Cache** — reuses deterministic work when repository state has not changed.
 - **Stop Engine** — stops once requested behavior is proven and material uncertainty is resolved.
 - **Model capability abstraction** — no permanent dependency on one GPT generation.
@@ -108,6 +154,7 @@ Project state:
 ├── PROJECT.md
 ├── architecture/
 │   └── system.json
+├── model-profile.json
 ├── registry/
 │   ├── decisions.jsonl
 │   ├── constraints.jsonl
@@ -135,16 +182,27 @@ python <plugin-dir>/engine/task_compiler.py \
   --request "Investigate intermittent queue race bug"
 ```
 
-Explicit override:
+Explicit depth plus known host profile:
 
 ```sh
 python <plugin-dir>/engine/task_compiler.py \
   --root . \
-  --depth deep \
-  --request "Investigate intermittent queue race bug"
+  --depth fast \
+  --model gpt-5.6-sol \
+  --host-effort xhigh \
+  --request "Adjust card padding"
 ```
 
-Supported CLI overrides are `auto`, `fast`, `deep`, and `critical`. NORMAL is an internal auto-selected depth.
+Standalone reasoning alignment:
+
+```sh
+python <plugin-dir>/engine/reasoning_profile.py \
+  --depth fast \
+  --model gpt-5.6-sol \
+  --host-effort xhigh
+```
+
+Supported depth overrides are `auto`, `fast`, `deep`, and `critical`. NORMAL is an internal auto-selected depth.
 
 ## Engineering doctrine
 
@@ -182,7 +240,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.2.0` adds the short `@cm` UX and adaptive FAST/NORMAL/DEEP/CRITICAL engineering depth on top of the v0.1 project-intelligence MVP.
+`v0.3.0` adds adaptive reasoning profiles and host-effort alignment on top of the short `@cm` UX and persistent project intelligence.
 
 ## License
 
