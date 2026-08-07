@@ -1,8 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "codemium",
-  "version": "0.6.0",
-  "description": "Codemium for Claude Code and other AI coding agents.",
   "owner": {
     "name": "Codemium"
   },
