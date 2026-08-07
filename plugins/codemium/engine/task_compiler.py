@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from common import state_root, now_iso, write_json
-from reasoning_profile import EFFORT_ORDER, resolve_reasoning_profile
+from reasoning_profile import EFFORT_ORDER, HOSTS, resolve_reasoning_profile
 
 DEPTH_RANK = {'FAST': 0, 'NORMAL': 1, 'DEEP': 2, 'CRITICAL': 3}
 
@@ -89,11 +89,12 @@ def compile_task(
     requested_depth: str = 'auto',
     model: str | None = None,
     host_effort: str | None = None,
+    host: str | None = None,
 ) -> dict:
     mode = classify(text)
     r = risk(text, mode)
     depth, depth_reason = resolve_depth(text, mode, r, requested_depth)
-    reasoning = resolve_reasoning_profile(depth, model=model, host_effort=host_effort)
+    reasoning = resolve_reasoning_profile(depth, model=model, host_effort=host_effort, host=host)
     policy = {
         'FIX': 'root-cause fix; surgical scope; regression evidence',
         'TEST': 'behavior/risk coverage; do not minimize justified cases',
@@ -132,11 +133,12 @@ def main():
     ap.add_argument('--root', default='.')
     ap.add_argument('--request', required=True)
     ap.add_argument('--depth', choices=['auto', 'fast', 'deep', 'critical'], default='auto')
+    ap.add_argument('--host', choices=sorted(HOSTS))
     ap.add_argument('--model')
     ap.add_argument('--host-effort', choices=EFFORT_ORDER)
     ap.add_argument('--no-write', action='store_true')
     ns = ap.parse_args()
-    task = compile_task(ns.request, ns.depth, ns.model, ns.host_effort)
+    task = compile_task(ns.request, ns.depth, ns.model, ns.host_effort, ns.host)
     root = Path(ns.root).resolve()
     if not ns.no_write:
         p = state_root(root) / 'tasks/active.json'
