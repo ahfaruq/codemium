@@ -8,4 +8,5 @@ venv/
 !.env.example
 .codemium/runtime/
 .codemium/repository/
+.codemium/tasks/active.json
 .codemium/tasks/completed/
