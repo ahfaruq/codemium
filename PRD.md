@@ -1,231 +1,360 @@
 # Codemium Product Requirements Document
 
-**Version:** 0.5 architecture revision  
-**Product:** Host-agnostic persistent coding intelligence for AI coding agents
+## Product definition
 
-## Mission
+Codemium is a **host-agnostic persistent coding-intelligence layer** for AI coding agents. It makes an agent behave increasingly like an engineer who has worked on the same repository for months: durable project knowledge is reused, only the relevant project slice is activated for each task, changes stay scoped, testing follows risk, and unchanged understanding is not repeatedly paid for.
 
-Codemium makes an AI coding agent behave increasingly like an engineer who has worked on the same repository for months: it remembers durable architecture, retrieves only the project slice required for the current task, changes only justified scope, tests according to risk, and avoids paying repeatedly for unchanged understanding.
-
-Codemium is **not a Codex-only product**. Codex is the reference/stable adapter. Claude Code and Gemini CLI are beta adapters. Future hosts must implement the same Codemium contract rather than fork the product logic.
+Codemium is not a wrapper around one vendor, model family, or prompt syntax. OpenAI Codex is the reference adapter; Claude Code, Gemini CLI, Cursor, OpenCode, and future hosts consume the same engineering contract through host-native surfaces.
 
 ## North-star outcome
 
-As project complexity grows, durable project knowledge may grow, but active task context should remain bounded. Correctness, architecture consistency, security, testing adequacy, and scope integrity must remain at or above baseline before token/latency/LOC improvements count as wins.
+As project complexity grows:
 
-## Product positioning
+```text
+Durable project knowledge   ↑↑↑
+Project understanding       ↑↑
+Correctness                 >= baseline
+Architecture consistency    >= baseline
 
-Codemium is an independent coding-intelligence product. Vendor models and coding-agent hosts are execution environments, not product identity.
+Active task context         bounded
+Repeated discovery          ↓↓↓
+Unrelated changes           → 0
+Token/context waste         ↓↓↓
+```
 
-The product must remain portable across model generations and coding-agent hosts whenever the host provides sufficient repository/tool access.
+Resource efficiency only counts as a win after correctness, security, testing adequacy, architecture consistency, and scope integrity meet the quality floor.
+
+## Positioning
+
+> **The senior engineer who already knows your codebase.**
+
+Codemium optimizes **minimum justified engineering**, not minimum LOC.
 
 ## Host architecture
 
 ```text
                          CODEMIUM CORE
                               │
-       ┌──────────────────────┼──────────────────────┐
-       │                      │                      │
-  Project Brain        Engineering Policy      Shared State
-       │                      │                      │
-       └──────────────────────┼──────────────────────┘
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+     Project Brain     Repository/Task Core   Shared Policy
+          │                   │                   │
+          └───────────────────┼───────────────────┘
                               │
-            ┌─────────────────┼─────────────────┐
-            │                 │                 │
-       Codex Adapter     Claude Adapter    Gemini Adapter
-            │                 │                 │
-           @cm          /codemium:cm            /cm
+        ┌───────────┬─────────┼─────────┬───────────┐
+        │           │         │         │           │
+      Codex       Claude    Gemini    Cursor     OpenCode
+        │           │         │         │           │
+       $cm    /codemium:cm    /cm       /cm      cm skill
 ```
 
-### Current host status
+A host adapter may change invocation syntax, plugin/extension layout, model controls, and tool plumbing. It must not fork Codemium's durable project-state semantics or weaken its engineering/safety invariants.
 
-- OpenAI Codex — stable/reference adapter.
-- Claude Code — beta native plugin + Agent Skill + slash command.
-- Gemini CLI — beta native extension + context file + custom command.
-- Cursor — planned after its current official extension surface is evaluated.
-- OpenCode — planned after its current official extension surface is evaluated.
+## Supported-host policy
 
-## Adapter contract
+- **Stable**: host integration is the reference implementation and exercised by repository fixtures plus actual-host validation for the release line.
+- **Beta**: packaging follows the host's documented native surface and repository CI validates the bundle, but actual-host runtime validation is still required before Stable promotion.
+- **Planned**: no installable adapter should be advertised as working.
 
-Every host adapter must preserve:
+Current release target:
 
-1. Task classification: BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, SECURITY.
-2. Engineering depth: FAST, NORMAL, DEEP, CRITICAL.
-3. Safety floor: explicit user depth may escalate but never force unsafe shallowness.
-4. Persistent `.codemium/` project state where workspace access permits it.
-5. Bounded working sets and targeted context expansion.
-6. Smallest justified engineering change, not minimum LOC.
-7. No opportunistic or unrelated edits.
-8. Testing and verification based on behavior, blast radius, and risk.
-9. Reuse of unchanged deterministic evidence where validity can be proven.
-10. Explicit completion and stop conditions.
-11. No claim that host/model reasoning changed unless the host confirms it.
+| Host | Status | Invocation |
+| --- | --- | --- |
+| OpenAI Codex | Stable | `$cm` |
+| Claude Code | Beta | `/codemium:cm` or skill auto-selection |
+| Gemini CLI | Beta | `/cm` |
+| Cursor | Beta | `/cm` / Agent Skill UI |
+| OpenCode | Beta | skill tool/auto-selection, `/cm` where exposed |
 
-Host-specific syntax, model selectors, thinking controls, permissions, hooks, and extension formats belong in adapters, not in core product doctrine.
+## User experience
 
-## User interface
+The identifier should stay short: **`cm`**.
 
-### Codex
+Depth modifiers are portable:
 
 ```text
-@cm
-@cm fast
-@cm deep
-@cm critical
+cm
+cm fast
+cm deep
+cm critical
 ```
 
-Focused Codex skills may include `@cm-fix`, `@cm-test`, `@cm-review`, `@cm-audit`, `@cm-health`, and `@cm-init`.
+The host adds its native marker:
 
-### Claude Code
+- Codex: `$cm`, `$cm fast`, `$cm deep`, `$cm critical`.
+- Claude Code: `/codemium:cm ...`.
+- Gemini CLI: `/cm ...`.
+- Cursor: `/cm` where the Agent Skill slash UI is available.
+- OpenCode: native skill loading; slash exposure when supported.
 
-The installed `cm` Agent Skill may trigger naturally. Explicit command:
+Plain `cm` semantics mean automatic task classification and automatic depth. NORMAL is intentionally not required as a typed modifier.
 
-```text
-/codemium:cm <task>
-/codemium:cm fast <task>
-/codemium:cm deep <task>
-/codemium:cm critical <task>
-```
+## Task axis
 
-### Gemini CLI
+Codemium classifies work as:
 
-```text
-/cm <task>
-/cm fast <task>
-/cm deep <task>
-/cm critical <task>
-```
+- BUILD
+- FIX
+- TEST
+- REFACTOR
+- REVIEW
+- MIGRATION
+- SECURITY
 
-The user experience should stay as short as each host natively allows.
+Task type changes engineering policy, not just wording.
 
-## Task/depth model
+## Depth axis
 
-Task axis: BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, SECURITY.
+- **FAST** — narrow, obvious, localized, low-risk work.
+- **NORMAL** — ordinary project-aware engineering.
+- **DEEP** — complex, intermittent, concurrent, distributed, performance-sensitive, cross-boundary, or materially uncertain work.
+- **CRITICAL** — trust-boundary/security, authentication/authorization, payments, migrations, secrets, production data, destructive operations, deployment/infrastructure, or breaking public interfaces.
 
-Depth axis:
+A user override may increase depth but cannot lower the minimum safe depth.
 
-- FAST — narrow, localized, low-risk work.
-- NORMAL — ordinary project-aware engineering.
-- DEEP — complex, cross-boundary, distributed, concurrent, performance-sensitive, intermittent, or uncertain work.
-- CRITICAL — security/trust boundaries, auth, payments, migrations, secrets, production data, destructive operations, infrastructure/deployment, or breaking public interfaces.
+## Portable reasoning classes
 
-Depth is portable. Vendor reasoning controls are not.
+Reasoning is separated into a vendor-neutral class:
 
-## Host reasoning policy
+| Depth | Preferred class | Minimum class |
+| --- | --- | --- |
+| FAST | economy | economy |
+| NORMAL | balanced | economy |
+| DEEP | strong | balanced |
+| CRITICAL | frontier | strong |
 
-Codemium core expresses engineering depth and a generic need for more or less reasoning. An adapter may map that need to host-specific controls only when the control is documented, safe, and confirmable.
+Host adapters may map these classes only when the host exposes documented, safe, confirmable controls.
 
-### Codex reference mapping
+The Codex adapter currently maps economy/balanced/strong/frontier to `low`/`medium`/`high`/`xhigh` when supported. Other adapters must not invent equivalent vendor controls.
 
-Current Codex adapter preference when supported:
+## Project Brain
 
-- FAST → `low`
-- NORMAL → `medium`
-- DEEP → `high`
-- CRITICAL → `xhigh`
-
-This mapping is advisory unless runtime confirmation proves the effective value changed.
-
-### Claude Code and Gemini CLI
-
-Beta adapters currently apply depth through context breadth, investigation rigor, impact analysis, and verification policy. They do not claim to mutate vendor thinking/model settings.
-
-## Core systems
-
-### Project Brain
-
-Stores sanitized durable facts: project charter, architecture, decisions, constraints, interfaces, patterns, and known bugs. It is not a conversation transcript.
-
-### Repository Intelligence
-
-Builds deterministic maps of files, symbols, imports, dependencies, and likely tests. Frontier reasoning consumes selected evidence instead of crawling the repository blindly.
-
-### Task Compiler
-
-Transforms user intent into a task contract with task type, objective, scope, expected behavior, acceptance criteria, risk, requested depth, effective depth, and escalation reason.
-
-### Working Set Engine
-
-Ranks candidate files and durable knowledge for the task. Context expands only when material uncertainty identifies a specific missing fact.
-
-### Engineering Policy
-
-Use the following solution ladder after understanding the actual requirement:
-
-```text
-need
-→ existing project solution
-→ standard library
-→ native platform/framework
-→ existing dependency
-→ local simple implementation
-→ new abstraction/dependency
-```
-
-### Scope Guard
-
-Every changed file/hunk must trace to DIRECT task work, a required DEPENDENCY change, CLEANUP made obsolete specifically by the change, or TEST/verification work. Unrelated modernization and cleanup are disallowed by default.
-
-### Impact & Test Intelligence
-
-Map changes to callers, imported dependents, related tests, public surfaces, and risk. Minimal production code never justifies under-testing.
-
-### Efficiency Governor
-
-Avoid equivalent reads/searches/tests on unchanged state; use git/hash identity, bounded working sets, delta reinspection, deterministic reuse, and explicit completion gates.
-
-### Model Capability Layer
-
-Core policies are model-independent. Model generations and host-specific reasoning knobs may be promoted only after representative benchmarks preserve the quality floor.
-
-## Shared project state
-
-All adapters use the same durable project namespace:
+Codemium durable state lives in:
 
 ```text
 .codemium/
 ```
 
-A project initialized under one host should remain understandable to another supported adapter. Durable state must not contain vendor-specific transient conversation data unless explicitly namespaced as non-portable runtime state.
+It may contain:
 
-## Task lifecycle
+- Project Charter;
+- architecture boundaries;
+- Decision Ledger;
+- Constraint Registry;
+- Interface Registry;
+- Pattern Registry;
+- Known Bug Registry;
+- repository/test intelligence;
+- active task contract;
+- deterministic cache/telemetry.
+
+Project Brain is not a conversation transcript and must not store secrets.
+
+## Repository Intelligence
+
+Build deterministic or low-cost maps before broad narrative reading:
+
+- files;
+- symbols;
+- imports/dependencies;
+- likely callers/references where available;
+- source-to-test relationships;
+- changed files/symbols;
+- repository state identity.
+
+The model should consume selected evidence, not crawl the repository blindly.
+
+## Working Set Engine
+
+Each task gets a bounded Working Set containing only facts/code likely to affect the decision.
+
+Preferred retrieval order:
+
+1. active task contract;
+2. relevant durable project facts;
+3. repository map/symbols;
+4. exact candidate code regions;
+5. relevant tests/runtime evidence;
+6. deeper history only for a named unresolved question.
+
+Context expansion is progressive and evidence-triggered.
+
+## Read-once / delta-first behavior
+
+If an artifact's relevant state identity has not changed, reuse extracted understanding. When it changes, inspect the delta/changed symbols before rereading the whole artifact.
+
+Equivalent deterministic reads, searches, and verification should be reused when validity is provable.
+
+## Engineering doctrine
+
+After understanding the actual requirement:
 
 ```text
-user request
-→ host adapter
-→ task/depth contract
-→ project state lookup
-→ bounded working set
-→ investigation
-→ root cause/design
-→ implementation
-→ diff inspection
-→ impact analysis
-→ risk-based verification
-→ scope guard
-→ durable memory update
-→ stop
+need?
+→ existing project solution?
+→ standard library?
+→ native framework/platform?
+→ existing dependency?
+→ local simple implementation?
+→ new abstraction/dependency
 ```
 
-## Benchmark system
+A shorter diff is not automatically better. The winning change is the smallest change that is correct for the current architecture, interfaces, risk, and required testing.
 
-Competitive benchmark infrastructure remains internal/hidden from the public README until measured results are ready. A publishable study must use controlled, identical task/repository/model/environment conditions and pass correctness/safety quality gates before efficiency claims count as wins.
+## Scope Guard
 
-Synthetic data must never be presented as product performance.
+Every changed hunk should be attributable to:
 
-## Success metrics
+- DIRECT — requested behavior;
+- DEPENDENCY — necessary supporting change;
+- CLEANUP — code made obsolete specifically by this change;
+- TEST — evidence for changed behavior.
 
-- correctness and acceptance pass rate >= baseline;
-- security and testing adequacy >= baseline;
-- architecture consistency >= baseline;
-- regression rate <= baseline;
-- unrelated changed lines approaches zero;
-- duplicate unchanged discovery <10% in MVP, <5% mature;
-- active context grows materially slower than total project knowledge;
-- cross-host `.codemium/` durable state remains compatible;
-- host/model changes are never claimed without confirmation;
-- no adapter silently diverges from the core engineering contract.
+Default-disallowed opportunistic work:
+
+- unrelated formatting;
+- adjacent refactoring;
+- style modernization;
+- unrelated renaming/comments;
+- deleting pre-existing dead code;
+- speculative architecture changes.
+
+Adjacent issues should be reported, not silently fixed.
+
+## Test Intelligence
+
+Production-code minimalism never implies minimal tests.
+
+Testing depth follows:
+
+- behavior surface;
+- failure modes;
+- boundaries;
+- security/data risk;
+- blast radius;
+- historical regressions;
+- existing project test patterns.
+
+Verification ranges from focused syntax/unit checks through subsystem/integration/runtime verification as justified.
+
+## Change Impact
+
+Before completion, identify affected callers/dependents, interfaces, background workers/events, database/public surfaces, and relevant tests where practical. Blast radius determines verification depth.
+
+## Stop Engine
+
+Stop when all required gates pass:
+
+```text
+objective satisfied
+acceptance satisfied
+verification sufficient
+scope clean
+architecture/security preserved
+material uncertainty resolved
+required review complete
+```
+
+Additional inspection after these gates requires a named unresolved risk that the next operation can reduce.
+
+## Host adapter contract
+
+Every supported adapter must preserve:
+
+1. task classification;
+2. safety-bounded depth;
+3. shared `.codemium/` state;
+4. bounded context/working sets;
+5. minimum justified engineering;
+6. scope integrity;
+7. risk-aware testing;
+8. deterministic reuse where valid;
+9. explicit stop conditions;
+10. honest host/model-control reporting.
+
+## Distribution architecture
+
+### Codex
+
+Codex plugin lives under `plugins/codemium/`, including the canonical deterministic engine and Agent Skills. Explicit invocation uses `$cm`.
+
+### Claude Code
+
+The repository root is the Claude plugin root. `.claude-plugin/plugin.json`, `skills/cm/SKILL.md`, and `commands/cm.md` are auto-discovered. This lets the skill reference the canonical engine inside the same installed plugin bundle.
+
+### Gemini CLI
+
+The repository root contains `gemini-extension.json`, `GEMINI.md`, and `commands/cm.toml`.
+
+### Cursor / OpenCode
+
+A portable Agent Skill bundle is installed by `scripts/install_host.py`. The installer copies the portable `SKILL.md`, canonical engine, and references into the host's documented skill directory. It manages only Codemium-owned directories and refuses unrecognized overwrite/removal without explicit `--force`.
+
+## Doctor / validation
+
+`scripts/doctor.py` validates cross-host manifests, version synchronization, native invocation contracts, portable-skill packaging, and engine completeness. It also reports which host binaries are locally available.
+
+Repository CI runs the deterministic verifier and doctor on every main push/pull request.
+
+## Functional requirements
+
+- FR-001 — initialize portable Project Brain.
+- FR-002 — build lightweight repository/test intelligence.
+- FR-003 — compile task + safe depth contracts.
+- FR-004 — generate bounded Working Sets.
+- FR-005 — expand context only for material uncertainty.
+- FR-006 — preserve/reuse unchanged understanding where identity is valid.
+- FR-007 — enforce scoped diffs.
+- FR-008 — map impact to sufficient verification.
+- FR-009 — preserve architecture/constraint/interface knowledge.
+- FR-010 — detect/avoid duplicate deterministic work.
+- FR-011 — stop after sufficient proof.
+- FR-012 — keep reasoning semantics model/vendor-independent.
+- FR-013 — provide native Codex, Claude Code, Gemini CLI, Cursor, and OpenCode distribution surfaces.
+- FR-014 — keep adapter versions synchronized with repository VERSION.
+- FR-015 — provide safe install/uninstall for portable Agent Skill hosts.
+- FR-016 — never claim host reasoning changes or token savings without evidence.
+
+## Quality order
+
+1. Safety and data integrity
+2. Correctness
+3. Architecture/interface consistency
+4. Verification adequacy
+5. Scope integrity
+6. Context/token/latency efficiency
+7. Code volume
+
+Optimization that lowers a higher-ranked quality dimension is a failure.
+
+## Benchmarking
+
+The benchmark engine remains evidence-gated. Public efficiency claims require measured agent runs under controlled, comparable conditions and must not substitute synthetic/demo numbers for real performance.
+
+Competitive/ablation data is not part of Codemium's public README until measured publication criteria are met.
 
 ## Non-goals
 
-Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, replacement for CI, or license to skip tests/security. It is not permanently tied to Codex, Claude, Gemini, or one model family. FAST does not mean careless. CRITICAL does not mean loading the entire repository.
+Codemium is not:
+
+- a minimum-LOC contest;
+- a license to under-test;
+- a generic multi-agent bureaucracy;
+- a replacement for CI;
+- a promise that one model/reasoning level is best forever;
+- a vendor-specific project-memory format;
+- a reason to preload an entire repository;
+- permission to edit unrelated code.
+
+## v0.6 release definition
+
+v0.6 is complete when:
+
+- Codex uses native `$cm` explicit invocation;
+- Claude repository-root plugin includes shared core access;
+- Gemini extension manifests/command validate;
+- Cursor/OpenCode portable Agent Skill installation is safe and documented;
+- shared reasoning classes are vendor-neutral;
+- README/HOSTS/INSTALL/PRD agree on host status and invocation;
+- CI verifies versions/layout, portable installer behavior, engine fixtures, and hidden benchmark publication gate;
+- repository doctor reports a clean layout.
