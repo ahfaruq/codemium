@@ -15,7 +15,14 @@ REGISTRY = {
     'bug': ('bugs.jsonl', 'B'),
 }
 
-DEFAULT_REASONING = {
+GENERIC_REASONING = {
+    'FAST': {'preferred_class': 'economy', 'minimum_class': 'economy'},
+    'NORMAL': {'preferred_class': 'balanced', 'minimum_class': 'economy'},
+    'DEEP': {'preferred_class': 'strong', 'minimum_class': 'balanced'},
+    'CRITICAL': {'preferred_class': 'frontier', 'minimum_class': 'strong'},
+}
+
+CODEX_EFFORT_BY_DEPTH = {
     'FAST': {'preferred_effort': 'low', 'minimum_effort': 'low'},
     'NORMAL': {'preferred_effort': 'medium', 'minimum_effort': 'low'},
     'DEEP': {'preferred_effort': 'high', 'minimum_effort': 'medium'},
@@ -25,19 +32,30 @@ DEFAULT_REASONING = {
 
 def default_model_profile() -> dict:
     return {
-        'schema_version': 2,
+        'schema_version': 3,
         'roles': {
             'primary': {'capability': 'frontier_reasoning', 'preferred_model': None},
             'reviewer': {'capability': 'frontier_review', 'preferred_model': None},
             'worker': {'capability': 'strong_coding', 'preferred_model': None},
         },
-        'reasoning_profiles': DEFAULT_REASONING,
+        'generic_reasoning': GENERIC_REASONING,
+        'host_profiles': {
+            'codex': {
+                'effort_by_depth': CODEX_EFFORT_BY_DEPTH,
+                'control': 'advisory_unless_runtime_confirms_per_task_control',
+            },
+            'claude-code': {
+                'control': 'host_owned_unless_documented_per_task_control',
+            },
+            'gemini-cli': {
+                'control': 'host_owned_unless_documented_per_task_control',
+            },
+        },
         'host_control': {
-            'mode': 'advisory_unless_runtime_confirms_per_task_control',
             'mutate_global_config': False,
             'claim_change_only_after_runtime_confirmation': True,
         },
-        'note': 'Model names and reasoning profiles are preferences, not proof of benchmarked capability.',
+        'note': 'Engineering depth is portable. Vendor model/reasoning knobs belong to host adapters and are not proof of benchmarked capability.',
     }
 
 
@@ -47,8 +65,15 @@ def ensure_model_profile(path: Path) -> None:
     if isinstance(current, dict):
         if isinstance(current.get('roles'), dict):
             merged['roles'].update(current['roles'])
+        if isinstance(current.get('generic_reasoning'), dict):
+            merged['generic_reasoning'].update(current['generic_reasoning'])
+        if isinstance(current.get('host_profiles'), dict):
+            for host, profile in current['host_profiles'].items():
+                if isinstance(profile, dict):
+                    merged['host_profiles'].setdefault(host, {}).update(profile)
+        # v2 migration: old reasoning_profiles represented the Codex effort mapping.
         if isinstance(current.get('reasoning_profiles'), dict):
-            merged['reasoning_profiles'].update(current['reasoning_profiles'])
+            merged['host_profiles']['codex']['effort_by_depth'].update(current['reasoning_profiles'])
         if isinstance(current.get('host_control'), dict):
             merged['host_control'].update(current['host_control'])
     write_json(path, merged)
