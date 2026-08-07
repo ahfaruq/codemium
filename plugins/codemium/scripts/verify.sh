@@ -26,38 +26,40 @@ for folder,heading in focused.items():
     text=(root/f'plugins/codemium/skills/{folder}/SKILL.md').read_text()
     assert heading in text, (folder,heading)
 
-# Claude Code adapter: repo root is plugin root.
+# One shared Agent Skill for Claude/Gemini/Cursor/OpenCode.
+shared=(root/'skills/cm/SKILL.md').read_text()
+for phrase in ['name: cm','portable Agent Skill','opencode/slash: "true"','Vendor model/thinking controls remain host-owned']:
+    assert phrase in shared, phrase
+
+# Claude Code adapter: repository root is plugin root.
 claude_market=json.loads((root/'.claude-plugin/marketplace.json').read_text())
 assert claude_market['name']=='codemium' and claude_market['version']==version
 entry=next(p for p in claude_market['plugins'] if p['name']=='codemium')
 assert entry['version']==version and entry['source']=='./'
 claude_plugin=json.loads((root/'.claude-plugin/plugin.json').read_text())
 assert claude_plugin['name']=='codemium' and claude_plugin['version']==version
-claude_skill=(root/'skills/cm/SKILL.md').read_text()
-assert 'name: cm' in claude_skill and '${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/' in claude_skill
 claude_command=(root/'commands/cm.md').read_text()
 assert '$ARGUMENTS' in claude_command and 'name: cm' in claude_command
+assert '${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/' in claude_command
 assert not (root/'adapters/claude-code/.claude-plugin/plugin.json').exists()
 
-# Gemini CLI adapter
+# Gemini CLI adapter; root shared skill is also available to Gemini extension skill discovery.
 gemini=json.loads((root/'gemini-extension.json').read_text())
 assert gemini['name']=='codemium' and gemini['version']==version and gemini['contextFileName']=='GEMINI.md'
 assert 'host-agnostic coding-intelligence layer' in (root/'GEMINI.md').read_text()
 parsed_cm=tomllib.loads((root/'commands/cm.toml').read_text())
 assert '{{args}}' in parsed_cm['prompt'] and 'Run Codemium' in parsed_cm['description']
 
-# Portable Agent Skill adapter (Cursor/OpenCode)
-portable=(root/'adapters/agent-skill/cm/SKILL.md').read_text()
-assert 'name: cm' in portable and 'opencode/slash: "true"' in portable
+# Portable host installer / doctor.
 assert (root/'scripts/install_host.py').exists()
 assert (root/'scripts/doctor.py').exists()
 
-# Public positioning / docs
+# Public positioning / docs.
 readme=(root/'README.md').read_text()
 for phrase in [
     'Persistent coding intelligence for AI coding agents',
     'OpenAI Codex | **Stable**', 'Claude Code | **Beta**', 'Gemini CLI | **Beta**',
-    'Cursor | **Beta**', 'OpenCode | **Beta**', 'Codex\'s native explicit Agent Skill syntax is `$<skill-name>`',
+    'Cursor | **Beta**', 'OpenCode | **Beta**', "Codex's native explicit Agent Skill syntax is `$<skill-name>`",
     'INSTALL.md', 'HOSTS.md'
 ]:
     assert phrase in readme, phrase
@@ -77,7 +79,7 @@ assert {'baseline','caveman','ponytail','codemium'} <= systems
 svg=(root/'benchmarks/demo-numbers.svg').read_text()
 assert 'SYNTHETIC / DEMO DATA' in svg
 
-print('PASS: v0.6 native host layouts, docs, and invocation contracts')
+print('PASS: v0.6 native host layouts, single-source skill, docs, and invocation contracts')
 PYEOF
 
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
@@ -96,6 +98,7 @@ python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "
 test -f "$TMPDIR/.cursor/skills/cm/SKILL.md"
 test -f "$TMPDIR/.cursor/skills/cm/engine/project_brain.py"
 test -f "$TMPDIR/.cursor/skills/cm/.codemium-installed.json"
+grep -q 'portable Agent Skill' "$TMPDIR/.cursor/skills/cm/SKILL.md"
 python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" >/dev/null
 python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" --uninstall >/dev/null
 test ! -e "$TMPDIR/.cursor/skills/cm"
