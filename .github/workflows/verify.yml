@@ -34,4 +34,4 @@ jobs:
           python-version: '3.12'
       - name: Verify Codemium
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
+        run: ./plugins/codemium/scripts/verify.ps1
