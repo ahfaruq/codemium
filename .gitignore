@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.codemium/runtime/
+.codemium/repository/
+.codemium/tasks/completed/

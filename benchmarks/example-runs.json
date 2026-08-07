@@ -1,0 +1,4 @@
+[
+  {"system":"vanilla","quality_pass":true,"input_tokens":100000,"reasoning_tokens":20000,"output_tokens":5000,"tool_calls":50,"unique_files_read":20,"duplicate_reads":6,"loc_changed":80,"unrelated_changed_lines":4,"seconds":600},
+  {"system":"codemium","quality_pass":true,"input_tokens":70000,"reasoning_tokens":20000,"output_tokens":3500,"tool_calls":38,"unique_files_read":12,"duplicate_reads":1,"loc_changed":55,"unrelated_changed_lines":0,"seconds":480}
+]

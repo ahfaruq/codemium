@@ -1,0 +1,12 @@
+{
+  "name": "codemium",
+  "interface": {"displayName": "Codemium"},
+  "plugins": [
+    {
+      "name": "codemium",
+      "source": {"source": "local", "path": "./plugins/codemium"},
+      "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+      "category": "Productivity"
+    }
+  ]
+}
