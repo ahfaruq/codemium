@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json
+
+import argparse
+import json
 from pathlib import Path
+
 from common import state_root, now_iso, write_json
+from reasoning_profile import EFFORT_ORDER, resolve_reasoning_profile
 
 DEPTH_RANK = {'FAST': 0, 'NORMAL': 1, 'DEEP': 2, 'CRITICAL': 3}
+
 
 def classify(text: str) -> str:
     t = text.lower()
@@ -22,6 +27,7 @@ def classify(text: str) -> str:
         return 'FIX'
     return 'BUILD'
 
+
 def risk(text: str, mode: str) -> str:
     t = text.lower()
     if mode in {'SECURITY', 'MIGRATION'} or any(x in t for x in [
@@ -32,6 +38,7 @@ def risk(text: str, mode: str) -> str:
     if mode in {'FIX', 'REFACTOR', 'REVIEW'} or any(x in t for x in ['database', 'api', 'worker', 'queue', 'webhook']):
         return 'medium'
     return 'low'
+
 
 def minimum_depth(text: str, mode: str, task_risk: str) -> tuple[str, str]:
     t = text.lower()
@@ -49,6 +56,7 @@ def minimum_depth(text: str, mode: str, task_risk: str) -> tuple[str, str]:
         return 'DEEP', 'high-risk or non-local behavior'
     return 'FAST', 'no safety escalation required'
 
+
 def auto_depth(text: str, mode: str, task_risk: str) -> tuple[str, str]:
     floor, floor_reason = minimum_depth(text, mode, task_risk)
     if floor in {'CRITICAL', 'DEEP'}:
@@ -60,6 +68,7 @@ def auto_depth(text: str, mode: str, task_risk: str) -> tuple[str, str]:
     if any(x in t for x in ['multi-module', 'cross-module', 'websocket', 'queue', 'webhook', 'worker']):
         return 'DEEP', 'cross-boundary behavior'
     return 'NORMAL', 'default project-aware depth'
+
 
 def resolve_depth(text: str, mode: str, task_risk: str, requested: str = 'auto') -> tuple[str, str]:
     requested = requested.lower().strip()
@@ -74,10 +83,17 @@ def resolve_depth(text: str, mode: str, task_risk: str, requested: str = 'auto')
         return floor, f'requested {desired} escalated: {floor_reason}'
     return desired, f'explicit {desired} override'
 
-def compile_task(text: str, requested_depth: str = 'auto') -> dict:
+
+def compile_task(
+    text: str,
+    requested_depth: str = 'auto',
+    model: str | None = None,
+    host_effort: str | None = None,
+) -> dict:
     mode = classify(text)
     r = risk(text, mode)
     depth, depth_reason = resolve_depth(text, mode, r, requested_depth)
+    reasoning = resolve_reasoning_profile(depth, model=model, host_effort=host_effort)
     policy = {
         'FIX': 'root-cause fix; surgical scope; regression evidence',
         'TEST': 'behavior/risk coverage; do not minimize justified cases',
@@ -104,25 +120,30 @@ def compile_task(text: str, requested_depth: str = 'auto') -> dict:
         'requested_depth': requested_depth.lower(),
         'depth': depth,
         'depth_reason': depth_reason,
+        'reasoning': reasoning,
         'change_policy': policy,
         'created_at': now_iso(),
         'working_set': [],
     }
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--root', default='.')
     ap.add_argument('--request', required=True)
     ap.add_argument('--depth', choices=['auto', 'fast', 'deep', 'critical'], default='auto')
+    ap.add_argument('--model')
+    ap.add_argument('--host-effort', choices=EFFORT_ORDER)
     ap.add_argument('--no-write', action='store_true')
     ns = ap.parse_args()
-    task = compile_task(ns.request, ns.depth)
+    task = compile_task(ns.request, ns.depth, ns.model, ns.host_effort)
     root = Path(ns.root).resolve()
     if not ns.no_write:
         p = state_root(root) / 'tasks/active.json'
         p.parent.mkdir(parents=True, exist_ok=True)
         write_json(p, task)
     print(json.dumps(task, ensure_ascii=False, indent=2))
+
 
 if __name__ == '__main__':
     main()
