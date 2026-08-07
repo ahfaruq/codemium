@@ -1,0 +1,12 @@
+{
+  "name": "codemium",
+  "version": "0.6.0",
+  "description": "Persistent coding intelligence for Claude Code with project memory, bounded context, scoped changes, and risk-aware verification.",
+  "author": {
+    "name": "Codemium"
+  },
+  "homepage": "https://github.com/admahmad/codemium",
+  "repository": "https://github.com/admahmad/codemium",
+  "license": "MIT",
+  "keywords": ["coding-agent", "project-intelligence", "context-engineering", "software-engineering"]
+}
