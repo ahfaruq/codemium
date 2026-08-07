@@ -2,11 +2,14 @@
 name: cm
 description: Use Codemium for software-engineering tasks that benefit from persistent project understanding, bounded context, scoped changes, risk-aware testing, or explicit fast/deep/critical depth. Trigger for project-aware implementation, debugging, review, testing, refactoring, migration, security, or when the user asks to reduce relearning/context waste without reducing engineering quality.
 argument-hint: "[fast|deep|critical] <coding task>"
+compatibility: "Claude Code, Gemini CLI, Cursor, OpenCode, and Agent Skills-compatible hosts"
+metadata:
+  opencode/slash: "true"
 ---
 
-# Codemium for Claude Code
+# Codemium — portable Agent Skill
 
-Operate as a senior engineer who already knows this repository. Optimize for the **smallest justified engineering change**, not minimum LOC.
+Operate as a senior engineer who already knows this repository. Optimize for the **smallest justified engineering change** and minimum relearning, not minimum LOC.
 
 ## Resolve task and depth
 
@@ -21,23 +24,19 @@ A user may request `fast`, `deep`, or `critical`. Safety may escalate depth but 
 
 ## Shared Project Brain
 
-Codemium durable state lives in `.codemium/` and is intentionally portable across hosts. Reuse it before rediscovering project facts. Never store secrets or full conversation transcripts.
+Codemium durable state lives in `.codemium/` and is intentionally portable across hosts. Reuse relevant decisions, constraints, interfaces, patterns, known bugs, repository intelligence, and current task state before rediscovering them. Never store secrets or full conversation transcripts.
 
-When deterministic project intelligence is useful, the installed plugin includes the shared engine at:
+## Deterministic helpers
 
-```text
-${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/
-```
+Codemium ships a canonical Python engine. Use it only when it reduces model work.
 
-Examples:
+- Portable Cursor/OpenCode installs place helpers in `engine/` next to this skill.
+- Repository-root extension installs contain the canonical engine under `plugins/codemium/engine/`.
+- If the host exposes neither path reliably, preserve Codemium behavior using normal repository tools rather than guessing an extension path.
 
-```sh
-python "${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/project_brain.py" --root . init
-python "${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/repo_graph.py" build --root .
-python "${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/test_map.py" build --root .
-```
+Typical helper operations include Project Brain initialization, repository mapping, test mapping, Working Set ranking, impact analysis, cache checks, health, and telemetry.
 
-Use deterministic helpers when they reduce model work; do not run them mechanically when the task is already obvious and local.
+Do not run helpers mechanically when the task is already obvious and local.
 
 ## Working-set discipline
 
@@ -47,13 +46,13 @@ Prefer durable project facts → repository map/symbols → exact candidate regi
 
 After understanding the real requirement, prefer: existing project solution → standard library → native platform/framework → existing dependency → local simple implementation → new abstraction/dependency.
 
-Every changed hunk must trace to the requested task, a necessary dependency change, cleanup made obsolete specifically by the change, or verification. Do not perform opportunistic cleanup or modernization.
+Every changed hunk must trace to the requested task, a necessary dependency change, cleanup made obsolete specifically by that change, or verification. Do not perform opportunistic cleanup, modernization, formatting, or renaming.
 
 Minimal production code never means minimal tests. Verification follows behavior, failure modes, blast radius, and risk.
 
 ## Host reasoning
 
-Codemium engineering depth is portable. Claude Code model/thinking controls remain owned by Claude Code unless a documented per-task mechanism exists and the host confirms the effective setting. Never claim a reasoning setting changed without that confirmation.
+Codemium engineering depth is portable. Vendor model/thinking controls remain host-owned unless a documented per-task mechanism exists and the host confirms the effective setting. Never claim a reasoning setting changed without confirmation.
 
 ## Completion
 
