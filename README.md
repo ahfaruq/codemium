@@ -1,5 +1,7 @@
 # Codemium
 
+[![Verify Codemium](https://github.com/admahmad/codemium/actions/workflows/verify.yml/badge.svg)](https://github.com/admahmad/codemium/actions/workflows/verify.yml)
+
 **Persistent coding intelligence for AI coding agents.**
 
 Codemium is a host-agnostic engineering layer for long-running software projects. It aims for the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and context efficiency.
@@ -18,7 +20,7 @@ Codemium keeps durable project intelligence in `.codemium/`, then exposes the sa
 | Cursor | **Beta** | Portable Agent Skill | `/cm` / skill picker |
 | OpenCode | **Beta** | Portable Agent Skill | `/cm` when slash exposure is supported, otherwise skill tool/auto-selection |
 
-See [`HOSTS.md`](HOSTS.md) for the adapter contract and [`INSTALL.md`](INSTALL.md) for installation details.
+See [`INSTALL.md`](INSTALL.md) for installation, [`HOSTS.md`](HOSTS.md) for the adapter contract, [`PRD.md`](PRD.md) for product requirements, and [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 ## One core, native adapters
 
@@ -91,7 +93,7 @@ codex plugin marketplace add admahmad/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
-Start a fresh Codex task after installation.
+Start a fresh Codex task after installation if the runtime has cached its skill inventory.
 
 ## Use
 
@@ -134,7 +136,7 @@ Codemium never silently rewrites the global Codex model/reasoning selector. A ho
 
 # Claude Code
 
-Claude Code uses the repository itself as the plugin root so the Claude adapter has access to the shared deterministic engine.
+Claude Code uses the repository itself as the plugin root so the adapter has access to the same shipped core.
 
 ## Install
 
@@ -144,8 +146,6 @@ Inside Claude Code:
 /plugin marketplace add admahmad/codemium
 /plugin install codemium@codemium
 ```
-
-Start a new Claude Code session after installation if the host has not refreshed plugin discovery yet.
 
 ## Use
 
@@ -164,7 +164,7 @@ Claude model/thinking controls remain Claude-owned unless the host documents and
 
 # Gemini CLI
 
-Codemium is packaged as a native Gemini CLI extension with `gemini-extension.json`, `GEMINI.md`, and `/cm`.
+Codemium is packaged as a native Gemini CLI extension with `gemini-extension.json`, a deliberately lean `GEMINI.md` bootstrap, the shared `cm` Agent Skill, and `/cm`.
 
 ## Install
 
@@ -189,7 +189,7 @@ Restart Gemini CLI after installation or update so extension commands/context re
 
 # Cursor
 
-Cursor supports Agent Skills. Codemium installs the portable `cm` bundle together with its deterministic engine and references.
+Cursor supports Agent Skills. Codemium installs the shared `cm` bundle together with its deterministic engine and references.
 
 ## User-wide install
 
@@ -203,13 +203,13 @@ python scripts/install_host.py --host cursor
 python scripts/install_host.py --host cursor --scope project --project /path/to/project
 ```
 
-Then use the `cm` Agent Skill when Cursor discovers it; current Cursor releases expose skills in the slash menu, so `/cm` is the intended short invocation where available.
+Then use the `cm` Agent Skill when Cursor discovers it; current Cursor releases expose skills in the slash UI, so `/cm` is the short invocation there. Cursor's current primary CLI entrypoint is `agent`, with `cursor-agent` retained as a compatibility alias.
 
 ---
 
 # OpenCode
 
-OpenCode natively discovers Agent Skills. Codemium installs into OpenCode's documented skill directories and sets `opencode/slash: "true"` metadata.
+OpenCode natively discovers Agent Skills. Codemium installs into its skill directories and sets `opencode/slash: "true"` metadata.
 
 ## User-wide install
 
@@ -223,7 +223,7 @@ python scripts/install_host.py --host opencode
 python scripts/install_host.py --host opencode --scope project --project /path/to/project
 ```
 
-OpenCode can auto-select/load `cm` via its skill tool. On versions exposing skill slash invocation, use `/cm`.
+OpenCode can auto-select/load `cm` via its native skill tool. Use `/cm` on versions exposing Agent Skills in the slash catalog.
 
 ---
 
@@ -254,7 +254,7 @@ All adapters use the same project state:
     └── snapshots/
 ```
 
-A project initialized under one host can be understood by another host because durable state is vendor-neutral.
+A project initialized under one host can be understood by another host because durable state is vendor-neutral. Transient repository maps/runtime/task state is ignored by Git by default; durable sanitized architecture and decision knowledge can remain project-owned.
 
 ## Deterministic core helpers
 
@@ -271,7 +271,7 @@ They are optional accelerators, not mandatory ceremony. Use them when they reduc
 
 `scripts/install_host.py` manages only its Codemium-owned skill directory. It refuses to overwrite or remove a non-Codemium directory unless `--force` is explicitly supplied.
 
-Dry-run example:
+Dry run:
 
 ```sh
 python scripts/install_host.py --host cursor --dry-run
@@ -286,13 +286,13 @@ python scripts/install_host.py --host opencode --uninstall
 
 ## Doctor
 
-Validate the repository and see which host binaries are available locally:
+Validate repository contracts and see which host binaries are locally available:
 
 ```sh
 python scripts/doctor.py
 ```
 
-Require one host binary when testing an adapter locally:
+Require a host when testing locally:
 
 ```sh
 python scripts/doctor.py --require-host codex
@@ -316,9 +316,15 @@ Windows:
 powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 ```
 
+GitHub Actions runs the verification suite on both Linux and Windows.
+
+## Benchmark policy
+
+Codemium does not publish synthetic performance numbers as product claims. The benchmark engine remains in the repository for measured competitive evaluation, but the public Numbers section stays hidden until a real dataset passes the publication quality/safety gate.
+
 ## Status
 
-`v0.6.0` makes the host boundary explicit: Codex uses native `$cm`; Claude Code uses a repository-root plugin with the shared engine; Gemini CLI uses a native extension; Cursor and OpenCode use a portable Agent Skill installer; and all adapters share the same `.codemium/` project intelligence.
+`v0.6.0` makes the host boundary explicit: Codex uses native `$cm`; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
 
 ## License
 
