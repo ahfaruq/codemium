@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
 import tomllib
 from pathlib import Path
 
@@ -52,7 +51,16 @@ def validate(root: Path) -> tuple[list[str], dict]:
         entries = codex_market.get("plugins", [])
         check(any(p.get("name") == "codemium" for p in entries), "Codex marketplace entry missing", errors)
 
-    # Claude Code: repository root is the plugin root so shared engine is available.
+    # Shared Agent Skill for Claude/Gemini/Cursor/OpenCode.
+    shared_skill = root / "skills/cm/SKILL.md"
+    check(shared_skill.exists(), "shared cm Agent Skill missing", errors)
+    if shared_skill.exists():
+        t = shared_skill.read_text(encoding="utf-8")
+        check("name: cm" in t, "shared skill name must be cm", errors)
+        check("portable Agent Skill" in t, "shared skill must remain host-portable", errors)
+        check('opencode/slash: "true"' in t, "OpenCode slash metadata missing", errors)
+
+    # Claude Code: repository root is plugin root.
     claude_market = load_json(root / ".claude-plugin/marketplace.json", errors)
     claude_manifest = load_json(root / ".claude-plugin/plugin.json", errors)
     check(claude_manifest.get("version") == version, "Claude plugin version mismatch", errors)
@@ -61,8 +69,8 @@ def validate(root: Path) -> tuple[list[str], dict]:
     if claude_entries:
         check(claude_entries[0].get("source") == "./", "Claude plugin source must be repository root", errors)
         check(claude_entries[0].get("version") == version, "Claude marketplace version mismatch", errors)
-    check((root / "skills/cm/SKILL.md").exists(), "Claude cm skill missing", errors)
     check((root / "commands/cm.md").exists(), "Claude /codemium:cm command missing", errors)
+    check(not (root / "adapters/claude-code/.claude-plugin/plugin.json").exists(), "duplicated legacy Claude adapter remains", errors)
 
     # Gemini CLI
     gemini = load_json(root / "gemini-extension.json", errors)
@@ -74,13 +82,7 @@ def validate(root: Path) -> tuple[list[str], dict]:
     except Exception as exc:
         errors.append(f"invalid Gemini command TOML: {exc}")
 
-    # Portable Agent Skill for Cursor/OpenCode.
-    portable = root / "adapters/agent-skill/cm/SKILL.md"
-    check(portable.exists(), "portable cm Agent Skill missing", errors)
-    if portable.exists():
-        t = portable.read_text(encoding="utf-8")
-        check("name: cm" in t, "portable skill name must be cm", errors)
-        check('opencode/slash: "true"' in t, "OpenCode slash metadata missing", errors)
+    # Cursor/OpenCode portable installer.
     check((root / "scripts/install_host.py").exists(), "host installer missing", errors)
 
     # Shared core.
