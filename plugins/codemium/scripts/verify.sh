@@ -1,12 +1,13 @@
 #!/usr/bin/env sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
+
 python - "$ROOT" <<'PYEOF'
 import json,sys,tomllib
 from pathlib import Path
 root=Path(sys.argv[1])
 version=(root/'VERSION').read_text().strip()
-assert version=='0.5.0', version
+assert version=='0.6.0', version
 
 # Codex adapter
 for p in [root/'.agents/plugins/marketplace.json',root/'plugins/codemium/.codex-plugin/plugin.json']:
@@ -14,39 +15,60 @@ for p in [root/'.agents/plugins/marketplace.json',root/'plugins/codemium/.codex-
 codex=json.loads((root/'plugins/codemium/.codex-plugin/plugin.json').read_text())
 assert codex['name']=='codemium' and codex['version']==version
 main=(root/'plugins/codemium/skills/codemium/SKILL.md').read_text()
-for phrase in ['name: cm','@cm fast','preferred `low`','preferred `xhigh`','smallest **justified** change','Minimal production code **does not imply minimal tests**']:
+for phrase in ['name: cm','# Codemium — $cm','$cm fast','preferred `low`','preferred `xhigh`','smallest **justified** change','Minimal production code **does not imply minimal tests**']:
     assert phrase in main, phrase
+assert '# Codemium — @cm' not in main
+focused={
+    'fix':'# $cm-fix','test':'# $cm-test','review':'# $cm-review',
+    'audit':'# $cm-audit','health':'# $cm-health','init':'# $cm-init'
+}
+for folder,heading in focused.items():
+    text=(root/f'plugins/codemium/skills/{folder}/SKILL.md').read_text()
+    assert heading in text, (folder,heading)
 
-# Claude Code adapter
+# Claude Code adapter: repo root is plugin root.
 claude_market=json.loads((root/'.claude-plugin/marketplace.json').read_text())
-assert claude_market['name']=='codemium'
+assert claude_market['name']=='codemium' and claude_market['version']==version
 entry=next(p for p in claude_market['plugins'] if p['name']=='codemium')
-assert entry['version']==version and entry['source']=='./adapters/claude-code'
-assert (root/'adapters/claude-code').is_dir()
-claude_plugin=json.loads((root/'adapters/claude-code/.claude-plugin/plugin.json').read_text())
+assert entry['version']==version and entry['source']=='./'
+claude_plugin=json.loads((root/'.claude-plugin/plugin.json').read_text())
 assert claude_plugin['name']=='codemium' and claude_plugin['version']==version
-claude_skill=(root/'adapters/claude-code/skills/cm/SKILL.md').read_text()
-assert 'name: cm' in claude_skill and 'smallest justified engineering change' in claude_skill
-claude_command=(root/'adapters/claude-code/commands/cm.md').read_text()
+claude_skill=(root/'skills/cm/SKILL.md').read_text()
+assert 'name: cm' in claude_skill and '${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/' in claude_skill
+claude_command=(root/'commands/cm.md').read_text()
 assert '$ARGUMENTS' in claude_command and 'name: cm' in claude_command
+assert not (root/'adapters/claude-code/.claude-plugin/plugin.json').exists()
 
 # Gemini CLI adapter
 gemini=json.loads((root/'gemini-extension.json').read_text())
 assert gemini['name']=='codemium' and gemini['version']==version and gemini['contextFileName']=='GEMINI.md'
 assert 'host-agnostic coding-intelligence layer' in (root/'GEMINI.md').read_text()
-cm_toml=(root/'commands/cm.toml').read_text()
-parsed_cm=tomllib.loads(cm_toml)
+parsed_cm=tomllib.loads((root/'commands/cm.toml').read_text())
 assert '{{args}}' in parsed_cm['prompt'] and 'Run Codemium' in parsed_cm['description']
 
-# Public positioning
+# Portable Agent Skill adapter (Cursor/OpenCode)
+portable=(root/'adapters/agent-skill/cm/SKILL.md').read_text()
+assert 'name: cm' in portable and 'opencode/slash: "true"' in portable
+assert (root/'scripts/install_host.py').exists()
+assert (root/'scripts/doctor.py').exists()
+
+# Public positioning / docs
 readme=(root/'README.md').read_text()
-for phrase in ['Persistent coding intelligence for AI coding agents','OpenAI Codex | **Stable**','Claude Code | **Beta**','Gemini CLI | **Beta**','HOSTS.md']:
+for phrase in [
+    'Persistent coding intelligence for AI coding agents',
+    'OpenAI Codex | **Stable**', 'Claude Code | **Beta**', 'Gemini CLI | **Beta**',
+    'Cursor | **Beta**', 'OpenCode | **Beta**', 'Codex\'s native explicit Agent Skill syntax is `$<skill-name>`',
+    'INSTALL.md', 'HOSTS.md'
+]:
     assert phrase in readme, phrase
 assert 'Codex-first plugin' not in readme
 assert '## Numbers' not in readme and 'benchmarks/demo-numbers.svg' not in readme
 assert 'Ponytail-style' not in readme
 hosts=(root/'HOSTS.md').read_text()
-assert 'host-agnostic at the product/core level' in hosts
+assert 'host-agnostic at the product/core level' in hosts and 'OpenCode | Beta' in hosts
+prd=(root/'PRD.md').read_text()
+assert 'host-agnostic persistent coding-intelligence layer' in prd
+assert 'v0.6 release definition' in prd
 
 # Hidden benchmark infrastructure remains retained and non-publishable when synthetic.
 demo=json.loads((root/'benchmarks/example-runs-v2.json').read_text())
@@ -55,15 +77,37 @@ assert {'baseline','caveman','ponytail','codemium'} <= systems
 svg=(root/'benchmarks/demo-numbers.svg').read_text()
 assert 'SYNTHETIC / DEMO DATA' in svg
 
-assert (root/'plugins/codemium/engine/reasoning_profile.py').exists()
-assert (root/'benchmarks/render_numbers.py').exists()
-print('PASS: Codex stable + Claude/Gemini beta adapters + host-agnostic positioning')
+print('PASS: v0.6 native host layouts, docs, and invocation contracts')
 PYEOF
-find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" -name '*.py' -print0 | xargs -0 python -m py_compile
+
+find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
 printf '%s\n' 'PASS: Python syntax'
+
+python "$ROOT/scripts/doctor.py" --repo "$ROOT" >/dev/null
+printf '%s\n' 'PASS: cross-host doctor'
+
 python "$ROOT/plugins/codemium/tests/test_fixture.py"
+
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
+
+# Portable installer: Cursor and OpenCode project-local install/update/uninstall.
+python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" >/dev/null
+test -f "$TMPDIR/.cursor/skills/cm/SKILL.md"
+test -f "$TMPDIR/.cursor/skills/cm/engine/project_brain.py"
+test -f "$TMPDIR/.cursor/skills/cm/.codemium-installed.json"
+python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" >/dev/null
+python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" --uninstall >/dev/null
+test ! -e "$TMPDIR/.cursor/skills/cm"
+
+python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" >/dev/null
+test -f "$TMPDIR/.opencode/skills/cm/SKILL.md"
+grep -q 'opencode/slash: "true"' "$TMPDIR/.opencode/skills/cm/SKILL.md"
+python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" --uninstall >/dev/null
+test ! -e "$TMPDIR/.opencode/skills/cm"
+printf '%s\n' 'PASS: Cursor/OpenCode portable installer lifecycle'
+
+# Synthetic benchmark remains hidden and cannot pass publication gate.
 python "$ROOT/benchmarks/render_numbers.py" "$ROOT/benchmarks/example-runs-v2.json" --svg "$TMPDIR/demo.svg" --markdown "$TMPDIR/demo.md" >/dev/null
 grep -q 'SYNTHETIC / DEMO DATA' "$TMPDIR/demo.svg"
 if python "$ROOT/benchmarks/render_numbers.py" "$ROOT/benchmarks/example-runs-v2.json" --publish --svg "$TMPDIR/publish.svg" --markdown "$TMPDIR/publish.md" >/dev/null 2>&1; then
