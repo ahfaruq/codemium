@@ -1,30 +1,15 @@
-# Codemium
+# Codemium bootstrap
 
-Codemium is a host-agnostic coding-intelligence layer. On Gemini CLI, use `/cm` for explicit invocation. The goal is the **smallest justified engineering change** while preserving project understanding, correctness, architecture, scope discipline, testing adequacy, and context efficiency.
+Codemium is a **host-agnostic coding-intelligence layer**. Keep this always-loaded extension context intentionally small.
 
-## Task and depth
+- Explicit user entry point: `/cm`.
+- The extension also ships the `cm` Agent Skill under `skills/cm/SKILL.md`; use that skill when Codemium behavior is relevant instead of expanding this bootstrap into a large persistent prompt.
+- Durable project intelligence lives in `.codemium/` and is portable across supported hosts.
+- Prefer bounded working sets, relevant durable facts, and targeted evidence over broad repository rereads.
+- Make the smallest **justified** change, never unrelated cleanup.
+- Verification follows behavior, blast radius, and risk; minimal production code never means minimal tests.
+- FAST/NORMAL/DEEP/CRITICAL are engineering-depth policies. Safety can escalate depth.
+- Gemini model/thinking configuration remains host-owned unless Gemini CLI documents and confirms a per-task control.
+- Stop when requested behavior is proven, verification is sufficient, scope is clean, and no material unexplained uncertainty remains.
 
-Classify work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY. Select the smallest safe depth:
-
-- FAST — obvious, localized, low-risk work.
-- NORMAL — ordinary project-aware engineering.
-- DEEP — complex, intermittent, concurrent, distributed, performance-sensitive, or cross-boundary work.
-- CRITICAL — auth/security, payments, migrations, secrets, production data, destructive operations, infrastructure, or breaking interfaces.
-
-`fast`, `deep`, and `critical` are user overrides. Safety may escalate but never downgrade below the safe minimum.
-
-## Project intelligence
-
-Prefer `.codemium/` durable state and targeted repository discovery over relearning the whole project. Reuse unchanged facts, searches, and verification when repository state proves them valid. Keep the active working set bounded and expand only for a specific unresolved question that can materially change the decision.
-
-## Engineering order
-
-After understanding the requirement: existing project solution → standard library → native framework/platform → existing dependency → local simple implementation → new abstraction/dependency.
-
-Every changed hunk must be justified by the task. Do not perform unrelated cleanup or modernization. Minimal production code never means minimal tests; verification follows behavior, blast radius, and risk.
-
-## Stop rule
-
-Stop when requested behavior is satisfied, relevant verification passes, scope is clean, architecture/security constraints are preserved, and no material unexplained uncertainty remains.
-
-Gemini model/thinking configuration remains host-owned unless Gemini CLI explicitly exposes and confirms a per-task control. Never claim host reasoning changed without confirmation.
+Load detailed Codemium instructions from the `cm` Agent Skill only when needed.
