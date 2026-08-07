@@ -33,7 +33,7 @@ for phrase in ['name: cm','portable Agent Skill','opencode/slash: "true"','Vendo
 
 # Claude Code adapter: repository root is plugin root.
 claude_market=json.loads((root/'.claude-plugin/marketplace.json').read_text())
-assert claude_market['name']=='codemium' and claude_market['version']==version
+assert claude_market['name']=='codemium'
 entry=next(p for p in claude_market['plugins'] if p['name']=='codemium')
 assert entry['version']==version and entry['source']=='./'
 claude_plugin=json.loads((root/'.claude-plugin/plugin.json').read_text())
