@@ -2,6 +2,12 @@
 
 Codemium uses one shared engineering core with host-native installation surfaces. The short identifier is `cm`; the invocation marker follows the host.
 
+## Prerequisites
+
+- Git for repository/extension installation where the host requires it.
+- Python 3.11+ for Codemium's deterministic engine, doctor, verification, and portable Cursor/OpenCode installer. The Agent Skill doctrine can still operate through normal host tools when a helper is unavailable, but the full deterministic optimization layer requires Python.
+- The target coding-agent host installed and authenticated according to that host's own setup.
+
 ## OpenAI Codex — Stable
 
 ```sh
@@ -22,6 +28,8 @@ $cm critical <task>
 
 Focused skills: `$cm-fix`, `$cm-test`, `$cm-review`, `$cm-audit`, `$cm-health`, `$cm-init`.
 
+Codex's explicit Agent Skill marker is `$<skill-name>`; older Codemium drafts that used `@cm` are obsolete.
+
 Upgrade the marketplace/plugin using the Codex plugin commands available in your installed Codex release, then start a fresh session if skill inventory is stale.
 
 ## Claude Code — Beta
@@ -33,7 +41,7 @@ Inside Claude Code:
 /plugin install codemium@codemium
 ```
 
-The repository root is the Claude plugin root. This is intentional: it gives Claude's skill access to the canonical Codemium engine under `plugins/codemium/engine/`.
+The repository root is the Claude plugin root. This is intentional: it gives Claude's command access to the canonical Codemium engine under `plugins/codemium/engine/`, while `skills/cm/SKILL.md` remains the shared Agent Skill source.
 
 Use:
 
@@ -45,6 +53,12 @@ Use:
 ```
 
 Claude may also auto-activate the `cm` Agent Skill when its description matches the task.
+
+Native schema validation from a checkout:
+
+```sh
+claude plugin validate . --strict
+```
 
 ## Gemini CLI — Beta
 
@@ -65,11 +79,21 @@ Use:
 /cm critical <task>
 ```
 
-To update later, use the `gemini extensions update` command supported by your installed Gemini CLI release.
+Validate the extension from a checkout:
+
+```sh
+gemini extensions validate .
+```
+
+To update later:
+
+```sh
+gemini extensions update codemium
+```
 
 ## Cursor — Beta
 
-Codemium uses Cursor's Agent Skills support.
+Codemium uses Cursor's Agent Skills support. Current Cursor releases use `agent` as the primary CLI entrypoint; `cursor-agent` remains a compatibility alias.
 
 ### User-wide
 
@@ -95,11 +119,19 @@ Target:
 <project>/.cursor/skills/cm/
 ```
 
-Cursor can discover the `cm` skill automatically. Current Cursor releases expose Agent Skills in the slash menu; use `/cm` where that UI is available.
+Cursor can discover the `cm` skill automatically and exposes skills through the slash-command UI on supported releases; use `/cm` there.
+
+Basic host check:
+
+```sh
+agent --version
+# or on older/compatibility installs
+cursor-agent --version
+```
 
 ## OpenCode — Beta
 
-Codemium uses OpenCode's Agent Skills support.
+Codemium uses OpenCode's native Agent Skills support.
 
 ### User-wide
 
@@ -125,7 +157,7 @@ Target:
 <project>/.opencode/skills/cm/
 ```
 
-The skill includes `opencode/slash: "true"` metadata. OpenCode can always advertise/load the skill through its native skill tool when permissions allow it; `/cm` is used on releases that expose skill slash invocation.
+The shared skill includes `opencode/slash: "true"` metadata. OpenCode advertises permitted skills on demand and loads the body only when selected, avoiding always-on context injection. Use `/cm` on releases that expose the skill slash catalog; otherwise let the agent load `cm` through the native skill tool.
 
 ## Portable Agent Skills path
 
@@ -165,7 +197,7 @@ python scripts/install_host.py --host cursor --scope project --project /path/to/
 
 The installer removes only directories containing Codemium's ownership marker. It refuses to delete/overwrite an unrecognized directory unless `--force` is explicitly supplied.
 
-## Verify installation source
+## Verify repository and host availability
 
 Run repository doctor:
 
@@ -183,6 +215,8 @@ python scripts/doctor.py --require-host cursor
 python scripts/doctor.py --require-host opencode
 ```
 
+The doctor recognizes Cursor's modern `agent` entrypoint and the `cursor-agent` compatibility alias.
+
 ## Initialize project intelligence
 
 Normal Codemium use may initialize `.codemium/` when durable state is useful. Manual deterministic initialization:
@@ -194,6 +228,8 @@ python plugins/codemium/engine/test_map.py build --root .
 ```
 
 Portable Cursor/OpenCode installs include copies of these engine helpers inside the installed `cm` skill directory.
+
+Project Brain deliberately keeps transient repository maps, runtime state, the active task contract, and completed task snapshots out of Git by default while leaving durable sanitized architecture/decision knowledge available to the project.
 
 ## Safety note
 
