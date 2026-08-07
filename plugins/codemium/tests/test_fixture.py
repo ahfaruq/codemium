@@ -21,7 +21,11 @@ def main():
         (r/'tests/test_session.py').write_text('from src.auth.session import refresh_session\n\ndef test_refresh_session():\n    assert refresh_session("x")["token"] == "x"\n')
         run('git','init','-q',cwd=r); run('git','config','user.email','fixture@example.com',cwd=r); run('git','config','user.name','Fixture',cwd=r); run('git','add','.',cwd=r); run('git','commit','-qm','initial',cwd=r)
         run(sys.executable,ENGINE/'project_brain.py','--root',r,'init')
-        assert (r/'.codemium/model-profile.json').exists()
+        model_profile=json.loads((r/'.codemium/model-profile.json').read_text())
+        assert model_profile['schema_version']==2
+        assert model_profile['reasoning_profiles']['FAST']['preferred_effort']=='low'
+        assert model_profile['reasoning_profiles']['CRITICAL']['preferred_effort']=='xhigh'
+
         out=json.loads(run(sys.executable,ENGINE/'project_brain.py','--root',r,'add-decision','--text','Auth sessions rotate in the auth module','--source','src/auth/session.py'))
         assert out['id']=='D0001'
         run(sys.executable,ENGINE/'repo_graph.py','build','--root',r)
@@ -32,16 +36,29 @@ def main():
 
         task=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--request','Fix auth refresh bug that logs users out'))
         assert task['type']=='FIX' and task['risk']=='high' and task['depth']=='CRITICAL'
-        forced_fast=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','fast','--request','Fix auth refresh bug that logs users out'))
+        assert task['reasoning']['preferred_effort']=='xhigh'
+
+        forced_fast=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','fast','--model','gpt-5.6-sol','--host-effort','low','--request','Fix auth refresh bug that logs users out'))
         assert forced_fast['requested_depth']=='fast' and forced_fast['depth']=='CRITICAL' and 'escalated' in forced_fast['depth_reason']
-        trivial=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--request','Change css spacing on card'))
+        assert forced_fast['reasoning']['preferred_effort']=='xhigh'
+        assert forced_fast['reasoning']['alignment']=='host_below_minimum'
+
+        trivial=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','fast','--model','gpt-5.6-sol','--host-effort','xhigh','--request','Change css spacing on card'))
         assert trivial['depth']=='FAST'
-        normal=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--request','Build profile preferences page'))
-        assert normal['depth']=='NORMAL'
-        deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--request','Investigate intermittent queue race bug'))
-        assert deep['depth']=='DEEP'
+        assert trivial['reasoning']['preferred_effort']=='low'
+        assert trivial['reasoning']['alignment']=='host_above_preferred'
+
+        normal=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--model','gpt-5.6-sol','--request','Build profile preferences page'))
+        assert normal['depth']=='NORMAL' and normal['reasoning']['preferred_effort']=='medium'
+
+        deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--model','gpt-5.6-sol','--request','Investigate intermittent queue race bug'))
+        assert deep['depth']=='DEEP' and deep['reasoning']['preferred_effort']=='high'
+
         explicit_deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','deep','--request','Build profile preferences page'))
-        assert explicit_deep['depth']=='DEEP'
+        assert explicit_deep['depth']=='DEEP' and explicit_deep['reasoning']['preferred_effort']=='high'
+
+        standalone=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','fast','--model','gpt-5.6-sol','--host-effort','xhigh'))
+        assert standalone['preferred_effort']=='low' and standalone['alignment']=='host_above_preferred'
 
         ws=json.loads(run(sys.executable,ENGINE/'working_set.py','--root',r,'--query','auth refresh session','--top','5'))
         assert any(x['path']=='src/auth/session.py' for x in ws['files'])
@@ -57,5 +74,5 @@ def main():
         assert hit['hit'] is True
         health=json.loads(run(sys.executable,ENGINE/'health.py','--root',r)); assert health['initialized'] is True
         tel=json.loads(run(sys.executable,ENGINE/'telemetry.py','--root',r)); assert 'approx_text_tokens_if_all_loaded' in tel
-    print('PASS: Codemium fixture + depth policy')
+    print('PASS: Codemium fixture + depth/reasoning policy')
 if __name__=='__main__': main()
