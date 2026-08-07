@@ -1,32 +1,98 @@
 # Codemium
 
-**Persistent coding intelligence for Codex.**
+**Persistent coding intelligence for AI coding agents.**
 
-Codemium is a Codex-first plugin for long-running software projects. It aims for the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and token efficiency.
+Codemium is a host-agnostic engineering layer for long-running software projects. It aims for the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and context efficiency.
 
 > **Positioning:** the senior engineer who already knows your codebase.
 
-## The short UX
+Codex is the first stable host. Claude Code and Gemini CLI now have native beta adapters built on the same Codemium doctrine and `.codemium/` project state.
 
-The primary tag is intentionally tiny:
+## Supported hosts
+
+| Host | Status | Native integration | Primary invocation |
+| --- | --- | --- | --- |
+| OpenAI Codex | **Stable** | Codex plugin + Agent Skills | `@cm` |
+| Claude Code | **Beta** | Claude plugin + Agent Skill + command | auto skill or `/codemium:cm` |
+| Gemini CLI | **Beta** | Gemini extension + context + command | `/cm` |
+| Cursor | Planned | host adapter | TBD |
+| OpenCode | Planned | host adapter | TBD |
+
+See [`HOSTS.md`](HOSTS.md) for the adapter contract.
+
+## One core, native adapters
 
 ```text
-@cm
+                         CODEMIUM
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+     Project Brain     Engineering Core   Shared State
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            │
+               ┌────────────┼────────────┐
+               │            │            │
+             Codex      Claude Code   Gemini CLI
+               │            │            │
+             @cm      /codemium:cm      /cm
 ```
 
-That is the normal/default experience. Codemium automatically detects both the coding task and the engineering depth.
+The host may change the invocation syntax, plugin format, model controls, and tool surface. It must not change Codemium's engineering invariants.
 
-Optional depth overrides:
+## Core behavior
 
-```text
-@cm fast
-@cm deep
-@cm critical
+Codemium classifies each task as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY, then selects the smallest safe engineering depth:
+
+| Depth | Meaning |
+| --- | --- |
+| FAST | obvious, localized, low-risk work |
+| NORMAL | ordinary project-aware engineering |
+| DEEP | complex, cross-boundary, intermittent, concurrency/performance work |
+| CRITICAL | auth/security, payments, migrations, production data, destructive or breaking changes |
+
+Safety may **escalate** depth but never downgrade below the safe minimum.
+
+Codemium then applies:
+
+- **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs;
+- **Repository Intelligence** — lightweight file/symbol/import/test discovery;
+- **Working Set Engine** — only context relevant to the current task;
+- **Scope Guard** — no unrelated edits or opportunistic cleanup;
+- **Impact & Test Intelligence** — verification follows behavior and blast radius;
+- **Read/Search Reuse** — unchanged deterministic work is not paid for twice;
+- **Stop Engine** — stop once the requested result is sufficiently proven.
+
+## Engineering doctrine
+
+After the real requirement is understood:
+
+1. Is the behavior actually required?
+2. Does the project already solve it?
+3. Does the standard library solve it?
+4. Does the native framework/platform solve it?
+5. Does an existing dependency solve it?
+6. Can a local simple implementation solve it?
+7. Only then add a new abstraction or dependency.
+
+The goal is **minimum justified engineering**, not minimum LOC. Minimal production code never means minimal testing.
+
+---
+
+# OpenAI Codex
+
+Codex is currently the stable/reference adapter.
+
+## Install
+
+```sh
+codex plugin marketplace add admahmad/codemium --ref main
+codex plugin add codemium@codemium
 ```
 
-There is deliberately no need to type `normal`; plain `@cm` is auto mode and will usually resolve to NORMAL for ordinary work.
+Start a fresh Codex task after installation.
 
-Examples:
+## Use
 
 ```text
 @cm fix the profile save bug
@@ -35,7 +101,7 @@ Examples:
 @cm critical change the authentication flow
 ```
 
-Focused shortcuts are available when you want to pin the task type:
+Focused shortcuts remain available:
 
 ```text
 @cm-fix
@@ -46,108 +112,77 @@ Focused shortcuts are available when you want to pin the task type:
 @cm-init
 ```
 
-Focused shortcuts can also receive a depth override when it makes sense:
+### Codex reasoning profile
+
+The Codex adapter currently derives a preferred GPT reasoning effort when the active model supports these labels:
+
+| Codemium depth | Preferred Codex reasoning |
+| --- | --- |
+| FAST | `low` |
+| NORMAL | `medium` |
+| DEEP | `high` |
+| CRITICAL | `xhigh` |
+
+This is a **preference**, not proof that the host changed. Codemium never silently rewrites global Codex settings and never claims a reasoning change unless the runtime confirms it.
+
+---
+
+# Claude Code
+
+Claude Code support is **beta** and uses its native plugin/Agent Skill model.
+
+## Install
+
+Inside Claude Code:
 
 ```text
-@cm-fix deep
-@cm-test critical
-@cm-review deep
+/plugin marketplace add admahmad/codemium
+/plugin install codemium@codemium
 ```
 
-## Depth + reasoning profile
+## Use
 
-Depth controls engineering investigation/context/verification. Codemium also derives a **preferred reasoning effort** for the effective depth:
-
-| Codemium depth | Preferred reasoning | Typical use |
-| --- | --- | --- |
-| FAST | `low` | obvious localized low-risk work |
-| NORMAL | `medium` | ordinary project-aware engineering |
-| DEEP | `high` | complex, cross-boundary, intermittent, concurrency/performance work |
-| CRITICAL | `xhigh` | auth/security, payments, migrations, production data, destructive or breaking changes |
-
-For GPT-5.6 Sol/Terra/Luna these effort labels are supported. GPT-5.6 also supports `max`, but Codemium does **not** make `max` the automatic CRITICAL default. Use it only for the hardest quality-first workloads after representative benchmarks show a material gain over `xhigh`.
-
-### Important host-control rule
-
-`@cm fast` does not magically rewrite the current Codex model selector.
-
-Codemium treats reasoning as a per-task preference:
-
-1. resolve the effective depth;
-2. resolve preferred/minimum reasoning effort;
-3. if the Codex runtime exposes confirmed safe **per-task** effort control, request it;
-4. otherwise keep the host setting and apply Codemium's bounded-context/tool/verification policy;
-5. never silently rewrite global Codex configuration;
-6. never claim reasoning changed unless the runtime confirms the effective setting.
-
-So if the current host is GPT-5.6 Sol `xhigh` and you run:
+Claude can trigger the installed `cm` skill from the task naturally. For explicit invocation:
 
 ```text
-@cm fast adjust card padding
+/codemium:cm fix the profile save bug
+/codemium:cm fast adjust card spacing
+/codemium:cm deep investigate the intermittent queue race
+/codemium:cm critical change authorization behavior
 ```
 
-Codemium resolves:
+The Claude adapter preserves Codemium depth and engineering policy but does **not** claim to modify Claude's thinking/model settings.
 
-```text
-Depth: FAST
-Preferred reasoning: low
-Host: xhigh
-Alignment: host_above_preferred
-```
+---
 
-The orchestration becomes FAST immediately. The model effort only changes if the host supports and confirms that per-task switch.
+# Gemini CLI
 
-Safety escalation always wins. For example:
-
-```text
-@cm fast change authentication flow
-```
-
-resolves to:
-
-```text
-Depth: CRITICAL
-Preferred reasoning: xhigh
-```
-
-## Why Codemium
-
-Coding agents often pay repeatedly for the same understanding: rereading unchanged files, rediscovering architecture, repeating searches/tests, carrying stale conversation history, creating abstractions that the project already solved, or touching nearby code outside the task.
-
-Codemium turns a repository into persistent engineering memory:
-
-- **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs.
-- **Repository Intelligence** — lightweight file/symbol/import/test graph built deterministically.
-- **Task Compiler** — detects BUILD/FIX/TEST/REFACTOR/REVIEW/MIGRATION/SECURITY plus FAST/NORMAL/DEEP/CRITICAL depth and reasoning profile.
-- **Working Set Engine** — ranks only files and project knowledge relevant to the task.
-- **Scope Guard** — detects files changed outside the allowed surface.
-- **Impact Engine** — estimates affected code/tests and blast radius.
-- **Test Intelligence** — testing follows behavior and risk, never production-code minimalism.
-- **Reasoning Profile Engine** — maps effective depth to preferred/minimum effort and compares it with a known host setting.
-- **Read/Search Cache** — reuses deterministic work when repository state has not changed.
-- **Stop Engine** — stops once requested behavior is proven and material uncertainty is resolved.
-- **Model capability abstraction** — no permanent dependency on one GPT generation.
+Gemini CLI support is **beta** and uses its native extension format.
 
 ## Install
 
 ```sh
-codex plugin marketplace add admahmad/codemium --ref main
-codex plugin add codemium@codemium
+gemini extensions install https://github.com/admahmad/codemium --ref main
 ```
 
-Start a fresh Codex task after installation, then use `@cm`.
+Restart/reload the CLI as required by Gemini CLI after extension changes.
 
-## Initialize a project
+## Use
 
-`@cm` may initialize project intelligence when `.codemium/` is missing and durable state creates value. Manual initialization is also available with `@cm-init` or the deterministic helpers:
-
-```sh
-python <plugin-dir>/engine/project_brain.py init --root .
-python <plugin-dir>/engine/repo_graph.py build --root .
-python <plugin-dir>/engine/test_map.py build --root .
+```text
+/cm fix the profile save bug
+/cm fast adjust card spacing
+/cm deep investigate the intermittent queue race
+/cm critical change authorization behavior
 ```
 
-Project state:
+The command accepts the rest of the line as its task arguments. The Gemini adapter preserves Codemium depth and engineering policy but does **not** claim to modify Gemini thinking/model settings.
+
+---
+
+## Shared project state
+
+All supported adapters use the same durable project namespace:
 
 ```text
 .codemium/
@@ -172,59 +207,19 @@ Project state:
     └── snapshots/
 ```
 
-## Task compiler
+A project initialized under one supported host should remain understandable to another adapter. Durable project knowledge belongs to the project, not to a model vendor.
 
-The deterministic task compiler mirrors the tag behavior:
+## Deterministic engine
 
-```sh
-python <plugin-dir>/engine/task_compiler.py \
-  --root . \
-  --request "Investigate intermittent queue race bug"
-```
+The current shared engine lives under `plugins/codemium/engine/` while the multi-host adapter layout stabilizes. It owns Project Brain, repository mapping, task compilation, impact analysis, scope checks, cache reuse, telemetry, and Codex reasoning-profile alignment.
 
-Explicit depth plus known host profile:
+Example:
 
 ```sh
-python <plugin-dir>/engine/task_compiler.py \
-  --root . \
-  --depth fast \
-  --model gpt-5.6-sol \
-  --host-effort xhigh \
-  --request "Adjust card padding"
+python plugins/codemium/engine/project_brain.py --root . init
+python plugins/codemium/engine/repo_graph.py build --root .
+python plugins/codemium/engine/test_map.py build --root .
 ```
-
-Standalone reasoning alignment:
-
-```sh
-python <plugin-dir>/engine/reasoning_profile.py \
-  --depth fast \
-  --model gpt-5.6-sol \
-  --host-effort xhigh
-```
-
-Supported depth overrides are `auto`, `fast`, `deep`, and `critical`. NORMAL is an internal auto-selected depth.
-
-## Engineering doctrine
-
-Codemium uses this solution ladder **after** the problem is understood:
-
-1. Is the requested behavior actually required?
-2. Does the codebase already solve it?
-3. Does the standard library solve it?
-4. Does the native platform/framework solve it?
-5. Does an existing dependency solve it?
-6. Can a local simple implementation solve it?
-7. Only then add a new abstraction or dependency.
-
-The center of gravity is **minimum justified engineering**, not minimum LOC.
-
-## Testing is not minimized
-
-Production-code minimalism must never be used as a reason to under-test. Verification depth follows blast radius and risk, from targeted local checks through subsystem/full/runtime verification where justified.
-
-## Token claims
-
-Codemium does **not** invent exact token savings. If the host exposes real token usage, benchmark it. Otherwise Codemium reports deterministic proxies such as working-set size, duplicate operations, repeated reads, test reuse, and persistent-state footprint.
 
 ## Validate this repository
 
@@ -240,7 +235,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.4.0` continues the short `@cm` UX, adaptive reasoning profiles, persistent project intelligence, scoped engineering, and risk-aware verification.
+`v0.5.0` introduces the host-adapter architecture: Codex stable, Claude Code beta, Gemini CLI beta, one shared Codemium engineering doctrine and project state.
 
 ## License
 
