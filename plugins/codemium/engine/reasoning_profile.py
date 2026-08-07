@@ -28,7 +28,7 @@ KNOWN_CODEX_MODELS = {
     'gpt-5.3-codex': ['low', 'medium', 'high', 'xhigh'],
     'gpt-5.2-codex': ['low', 'medium', 'high', 'xhigh'],
 }
-HOSTS = {'generic', 'codex', 'claude-code', 'gemini-cli'}
+HOSTS = {'generic', 'codex', 'claude-code', 'gemini-cli', 'cursor', 'opencode'}
 
 
 def rank(effort: str) -> int:
