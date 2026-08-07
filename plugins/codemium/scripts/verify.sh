@@ -18,10 +18,12 @@ for folder,phrase in expected.items():
 readme=(root/'README.md').read_text()
 assert '@cm' in readme and '$codemium:' not in readme
 assert 'FAST | `low`' in readme and 'CRITICAL | `xhigh`' in readme
-assert '## Numbers' in readme
+assert '## Numbers' not in readme
+assert 'benchmarks/demo-numbers.svg' not in readme
 assert 'Ponytail-style' not in readme
-for phrase in ['**baseline**','**caveman**','**ponytail**','**codemium**']:
-    assert phrase in readme, phrase
+manifest_text=(root/'plugins/codemium/.codex-plugin/plugin.json').read_text().lower()
+assert 'benchmark dashboard' not in manifest_text
+# Benchmark infrastructure remains available for later measured publication.
 demo=json.loads((root/'benchmarks/example-runs-v2.json').read_text())
 systems={r['system'] for r in demo['runs']}
 assert {'baseline','caveman','ponytail','codemium'} <= systems
@@ -32,7 +34,7 @@ assert (root/'plugins/codemium/engine/reasoning_profile.py').exists()
 assert (root/'plugins/codemium/skills/codemium/references/reasoning-policy.md').exists()
 assert (root/'benchmarks/render_numbers.py').exists()
 assert (root/'VERSION').read_text().strip()=='0.4.0'
-print('PASS: manifests, @cm, competitive Numbers framing, and core doctrine')
+print('PASS: public Numbers hidden; benchmark engine retained; @cm doctrine valid')
 PYEOF
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" -name '*.py' -print0 | xargs -0 python -m py_compile
 printf '%s\n' 'PASS: Python syntax'
@@ -48,5 +50,5 @@ if python "$ROOT/benchmarks/render_numbers.py" "$ROOT/benchmarks/example-runs-v2
   echo 'FAIL: synthetic benchmark passed publication gate' >&2
   exit 1
 fi
-printf '%s\n' 'PASS: competitive renderer + synthetic publication gate'
+printf '%s\n' 'PASS: hidden benchmark engine + synthetic publication gate'
 printf '%s\n' 'ALL CHECKS PASSED'
