@@ -1,9 +1,9 @@
 ---
 name: cm-test
-description: "Short Codemium testing tag: sufficient behavioral, edge-case, and failure-mode coverage with adaptive depth and no production-code minimalism applied to justified tests."
+description: "Short Codemium testing skill: sufficient behavioral, edge-case, and failure-mode coverage with adaptive depth and no production-code minimalism applied to justified tests."
 ---
 
-# @cm-test
+# $cm-test
 
 Pin task type to TEST. Accept `fast`, `deep`, or `critical` as optional depth requests; otherwise auto-select depth from behavior and risk.
 
