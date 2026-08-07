@@ -5,15 +5,22 @@ import argparse
 import json
 from typing import Iterable
 
-EFFORT_ORDER = ['none', 'low', 'medium', 'high', 'xhigh', 'max']
-DEPTH_PROFILE = {
-    'FAST': {'preferred_effort': 'low', 'minimum_effort': 'low', 'reason': 'latency/token-sensitive localized work'},
-    'NORMAL': {'preferred_effort': 'medium', 'minimum_effort': 'low', 'reason': 'balanced project-aware engineering'},
-    'DEEP': {'preferred_effort': 'high', 'minimum_effort': 'medium', 'reason': 'complex or cross-boundary reasoning'},
-    'CRITICAL': {'preferred_effort': 'xhigh', 'minimum_effort': 'high', 'reason': 'quality-first high-risk engineering'},
+GENERIC_CLASS_ORDER = ['economy', 'balanced', 'strong', 'frontier']
+GENERIC_DEPTH_PROFILE = {
+    'FAST': {'preferred_class': 'economy', 'minimum_class': 'economy', 'reason': 'localized low-risk engineering'},
+    'NORMAL': {'preferred_class': 'balanced', 'minimum_class': 'economy', 'reason': 'ordinary project-aware engineering'},
+    'DEEP': {'preferred_class': 'strong', 'minimum_class': 'balanced', 'reason': 'complex or cross-boundary engineering'},
+    'CRITICAL': {'preferred_class': 'frontier', 'minimum_class': 'strong', 'reason': 'quality-first high-risk engineering'},
 }
 
-KNOWN_MODELS = {
+EFFORT_ORDER = ['none', 'low', 'medium', 'high', 'xhigh', 'max']
+CODEX_CLASS_TO_EFFORT = {
+    'economy': 'low',
+    'balanced': 'medium',
+    'strong': 'high',
+    'frontier': 'xhigh',
+}
+KNOWN_CODEX_MODELS = {
     'gpt-5.6': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-terra': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
@@ -21,6 +28,7 @@ KNOWN_MODELS = {
     'gpt-5.3-codex': ['low', 'medium', 'high', 'xhigh'],
     'gpt-5.2-codex': ['low', 'medium', 'high', 'xhigh'],
 }
+HOSTS = {'generic', 'codex', 'claude-code', 'gemini-cli'}
 
 
 def rank(effort: str) -> int:
@@ -34,10 +42,10 @@ def nearest_supported(target: str, supported: Iterable[str]) -> str | None:
     return min(values, key=lambda x: (abs(rank(x) - rank(target)), rank(x)))
 
 
-def alignment(host_effort: str | None, preferred: str, minimum: str) -> str:
-    if not host_effort:
-        return 'host_unknown'
-    if host_effort not in EFFORT_ORDER:
+def alignment(host_effort: str | None, preferred: str | None, minimum: str | None) -> str:
+    if preferred is None or minimum is None:
+        return 'host_owned'
+    if not host_effort or host_effort not in EFFORT_ORDER:
         return 'host_unknown'
     if rank(host_effort) < rank(minimum):
         return 'host_below_minimum'
@@ -48,43 +56,80 @@ def alignment(host_effort: str | None, preferred: str, minimum: str) -> str:
     return 'host_within_safe_range'
 
 
-def resolve_reasoning_profile(depth: str, model: str | None = None, host_effort: str | None = None) -> dict:
+def infer_host(host: str | None, model: str | None) -> str:
+    if host:
+        normalized = host.lower()
+        if normalized not in HOSTS:
+            raise ValueError(f'unknown host: {host}')
+        return normalized
+    m = (model or '').lower()
+    if m.startswith('gpt-'):
+        return 'codex'
+    return 'generic'
+
+
+def resolve_reasoning_profile(
+    depth: str,
+    model: str | None = None,
+    host_effort: str | None = None,
+    host: str | None = None,
+) -> dict:
     depth = depth.upper()
-    if depth not in DEPTH_PROFILE:
+    if depth not in GENERIC_DEPTH_PROFILE:
         raise ValueError(f'unknown depth: {depth}')
-    base = DEPTH_PROFILE[depth]
-    preferred = base['preferred_effort']
-    minimum = base['minimum_effort']
-    supported = KNOWN_MODELS.get((model or '').lower())
-    model_known = supported is not None
-    requested = nearest_supported(preferred, supported) if supported else preferred
-    min_supported = nearest_supported(minimum, supported) if supported else minimum
-    if supported and requested and min_supported and rank(requested) < rank(min_supported):
-        requested = min_supported
+    base = GENERIC_DEPTH_PROFILE[depth]
+    resolved_host = infer_host(host, model)
+    preferred_effort = None
+    minimum_effort = None
+    requested_effort = None
+    model_known = False
+
+    if resolved_host == 'codex':
+        target = CODEX_CLASS_TO_EFFORT[base['preferred_class']]
+        minimum_target = CODEX_CLASS_TO_EFFORT[base['minimum_class']]
+        supported = KNOWN_CODEX_MODELS.get((model or '').lower())
+        model_known = supported is not None
+        preferred_effort = nearest_supported(target, supported) if supported else target
+        minimum_effort = nearest_supported(minimum_target, supported) if supported else minimum_target
+        if preferred_effort and minimum_effort and rank(preferred_effort) < rank(minimum_effort):
+            preferred_effort = minimum_effort
+        requested_effort = preferred_effort
+        control = 'advisory_unless_runtime_confirms_per_task_control'
+        note = 'Do not claim Codex reasoning changed unless the runtime confirms the effective setting.'
+    else:
+        control = 'host_owned_unless_documented_per_task_control'
+        note = 'Engineering depth is portable; vendor reasoning controls remain host-owned unless documented and confirmed.'
+
     return {
         'depth': depth,
+        'reasoning_class': base['preferred_class'],
+        'minimum_reasoning_class': base['minimum_class'],
+        'host': resolved_host,
         'model': model,
         'model_capabilities_known': model_known,
-        'preferred_effort': requested,
-        'minimum_effort': min_supported,
+        'preferred_effort': preferred_effort,
+        'minimum_effort': minimum_effort,
         'host_effort': host_effort,
-        'alignment': alignment(host_effort, requested, min_supported),
-        'host_control': 'advisory_unless_runtime_confirms_per_task_control',
-        'requested_effort': requested,
+        'alignment': alignment(host_effort, preferred_effort, minimum_effort),
+        'host_control': control,
+        'requested_effort': requested_effort,
         'reason': base['reason'],
-        'note': 'Do not claim the host effort changed unless the Codex runtime confirms the effective setting.',
+        'note': note,
     }
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument('--depth', required=True, choices=['fast', 'normal', 'deep', 'critical'])
+    ap.add_argument('--host', choices=sorted(HOSTS))
     ap.add_argument('--model')
     ap.add_argument('--host-effort', choices=EFFORT_ORDER)
     ap.add_argument('--emit-responses-api', action='store_true')
     ns = ap.parse_args()
-    profile = resolve_reasoning_profile(ns.depth, ns.model, ns.host_effort)
+    profile = resolve_reasoning_profile(ns.depth, ns.model, ns.host_effort, ns.host)
     if ns.emit_responses_api:
+        if profile['host'] != 'codex' or not profile['requested_effort']:
+            raise SystemExit('--emit-responses-api is only available for a Codex reasoning profile')
         profile['responses_api'] = {'reasoning': {'effort': profile['requested_effort']}}
     print(json.dumps(profile, indent=2))
 
