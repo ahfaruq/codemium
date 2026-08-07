@@ -1,11 +1,11 @@
 ---
 name: cm-fix
-description: "Short Codemium bug-fix tag: root-cause-first fixing with bounded project context, sufficient regression evidence, scope control, and adaptive depth."
+description: "Short Codemium bug-fix skill: root-cause-first fixing with bounded project context, sufficient regression evidence, scope control, and adaptive depth."
 ---
 
-# @cm-fix
+# $cm-fix
 
-Pin task type to FIX. If the first modifier is `fast`, `deep`, or `critical`, treat it as the requested depth; otherwise auto-select depth using the same policy as `@cm`.
+Pin task type to FIX. If the first modifier is `fast`, `deep`, or `critical`, treat it as the requested depth; otherwise auto-select depth using the same policy as `$cm`.
 
 Priorities: reproduce or establish evidence → trace execution/call path → root cause → smallest shared correct fix → regression tests → impact/scope verification.
 
