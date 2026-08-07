@@ -1,8 +1,10 @@
 ---
-name: test
-description: "Codemium test mode: build sufficient behavioral, edge-case, and failure-mode coverage without applying production-code minimalism to test count."
+name: cm-test
+description: "Short Codemium testing tag: sufficient behavioral, edge-case, and failure-mode coverage with adaptive depth and no production-code minimalism applied to justified tests."
 ---
 
-# Codemium Test
+# @cm-test
 
-Tests are evidence, not code-volume waste. Identify the behavioral surface, risk, boundaries, likely regressions, and failure modes. Reuse project test patterns and helpers, but add as many distinct cases as are justified. Avoid duplicate cases that prove the same condition with no added confidence.
+Pin task type to TEST. Accept `fast`, `deep`, or `critical` as optional depth requests; otherwise auto-select depth from behavior and risk.
+
+Tests are evidence, not code-volume waste. Identify behavioral surface, boundaries, likely regressions, failure modes, and risk. Reuse project test patterns/helpers, but add as many distinct cases as justified. Avoid duplicate cases that prove the same condition with no added confidence. A lower requested depth cannot bypass security, migration, payment, data-integrity, or other safety requirements.

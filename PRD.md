@@ -8,6 +8,62 @@ Codemium is a persistent coding intelligence layer for Codex that makes an AI ag
 
 As project complexity grows, durable project knowledge may grow, but active task context should remain bounded. Correctness, architecture consistency, security, testing adequacy, and scope integrity must remain at or above baseline before token/latency/LOC improvements count as wins.
 
+## User interface
+
+The primary invocation is deliberately short:
+
+```text
+@cm
+```
+
+Plain `@cm` means automatic task classification and automatic engineering depth. Optional user overrides are:
+
+```text
+@cm fast
+@cm deep
+@cm critical
+```
+
+NORMAL is intentionally not required as a typed mode; it is the ordinary internal default selected by auto mode.
+
+Focused task shortcuts:
+
+```text
+@cm-fix
+@cm-test
+@cm-review
+@cm-audit
+@cm-health
+@cm-init
+```
+
+## Two-axis orchestration
+
+Codemium separates **what work is being done** from **how deeply it must be investigated and verified**.
+
+Task axis:
+
+- BUILD
+- FIX
+- TEST
+- REFACTOR
+- REVIEW
+- MIGRATION
+- SECURITY
+
+Depth axis:
+
+- FAST — narrow, localized, low-risk work.
+- NORMAL — default project-aware engineering.
+- DEEP — complex, cross-boundary, distributed, concurrent, performance-sensitive, or uncertain work.
+- CRITICAL — security/trust-boundary, auth, payments, migrations, secrets, production data, destructive operations, infrastructure/deployment, or breaking public interfaces.
+
+Depth is an orchestration policy, not a guarantee that the Codex host changes the underlying model reasoning setting.
+
+## Safety floor
+
+A user override may increase depth but cannot reduce the minimum safe depth. A request such as `@cm fast` on authentication, payments, migrations, or other critical surfaces must automatically escalate.
+
 ## Core systems
 
 ### Project Brain
@@ -17,7 +73,7 @@ Stores sanitized durable facts: project charter, architecture, decisions, constr
 Builds deterministic maps of files, symbols, imports, and likely tests. Frontier reasoning should consume selected evidence, not crawl the repository blindly.
 
 ### Task Compiler
-Transforms user intent into BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY task contracts with objective, scope, expected behavior, acceptance, risk, and change policy.
+Transforms user intent into a task contract with task type, objective, scope, expected behavior, acceptance, risk, change policy, requested depth, effective depth, and escalation reason.
 
 ### Working Set Engine
 Ranks candidate files and durable knowledge for the task. Context expands only when material uncertainty identifies a specific missing fact.
@@ -39,7 +95,7 @@ Core policies are model-independent. New model generations are promoted only aft
 
 ## Task lifecycle
 
-User request → task contract → project state lookup → working set → investigation → root cause/design → implementation → diff inspection → impact analysis → risk-based verification → scope guard → durable memory update → stop.
+User request → task/depth contract → project state lookup → working set → investigation → root cause/design → implementation → diff inspection → impact analysis → depth/risk-based verification → scope guard → durable memory update → stop.
 
 ## Success metrics
 
@@ -52,10 +108,6 @@ User request → task contract → project state lookup → working set → inve
 - active context grows slower than total project knowledge across long-running project benchmarks;
 - token savings are reported only from actual host telemetry or clearly labeled proxies.
 
-## MVP scope
-
-Project Brain, repository map, task compiler, working set, task modes, scope guard, impact mapping, test mapping, read/search cache, stop doctrine, health/telemetry, plugin packaging, verification tests.
-
 ## Non-goals
 
-Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, full AST language server, replacement for CI, or license to skip tests/security. It does not automatically refactor unrelated code and does not bind permanently to one model generation.
+Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, replacement for CI, or license to skip tests/security. FAST does not mean careless. CRITICAL does not mean loading the entire repository. Codemium does not bind permanently to one model generation.

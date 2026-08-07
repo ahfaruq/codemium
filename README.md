@@ -2,26 +2,85 @@
 
 **Persistent coding intelligence for Codex.**
 
-Codemium is a Codex-first plugin for long-running software projects. Its goal is not the fewest lines of code or the shortest prompt. Its goal is the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and token efficiency.
+Codemium is a Codex-first plugin for long-running software projects. It aims for the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and token efficiency.
 
 > **Positioning:** the senior engineer who already knows your codebase.
+
+## The short UX
+
+The primary tag is intentionally tiny:
+
+```text
+@cm
+```
+
+That is the normal/default experience. Codemium automatically detects both the coding task and the engineering depth.
+
+Optional depth overrides:
+
+```text
+@cm fast
+@cm deep
+@cm critical
+```
+
+There is deliberately no need to type `normal`; plain `@cm` is auto mode and will usually resolve to NORMAL for ordinary work.
+
+Examples:
+
+```text
+@cm fix the profile save bug
+@cm fast adjust the card spacing
+@cm deep investigate why the websocket disconnects intermittently
+@cm critical change the authentication flow
+```
+
+Focused shortcuts are available when you want to pin the task type:
+
+```text
+@cm-fix
+@cm-test
+@cm-review
+@cm-audit
+@cm-health
+@cm-init
+```
+
+Focused shortcuts can also receive a depth override when it makes sense:
+
+```text
+@cm-fix deep
+@cm-test critical
+@cm-review deep
+```
+
+## Depth model
+
+Depth controls **engineering investigation and verification depth**, not a promise to switch the host model's reasoning setting.
+
+- **FAST** — obvious, localized, low-risk work; narrow context and targeted verification.
+- **NORMAL** — default project-aware engineering for ordinary tasks.
+- **DEEP** — complex debugging, concurrency, distributed/cross-boundary behavior, performance, or material uncertainty.
+- **CRITICAL** — authentication/authorization, payments, migrations, secrets, production data, destructive operations, infrastructure/deployment, or breaking public interfaces.
+
+Explicit depth can increase rigor, but it cannot lower the safety floor. For example, `@cm fast` on an authentication change is automatically escalated to CRITICAL.
 
 ## Why Codemium
 
 Coding agents often pay repeatedly for the same understanding: rereading unchanged files, rediscovering architecture, repeating searches/tests, carrying stale conversation history, creating abstractions that the project already solved, or touching nearby code outside the task.
 
-Codemium turns a repository into a persistent engineering memory:
+Codemium turns a repository into persistent engineering memory:
 
 - **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs.
 - **Repository Intelligence** — lightweight file/symbol/import/test graph built deterministically.
-- **Task Compiler** — converts requests into scoped BUILD/FIX/TEST/REFACTOR/REVIEW/MIGRATION/SECURITY contracts.
-- **Working Set Engine** — ranks only the files and project knowledge relevant to the current task.
-- **Scope Guard** — detects files changed outside the task's allowed surface.
-- **Impact Engine** — estimates callers, related tests, interfaces, and blast radius.
-- **Test Intelligence** — maps changed source to likely tests; testing depth follows risk, not code minimalism.
+- **Task Compiler** — detects BUILD/FIX/TEST/REFACTOR/REVIEW/MIGRATION/SECURITY plus FAST/NORMAL/DEEP/CRITICAL depth.
+- **Working Set Engine** — ranks only files and project knowledge relevant to the task.
+- **Scope Guard** — detects files changed outside the allowed surface.
+- **Impact Engine** — estimates affected code/tests and blast radius.
+- **Test Intelligence** — testing follows behavior and risk, never production-code minimalism.
 - **Read/Search Cache** — reuses deterministic work when repository state has not changed.
-- **Stop Engine doctrine** — stop once the requested behavior is proven and material uncertainty is resolved.
-- **Model capability abstraction** — no permanent dependency on a specific GPT generation.
+- **Stop Engine** — stops once requested behavior is proven and material uncertainty is resolved.
+- **Model capability abstraction** — no permanent dependency on one GPT generation.
 
 ## Install
 
@@ -30,28 +89,11 @@ codex plugin marketplace add admahmad/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
-Start a fresh Codex task after installation.
-
-Use the primary skill:
-
-```text
-Use $codemium:codemium for this coding task.
-```
-
-Or a focused skill:
-
-```text
-$codemium:init
-$codemium:fix
-$codemium:test
-$codemium:review
-$codemium:audit
-$codemium:health
-```
+Start a fresh Codex task after installation, then use `@cm`.
 
 ## Initialize a project
 
-From the target repository root:
+`@cm` may initialize project intelligence when `.codemium/` is missing and durable state creates value. Manual initialization is also available with `@cm-init` or the deterministic helpers:
 
 ```sh
 python <plugin-dir>/engine/project_brain.py init --root .
@@ -59,7 +101,7 @@ python <plugin-dir>/engine/repo_graph.py build --root .
 python <plugin-dir>/engine/test_map.py build --root .
 ```
 
-This creates `.codemium/`. Runtime/generated data is ignored by default; durable project knowledge can be reviewed and committed if the team wants it shared.
+Project state:
 
 ```text
 .codemium/
@@ -83,33 +125,26 @@ This creates `.codemium/`. Runtime/generated data is ignored by default; durable
     └── snapshots/
 ```
 
-## Example workflow
+## Task compiler
+
+The deterministic task compiler mirrors the tag behavior:
 
 ```sh
-# 1. Compile a user request into a task contract
 python <plugin-dir>/engine/task_compiler.py \
   --root . \
-  --request "Customer receives two emails after one order completes"
-
-# 2. Build/update repository intelligence
-python <plugin-dir>/engine/repo_graph.py build --root .
-
-# 3. Generate a bounded working set
-python <plugin-dir>/engine/working_set.py \
-  --root . \
-  --query "duplicate order email notification" \
-  --top 12
-
-# 4. After edits, inspect blast radius
-python <plugin-dir>/engine/impact.py --root . --git-diff
-
-# 5. Check for scope pollution
-python <plugin-dir>/engine/scope_guard.py --root .
-
-# 6. Project health / deterministic telemetry
-python <plugin-dir>/engine/health.py --root .
-python <plugin-dir>/engine/telemetry.py --root .
+  --request "Investigate intermittent queue race bug"
 ```
+
+Explicit override:
+
+```sh
+python <plugin-dir>/engine/task_compiler.py \
+  --root . \
+  --depth deep \
+  --request "Investigate intermittent queue race bug"
+```
+
+Supported CLI overrides are `auto`, `fast`, `deep`, and `critical`. NORMAL is an internal auto-selected depth.
 
 ## Engineering doctrine
 
@@ -123,18 +158,11 @@ Codemium uses this solution ladder **after** the problem is understood:
 6. Can a local simple implementation solve it?
 7. Only then add a new abstraction or dependency.
 
-The center of gravity is **minimum justified engineering**, not minimum LOC. A 25-line correct change is better than a 5-line fragile change.
+The center of gravity is **minimum justified engineering**, not minimum LOC.
 
 ## Testing is not minimized
 
-Production-code minimalism must never be used as a reason to under-test. Codemium selects verification by blast radius and risk:
-
-- V0 — reasoning-only for genuinely trivial/non-behavioral changes
-- V1 — syntax/lint/type checks
-- V2 — targeted tests
-- V3 — subsystem/integration tests
-- V4 — full build/test boundary
-- V5 — runtime/E2E/environment verification
+Production-code minimalism must never be used as a reason to under-test. Verification depth follows blast radius and risk, from targeted local checks through subsystem/full/runtime verification where justified.
 
 ## Token claims
 
@@ -154,7 +182,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.1.0` is an MVP focused on persistent project intelligence, bounded task context, task-aware engineering policy, scope control, impact/test mapping, deterministic reuse, and evidence-backed stopping.
+`v0.2.0` adds the short `@cm` UX and adaptive FAST/NORMAL/DEEP/CRITICAL engineering depth on top of the v0.1 project-intelligence MVP.
 
 ## License
 

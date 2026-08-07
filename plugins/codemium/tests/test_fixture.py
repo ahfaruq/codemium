@@ -29,8 +29,20 @@ def main():
         assert graph['file_count']==3
         assert any('refresh_session' in f['symbols'] for f in graph['files'])
         run(sys.executable,ENGINE/'test_map.py','build','--root',r)
+
         task=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--request','Fix auth refresh bug that logs users out'))
-        assert task['type']=='FIX' and task['risk']=='high'
+        assert task['type']=='FIX' and task['risk']=='high' and task['depth']=='CRITICAL'
+        forced_fast=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','fast','--request','Fix auth refresh bug that logs users out'))
+        assert forced_fast['requested_depth']=='fast' and forced_fast['depth']=='CRITICAL' and 'escalated' in forced_fast['depth_reason']
+        trivial=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--request','Change css spacing on card'))
+        assert trivial['depth']=='FAST'
+        normal=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--request','Build profile preferences page'))
+        assert normal['depth']=='NORMAL'
+        deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--request','Investigate intermittent queue race bug'))
+        assert deep['depth']=='DEEP'
+        explicit_deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','deep','--request','Build profile preferences page'))
+        assert explicit_deep['depth']=='DEEP'
+
         ws=json.loads(run(sys.executable,ENGINE/'working_set.py','--root',r,'--query','auth refresh session','--top','5'))
         assert any(x['path']=='src/auth/session.py' for x in ws['files'])
         (r/'src/auth/session.py').write_text('def refresh_session(token):\n    if not token:\n        raise ValueError("token required")\n    return {"token": token}\n')
@@ -45,5 +57,5 @@ def main():
         assert hit['hit'] is True
         health=json.loads(run(sys.executable,ENGINE/'health.py','--root',r)); assert health['initialized'] is True
         tel=json.loads(run(sys.executable,ENGINE/'telemetry.py','--root',r)); assert 'approx_text_tokens_if_all_loaded' in tel
-    print('PASS: Codemium fixture')
+    print('PASS: Codemium fixture + depth policy')
 if __name__=='__main__': main()

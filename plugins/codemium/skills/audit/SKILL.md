@@ -1,8 +1,10 @@
 ---
-name: audit
-description: "Codemium repository audit: deterministic hotspot discovery first, targeted AI inspection second, avoiding full-repo prompt loading."
+name: cm-audit
+description: "Short Codemium repository-audit tag: deterministic hotspot discovery first, bounded AI inspection second, with depth based on audit risk."
 ---
 
-# Codemium Audit
+# @cm-audit
 
-Do not load the entire repository into model context. Build/refresh repository graph, identify structural hotspots and risk candidates deterministically, rank them, inspect top candidates, then expand only where evidence warrants. Report findings; do not auto-refactor the whole repository.
+Audit is repository-wide in discovery, not in model context. Build/refresh repository graph, identify structural hotspots and risk candidates deterministically, rank them, inspect top candidates, then expand only where evidence warrants.
+
+Plain `@cm-audit` uses normal adaptive audit depth. `deep` and `critical` may request stronger investigation; a `fast` request must not reduce audit below the minimum useful deterministic scan. Report findings and evidence. Do not auto-refactor the whole repository.

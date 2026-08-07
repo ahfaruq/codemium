@@ -1,19 +1,19 @@
 {
   "name": "codemium",
-  "version": "0.1.0",
-  "description": "Persistent coding intelligence for Codex: project memory, bounded working sets, scoped engineering, impact-aware testing, and deterministic reuse.",
+  "version": "0.2.0",
+  "description": "Persistent coding intelligence for Codex with short @cm skill tags, adaptive engineering depth, project memory, bounded working sets, scoped changes, impact-aware testing, and deterministic reuse.",
   "license": "MIT",
   "keywords": ["codex", "coding-agent", "context-engineering", "repository-intelligence", "token-efficiency", "developer-tools"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Codemium",
     "shortDescription": "The senior engineer who already knows your codebase.",
-    "longDescription": "Codemium gives Codex persistent project intelligence. It maintains durable architecture and engineering knowledge, builds lightweight repository maps, compiles scoped task contracts, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work on unchanged state, and stops when sufficient evidence proves completion.",
+    "longDescription": "Codemium gives Codex persistent project intelligence. Use the short @cm tag for automatic task and depth selection, or fast, deep, and critical overrides. Codemium maintains durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work on unchanged state, and stops when sufficient evidence proves completion.",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "defaultPrompt": [
-      "Use Codemium for this coding task: understand the project, select a bounded working set, make the smallest justified change, verify according to risk, preserve scope, and stop when proven.",
-      "Use Codemium project intelligence. Reuse durable project knowledge and unchanged deterministic work instead of relearning the repository."
+      "Use @cm for this coding task. Auto-detect the task type and required engineering depth, preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
+      "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository."
     ]
   }
 }
