@@ -30,6 +30,7 @@ CODEX_EFFORT_BY_DEPTH = {
 }
 
 HOST_OWNED = {'control': 'host_owned_unless_documented_per_task_control'}
+TRANSIENT_IGNORE = ['runtime/', 'repository/', 'tasks/active.json', 'tasks/completed/']
 
 
 def default_model_profile() -> dict:
@@ -79,6 +80,19 @@ def ensure_model_profile(path: Path) -> None:
     write_json(path, merged)
 
 
+def ensure_state_gitignore(path: Path) -> None:
+    existing = path.read_text(encoding='utf-8').splitlines() if path.exists() else []
+    normalized = {line.strip() for line in existing if line.strip()}
+    additions = [entry for entry in TRANSIENT_IGNORE if entry not in normalized]
+    if not additions:
+        return
+    text = '\n'.join(existing)
+    if text and not text.endswith('\n'):
+        text += '\n'
+    text += '\n'.join(additions) + '\n'
+    atomic_write(path, text)
+
+
 def init(root: Path) -> None:
     s = state_root(root)
     for d in ['architecture', 'registry', 'repository', 'tasks/completed', 'runtime/snapshots']:
@@ -92,9 +106,7 @@ def init(root: Path) -> None:
     ensure_model_profile(s / 'model-profile.json')
     for fn, _ in REGISTRY.values():
         (s / 'registry' / fn).touch(exist_ok=True)
-    gi = s / '.gitignore'
-    if not gi.exists():
-        atomic_write(gi, 'runtime/\nrepository/\ntasks/completed/\n')
+    ensure_state_gitignore(s / '.gitignore')
     print(json.dumps({'status': 'initialized', 'state_dir': str(s)}, indent=2))
 
 
