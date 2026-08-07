@@ -6,19 +6,19 @@ Codemium is a host-agnostic engineering layer for long-running software projects
 
 > **Positioning:** the senior engineer who already knows your codebase.
 
-Codex is the first stable host. Claude Code and Gemini CLI now have native beta adapters built on the same Codemium doctrine and `.codemium/` project state.
+Codemium keeps durable project intelligence in `.codemium/`, then exposes the same engineering doctrine through native adapters for each coding-agent host.
 
 ## Supported hosts
 
-| Host | Status | Native integration | Primary invocation |
+| Host | Status | Native integration | Explicit invocation |
 | --- | --- | --- | --- |
-| OpenAI Codex | **Stable** | Codex plugin + Agent Skills | `@cm` |
-| Claude Code | **Beta** | Claude plugin + Agent Skill + command | auto skill or `/codemium:cm` |
+| OpenAI Codex | **Stable** | Codex plugin + Agent Skills | `$cm` |
+| Claude Code | **Beta** | Claude plugin + Agent Skill + command | `/codemium:cm` |
 | Gemini CLI | **Beta** | Gemini extension + context + command | `/cm` |
-| Cursor | Planned | host adapter | TBD |
-| OpenCode | Planned | host adapter | TBD |
+| Cursor | **Beta** | Portable Agent Skill | `/cm` / skill picker |
+| OpenCode | **Beta** | Portable Agent Skill | `/cm` when slash exposure is supported, otherwise skill tool/auto-selection |
 
-See [`HOSTS.md`](HOSTS.md) for the adapter contract.
+See [`HOSTS.md`](HOSTS.md) for the adapter contract and [`INSTALL.md`](INSTALL.md) for installation details.
 
 ## One core, native adapters
 
@@ -31,18 +31,18 @@ See [`HOSTS.md`](HOSTS.md) for the adapter contract.
           │                 │                 │
           └─────────────────┼─────────────────┘
                             │
-               ┌────────────┼────────────┐
-               │            │            │
-             Codex      Claude Code   Gemini CLI
-               │            │            │
-             @cm      /codemium:cm      /cm
+        ┌───────────┬───────┼────────┬────────────┐
+        │           │       │        │            │
+      Codex       Claude  Gemini   Cursor      OpenCode
+        │           │       │        │            │
+       $cm    /codemium:cm  /cm      /cm        cm skill
 ```
 
-The host may change the invocation syntax, plugin format, model controls, and tool surface. It must not change Codemium's engineering invariants.
+Invocation syntax, extension format, model controls, and tool surfaces are host-specific. The engineering invariants are not.
 
 ## Core behavior
 
-Codemium classifies each task as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY, then selects the smallest safe engineering depth:
+Codemium classifies work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY and then chooses the smallest safe engineering depth:
 
 | Depth | Meaning |
 | --- | --- |
@@ -61,7 +61,8 @@ Codemium then applies:
 - **Scope Guard** — no unrelated edits or opportunistic cleanup;
 - **Impact & Test Intelligence** — verification follows behavior and blast radius;
 - **Read/Search Reuse** — unchanged deterministic work is not paid for twice;
-- **Stop Engine** — stop once the requested result is sufficiently proven.
+- **Stop Engine** — stop once the requested result is sufficiently proven;
+- **Model Capability Layer** — engineering depth is portable while vendor reasoning knobs remain host-owned.
 
 ## Engineering doctrine
 
@@ -94,42 +95,46 @@ Start a fresh Codex task after installation.
 
 ## Use
 
-```text
-@cm fix the profile save bug
-@cm fast adjust the card spacing
-@cm deep investigate why the websocket disconnects intermittently
-@cm critical change the authentication flow
-```
-
-Focused shortcuts remain available:
+Codex's native explicit Agent Skill syntax is `$<skill-name>`:
 
 ```text
-@cm-fix
-@cm-test
-@cm-review
-@cm-audit
-@cm-health
-@cm-init
+$cm fix the profile save bug
+$cm fast adjust the card spacing
+$cm deep investigate why the websocket disconnects intermittently
+$cm critical change the authentication flow
 ```
 
-### Codex reasoning profile
+Focused skills:
 
-The Codex adapter currently derives a preferred GPT reasoning effort when the active model supports these labels:
+```text
+$cm-fix
+$cm-test
+$cm-review
+$cm-audit
+$cm-health
+$cm-init
+```
 
-| Codemium depth | Preferred Codex reasoning |
-| --- | --- |
-| FAST | `low` |
-| NORMAL | `medium` |
-| DEEP | `high` |
-| CRITICAL | `xhigh` |
+> **v0.6 migration note:** earlier Codemium drafts documented `@cm`. Current Codex uses `$cm` for explicit skill invocation, so v0.6 standardizes on the native marker.
 
-This is a **preference**, not proof that the host changed. Codemium never silently rewrites global Codex settings and never claims a reasoning change unless the runtime confirms it.
+### Codex reasoning mapping
+
+Codemium's portable reasoning classes map to current Codex effort preferences when supported:
+
+| Depth | Portable class | Codex preference |
+| --- | --- | --- |
+| FAST | economy | `low` |
+| NORMAL | balanced | `medium` |
+| DEEP | strong | `high` |
+| CRITICAL | frontier | `xhigh` |
+
+Codemium never silently rewrites the global Codex model/reasoning selector. A host-effort change is only reported when the runtime confirms it.
 
 ---
 
 # Claude Code
 
-Claude Code support is **beta** and uses its native plugin/Agent Skill model.
+Claude Code uses the repository itself as the plugin root so the Claude adapter has access to the shared deterministic engine.
 
 ## Install
 
@@ -140,49 +145,91 @@ Inside Claude Code:
 /plugin install codemium@codemium
 ```
 
+Start a new Claude Code session after installation if the host has not refreshed plugin discovery yet.
+
 ## Use
 
-Claude can trigger the installed `cm` skill from the task naturally. For explicit invocation:
+Claude may auto-select the `cm` Agent Skill when relevant, or invoke explicitly:
 
 ```text
 /codemium:cm fix the profile save bug
-/codemium:cm fast adjust card spacing
-/codemium:cm deep investigate the intermittent queue race
+/codemium:cm fast adjust the card spacing
+/codemium:cm deep investigate a race condition
 /codemium:cm critical change authorization behavior
 ```
 
-The Claude adapter preserves Codemium depth and engineering policy but does **not** claim to modify Claude's thinking/model settings.
+Claude model/thinking controls remain Claude-owned unless the host documents and confirms a per-task control.
 
 ---
 
 # Gemini CLI
 
-Gemini CLI support is **beta** and uses its native extension format.
+Codemium is packaged as a native Gemini CLI extension with `gemini-extension.json`, `GEMINI.md`, and `/cm`.
 
 ## Install
+
+From a terminal:
 
 ```sh
 gemini extensions install https://github.com/admahmad/codemium --ref main
 ```
 
-Restart/reload the CLI as required by Gemini CLI after extension changes.
+Restart Gemini CLI after installation or update so extension commands/context refresh.
 
 ## Use
 
 ```text
 /cm fix the profile save bug
-/cm fast adjust card spacing
-/cm deep investigate the intermittent queue race
-/cm critical change authorization behavior
+/cm fast adjust the card spacing
+/cm deep investigate a race condition
+/cm critical change authentication behavior
 ```
-
-The command accepts the rest of the line as its task arguments. The Gemini adapter preserves Codemium depth and engineering policy but does **not** claim to modify Gemini thinking/model settings.
 
 ---
 
-## Shared project state
+# Cursor
 
-All supported adapters use the same durable project namespace:
+Cursor supports Agent Skills. Codemium installs the portable `cm` bundle together with its deterministic engine and references.
+
+## User-wide install
+
+```sh
+python scripts/install_host.py --host cursor
+```
+
+## Project-local install
+
+```sh
+python scripts/install_host.py --host cursor --scope project --project /path/to/project
+```
+
+Then use the `cm` Agent Skill when Cursor discovers it; current Cursor releases expose skills in the slash menu, so `/cm` is the intended short invocation where available.
+
+---
+
+# OpenCode
+
+OpenCode natively discovers Agent Skills. Codemium installs into OpenCode's documented skill directories and sets `opencode/slash: "true"` metadata.
+
+## User-wide install
+
+```sh
+python scripts/install_host.py --host opencode
+```
+
+## Project-local install
+
+```sh
+python scripts/install_host.py --host opencode --scope project --project /path/to/project
+```
+
+OpenCode can auto-select/load `cm` via its skill tool. On versions exposing skill slash invocation, use `/cm`.
+
+---
+
+# Shared Project Brain
+
+All adapters use the same project state:
 
 ```text
 .codemium/
@@ -207,21 +254,57 @@ All supported adapters use the same durable project namespace:
     └── snapshots/
 ```
 
-A project initialized under one supported host should remain understandable to another adapter. Durable project knowledge belongs to the project, not to a model vendor.
+A project initialized under one host can be understood by another host because durable state is vendor-neutral.
 
-## Deterministic engine
-
-The current shared engine lives under `plugins/codemium/engine/` while the multi-host adapter layout stabilizes. It owns Project Brain, repository mapping, task compilation, impact analysis, scope checks, cache reuse, telemetry, and Codex reasoning-profile alignment.
-
-Example:
+## Deterministic core helpers
 
 ```sh
 python plugins/codemium/engine/project_brain.py --root . init
 python plugins/codemium/engine/repo_graph.py build --root .
 python plugins/codemium/engine/test_map.py build --root .
+python plugins/codemium/engine/working_set.py --root . --query "auth refresh" --top 8
 ```
 
-## Validate this repository
+They are optional accelerators, not mandatory ceremony. Use them when they reduce repeated model work.
+
+## Host installer safety
+
+`scripts/install_host.py` manages only its Codemium-owned skill directory. It refuses to overwrite or remove a non-Codemium directory unless `--force` is explicitly supplied.
+
+Dry-run example:
+
+```sh
+python scripts/install_host.py --host cursor --dry-run
+```
+
+Uninstall:
+
+```sh
+python scripts/install_host.py --host cursor --uninstall
+python scripts/install_host.py --host opencode --uninstall
+```
+
+## Doctor
+
+Validate the repository and see which host binaries are available locally:
+
+```sh
+python scripts/doctor.py
+```
+
+Require one host binary when testing an adapter locally:
+
+```sh
+python scripts/doctor.py --require-host codex
+python scripts/doctor.py --require-host claude-code
+python scripts/doctor.py --require-host gemini-cli
+python scripts/doctor.py --require-host cursor
+python scripts/doctor.py --require-host opencode
+```
+
+## Repository verification
+
+Linux/macOS:
 
 ```sh
 sh plugins/codemium/scripts/verify.sh
@@ -235,7 +318,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.5.0` introduces the host-adapter architecture: Codex stable, Claude Code beta, Gemini CLI beta, one shared Codemium engineering doctrine and project state.
+`v0.6.0` makes the host boundary explicit: Codex uses native `$cm`; Claude Code uses a repository-root plugin with the shared engine; Gemini CLI uses a native extension; Cursor and OpenCode use a portable Agent Skill installer; and all adapters share the same `.codemium/` project intelligence.
 
 ## License
 
