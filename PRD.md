@@ -16,7 +16,7 @@ The primary invocation is deliberately short:
 @cm
 ```
 
-Plain `@cm` means automatic task classification and automatic engineering depth. Optional user overrides are:
+Plain `@cm` means automatic task classification, automatic engineering depth, and a derived reasoning profile. Optional user overrides are:
 
 ```text
 @cm fast
@@ -37,9 +37,13 @@ Focused task shortcuts:
 @cm-init
 ```
 
-## Two-axis orchestration
+## Three-axis orchestration
 
-Codemium separates **what work is being done** from **how deeply it must be investigated and verified**.
+Codemium separates three decisions that should not be conflated:
+
+1. **Task** — what engineering work is being done.
+2. **Depth** — how broadly/deeply the project must be investigated and verified.
+3. **Reasoning profile** — how much model reasoning effort is preferred for the effective depth when the host supports it.
 
 Task axis:
 
@@ -58,22 +62,72 @@ Depth axis:
 - DEEP — complex, cross-boundary, distributed, concurrent, performance-sensitive, or uncertain work.
 - CRITICAL — security/trust-boundary, auth, payments, migrations, secrets, production data, destructive operations, infrastructure/deployment, or breaking public interfaces.
 
-Depth is an orchestration policy, not a guarantee that the Codex host changes the underlying model reasoning setting.
+Default reasoning profile:
+
+- FAST → preferred `low`, minimum `low`.
+- NORMAL → preferred `medium`, minimum `low`.
+- DEEP → preferred `high`, minimum `medium`.
+- CRITICAL → preferred `xhigh`, minimum `high`.
+
+`max` is not an automatic CRITICAL default. It is reserved for the hardest quality-first workloads after benchmark evidence shows a material gain over `xhigh`.
+
+## Host reasoning control
+
+Codemium must never assume a skill can silently change the active Codex model/reasoning setting.
+
+Requirements:
+
+- derive and record preferred/minimum effort in the task contract;
+- compare against current host effort when that value is known;
+- request per-task effort only when the runtime exposes a safe confirmed mechanism;
+- otherwise leave the host setting unchanged and apply depth through context/tool/verification policy;
+- never silently rewrite global Codex configuration for a task-local preference;
+- never claim the host effort changed until the runtime confirms the effective value.
+
+Example:
+
+```text
+Host: GPT-5.6 Sol / xhigh
+Request: @cm fast adjust card padding
+```
+
+Expected contract:
+
+```text
+Depth: FAST
+Preferred reasoning: low
+Host alignment: host_above_preferred
+```
+
+The task immediately uses FAST orchestration. The host reasoning effort changes only if the runtime supports and confirms the per-task request.
 
 ## Safety floor
 
-A user override may increase depth but cannot reduce the minimum safe depth. A request such as `@cm fast` on authentication, payments, migrations, or other critical surfaces must automatically escalate.
+A user override may increase depth but cannot reduce the minimum safe depth. A request such as `@cm fast` on authentication, payments, migrations, or other critical surfaces must automatically escalate. The reasoning profile follows the **effective** depth after escalation.
+
+Example:
+
+```text
+@cm fast change authentication flow
+```
+
+must resolve to:
+
+```text
+Depth: CRITICAL
+Preferred reasoning: xhigh
+```
 
 ## Core systems
 
 ### Project Brain
-Stores sanitized durable facts: project charter, architecture, decisions, constraints, interfaces, patterns, and known bugs. It is not a conversation transcript.
+Stores sanitized durable facts: project charter, architecture, decisions, constraints, interfaces, patterns, known bugs, model capability preferences, and reasoning profile policy. It is not a conversation transcript.
 
 ### Repository Intelligence
 Builds deterministic maps of files, symbols, imports, and likely tests. Frontier reasoning should consume selected evidence, not crawl the repository blindly.
 
 ### Task Compiler
-Transforms user intent into a task contract with task type, objective, scope, expected behavior, acceptance, risk, change policy, requested depth, effective depth, and escalation reason.
+Transforms user intent into a task contract with task type, objective, scope, expected behavior, acceptance, risk, change policy, requested depth, effective depth, escalation reason, and reasoning profile.
 
 ### Working Set Engine
 Ranks candidate files and durable knowledge for the task. Context expands only when material uncertainty identifies a specific missing fact.
@@ -87,15 +141,18 @@ Every changed file/hunk must trace to DIRECT, DEPENDENCY, CLEANUP caused by the 
 ### Impact & Test Intelligence
 Maps changes to callers, imported dependents, related tests, public surfaces, and risk. Testing depth follows behavior/risk; production minimalism never justifies under-testing.
 
+### Reasoning Profile Engine
+Maps effective depth to preferred/minimum effort, validates known model capability labels, and reports host alignment. It is advisory unless the host exposes confirmed per-task control.
+
 ### Efficiency Governor
-Avoids equivalent reads/searches/tests on unchanged state; uses git/hash identity, bounded working sets, delta reinspection, and explicit completion gates.
+Avoids equivalent reads/searches/tests on unchanged state; uses git/hash identity, bounded working sets, delta reinspection, explicit completion gates, and reasoning effort proportional to task depth when supported.
 
 ### Model Capability Layer
-Core policies are model-independent. New model generations are promoted only after representative benchmarks meet the quality floor and improve useful efficiency.
+Core policies are model-independent. New model generations are promoted only after representative benchmarks meet the quality floor and improve useful efficiency. Model capability changes and reasoning labels must be verified before the registry is updated.
 
 ## Task lifecycle
 
-User request → task/depth contract → project state lookup → working set → investigation → root cause/design → implementation → diff inspection → impact analysis → depth/risk-based verification → scope guard → durable memory update → stop.
+User request → task/depth contract → reasoning profile → project state lookup → working set → investigation → root cause/design → implementation → diff inspection → impact analysis → depth/risk-based verification → scope guard → durable memory update → stop.
 
 ## Success metrics
 
@@ -106,8 +163,10 @@ User request → task/depth contract → project state lookup → working set �
 - unrelated changed lines approaches zero;
 - duplicate unchanged discovery <10% in MVP, <5% mature;
 - active context grows slower than total project knowledge across long-running project benchmarks;
+- reasoning profiles reduce unnecessary compute without lowering the quality floor;
+- host-effort changes are never reported without runtime confirmation;
 - token savings are reported only from actual host telemetry or clearly labeled proxies.
 
 ## Non-goals
 
-Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, replacement for CI, or license to skip tests/security. FAST does not mean careless. CRITICAL does not mean loading the entire repository. Codemium does not bind permanently to one model generation.
+Codemium is not a minimum-LOC contest, generic autonomous multi-agent framework, replacement for CI, or license to skip tests/security. FAST does not mean careless. CRITICAL does not mean loading the entire repository. A reasoning preference is not permission to rewrite global Codex configuration. Codemium does not bind permanently to one model generation.
