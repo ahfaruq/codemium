@@ -47,9 +47,9 @@ def main() -> None:
             fail(f"missing engine/{name}")
         py_compile.compile(str(path), doraise=True)
 
-    fixture = TESTS / "test_fixture.py"
+    fixture = TESTS / "test_core_fixture.py"
     if not fixture.exists():
-        fail("missing core fixture")
+        fail("missing host-agnostic core fixture")
     py_compile.compile(str(fixture), doraise=True)
 
     # Project Brain schema is a core contract, not a host-adapter contract.
@@ -86,8 +86,8 @@ def main() -> None:
         "checked": [
             "engine syntax",
             "Project Brain invariants",
-            "task/depth contract",
-            "core fixture",
+            "generic task/depth contract",
+            "host-agnostic core fixture",
         ],
     }, indent=2))
     print("PASS: Codemium core integrity")
