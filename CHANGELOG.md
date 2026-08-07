@@ -13,7 +13,9 @@ All notable Codemium changes are recorded here.
 - Added generic reasoning classes (`economy`, `balanced`, `strong`, `frontier`) so Codemium core does not depend on vendor reasoning labels.
 - Added Cursor and OpenCode to portable task/reasoning profiles.
 - Consolidated Claude/Gemini/Cursor/OpenCode onto one root `skills/cm/SKILL.md` source of truth.
-- Expanded Linux/macOS and Windows verification for multi-host manifests, installer lifecycle, fixtures, and hidden benchmark publication gates.
+- Added safe transient-state migration so `.codemium/tasks/active.json`, repository maps, runtime data, and completed task snapshots stay out of Git by default.
+- Split verification into three evidence layers: fast host-agnostic Core CI on every push/PR, full cross-host Linux/Windows validation only on manual/release runs, and a separate AI competitive benchmark for quality/performance claims.
+- Added `scripts/verify_core.py` as the health-badge check and retained the full Linux/macOS + Windows verifier for release validation.
 - Added `HOSTS.md` and `INSTALL.md`.
 - Kept the public Numbers dashboard hidden until measured competitive benchmark data is available.
 
