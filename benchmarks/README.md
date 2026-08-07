@@ -1,30 +1,52 @@
-# Codemium Benchmarks
+# Codemium Competitive Benchmarks
 
 Codemium treats performance claims as engineering evidence, not marketing copy.
 
+The benchmark is explicitly competitive: **Codemium is compared against baseline, caveman, and Ponytail on the same work.** Ponytail is a comparison target, not a parent framework or positioning reference for Codemium.
+
+## Primary benchmark arms
+
+A public competitive study must include:
+
+- `baseline` — same coding agent, model, reasoning configuration, and environment with no optimization skill;
+- `caveman` — terse-prose/minimal-control benchmark arm;
+- `ponytail` — Ponytail on the identical task set and repository starts;
+- `codemium` — Codemium `@cm` on those identical conditions.
+
+Internal Codemium variants such as `codemium-fast`, `codemium-deep`, different reasoning efforts, or feature-disabled builds are **ablation studies**. They should not replace the four primary competitive arms.
+
+## Fair-comparison protocol
+
+For every arm:
+
+1. use the same task/ticket text;
+2. start from the same repository commit or clean fixture;
+3. use the same coding agent host;
+4. use the same base model and host reasoning configuration unless the study explicitly tests reasoning policy;
+5. use the same tools, network permissions, environment, timeout, and dependency state;
+6. isolate runs so one arm cannot inherit another arm's context;
+7. score the final diff and observable behavior using the same evaluator;
+8. record raw run data before aggregation;
+9. use repeated runs (`n >= 4` recommended) because agentic results vary.
+
+Where practical, quality/safety scoring should be blind to the arm identity.
+
 ## Publication rule
 
-A public **Numbers** chart may be generated from any dataset, but `--publish` refuses the dataset unless:
+A public **Numbers** chart may be rendered from any dataset, but `--publish` refuses a competitive dataset unless:
 
 - `meta.kind` is exactly `measured`;
-- the baseline arm exists;
-- the same benchmark task set is represented across compared arms;
-- quality and safety results are recorded;
-- token/cost values come from host or billing telemetry rather than estimates when presented as measured.
+- the `baseline`, `caveman`, `ponytail`, and `codemium` arms all exist;
+- the four arms cover identical task IDs;
+- quality and safety results are recorded for every competitive run;
+- measured token values come from host telemetry;
+- measured cost comes from billing/run telemetry rather than fabricated or stale pricing estimates.
 
-Synthetic data is allowed only for renderer/demo testing and must remain visibly labeled **SYNTHETIC / DEMO DATA — NOT CODEMIUM PRODUCT PERFORMANCE**.
+Synthetic data is allowed only for renderer/demo testing and must remain visibly labeled:
 
-## Recommended benchmark arms
+> **SYNTHETIC / DEMO DATA — NOT CODEMIUM PRODUCT PERFORMANCE**
 
-For a first real study:
-
-- `vanilla` — same Codex host/model/reasoning without Codemium;
-- `codemium-auto` — `@cm` with automatic task/depth policy;
-- optionally `ponytail` or another control, if installed and tested on the exact same task set.
-
-Do not compare `@cm fast` and `@cm deep` across different task populations as if they were interchangeable systems. Depth-specific studies should use task sets where that depth is appropriate and clearly report the population.
-
-## Core metrics
+## Core public metrics
 
 Lower is better:
 
@@ -38,7 +60,29 @@ Higher is better:
 - quality pass rate;
 - safety pass rate.
 
-Also retain diagnostic metrics such as tool calls, unique files read, duplicate reads, unrelated changed lines, and verification results.
+Diagnostic metrics should also be retained:
+
+- tool calls;
+- unique files read;
+- duplicate reads;
+- unrelated changed lines;
+- tests/checks executed;
+- regression findings;
+- context/cache reuse where measurable.
+
+## Quality gate
+
+Efficiency is not a win when correctness or safety falls.
+
+A Codemium result should only be described as better when the quality floor is preserved:
+
+```text
+quality >= baseline/control quality
+safety  >= baseline/control safety
+regressions <= controls
+```
+
+Only after that should LOC, tokens, cost, and time be compared.
 
 ## Dataset format
 
@@ -46,16 +90,18 @@ Also retain diagnostic metrics such as tool calls, unique files read, duplicate 
 {
   "meta": {
     "kind": "measured",
-    "title": "Codemium agent benchmark",
+    "study_type": "competitive",
+    "title": "Codemium competitive agent benchmark",
     "repository": "owner/repo@commit",
     "agent": "Codex",
-    "model": "model + reasoning configuration",
-    "runs_per_arm": 4
+    "model": "same model + reasoning configuration",
+    "runs_per_arm": 4,
+    "required_arms": ["baseline", "caveman", "ponytail", "codemium"]
   },
   "runs": [
     {
       "task_id": "ticket-01",
-      "system": "vanilla",
+      "system": "baseline",
       "quality_pass": true,
       "safety_pass": true,
       "input_tokens": 12345,
@@ -69,6 +115,8 @@ Also retain diagnostic metrics such as tool calls, unique files read, duplicate 
 }
 ```
 
+Each `task_id` must appear in every primary arm for publication.
+
 ## Render
 
 Demo:
@@ -80,7 +128,7 @@ python benchmarks/render_numbers.py \
   --markdown benchmarks/demo-NUMBERS.md
 ```
 
-Publish measured results:
+Publish measured competitive results:
 
 ```sh
 python benchmarks/render_numbers.py \
@@ -90,8 +138,13 @@ python benchmarks/render_numbers.py \
   --markdown benchmarks/NUMBERS.md
 ```
 
-The renderer is stdlib-only and produces a dark SVG dashboard plus a Markdown summary.
+The renderer is stdlib-only. System colors are intentionally stable in the primary chart:
+
+- baseline — gray;
+- caveman — orange;
+- ponytail — green;
+- codemium — purple.
 
 ## Current public status
 
-No real Codemium agent-performance dataset is committed yet. `demo-numbers.svg` is deliberately synthetic and exists only to show the dashboard format.
+No real Codemium-vs-caveman-vs-Ponytail performance dataset is committed yet. `demo-numbers.svg` is deliberately synthetic and exists only to demonstrate the competitive dashboard and publication pipeline.
