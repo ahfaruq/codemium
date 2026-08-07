@@ -29,6 +29,8 @@ CODEX_EFFORT_BY_DEPTH = {
     'CRITICAL': {'preferred_effort': 'xhigh', 'minimum_effort': 'high'},
 }
 
+HOST_OWNED = {'control': 'host_owned_unless_documented_per_task_control'}
+
 
 def default_model_profile() -> dict:
     return {
@@ -44,12 +46,10 @@ def default_model_profile() -> dict:
                 'effort_by_depth': CODEX_EFFORT_BY_DEPTH,
                 'control': 'advisory_unless_runtime_confirms_per_task_control',
             },
-            'claude-code': {
-                'control': 'host_owned_unless_documented_per_task_control',
-            },
-            'gemini-cli': {
-                'control': 'host_owned_unless_documented_per_task_control',
-            },
+            'claude-code': dict(HOST_OWNED),
+            'gemini-cli': dict(HOST_OWNED),
+            'cursor': dict(HOST_OWNED),
+            'opencode': dict(HOST_OWNED),
         },
         'host_control': {
             'mutate_global_config': False,
