@@ -26,9 +26,9 @@ The current Codex adapter maps the portable classes to a preferred GPT reasoning
 
 For GPT-5.6, `max` is available but is not the automatic CRITICAL default. Reserve it for the hardest quality-first workloads after representative evaluation shows a material gain over `xhigh`.
 
-## Claude Code and Gemini CLI
+## Claude Code, Gemini CLI, Cursor, and OpenCode
 
-The beta adapters currently apply reasoning class through engineering behavior: working-set breadth, investigation depth, impact analysis, and verification strength. They do not claim to change Claude/Gemini thinking or model controls.
+These adapters currently apply the portable reasoning class through engineering behavior: working-set breadth, investigation depth, impact analysis, and verification strength. They do not claim to change host model/thinking controls.
 
 ## Host-control rule
 
@@ -52,15 +52,15 @@ python <plugin-dir>/engine/reasoning_profile.py \
   --host-effort xhigh
 ```
 
-Claude example:
+Portable host example:
 
 ```sh
 python <plugin-dir>/engine/reasoning_profile.py \
   --depth deep \
-  --host claude-code
+  --host cursor
 ```
 
-The Claude result keeps the portable `strong` class but leaves vendor effort unset/host-owned.
+The non-Codex result keeps the portable `strong` class but leaves vendor effort unset/host-owned. The same contract applies to `claude-code`, `gemini-cli`, and `opencode`.
 
 ## Safety alignment
 
