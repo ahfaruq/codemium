@@ -22,9 +22,11 @@ def main():
         run('git','init','-q',cwd=r); run('git','config','user.email','fixture@example.com',cwd=r); run('git','config','user.name','Fixture',cwd=r); run('git','add','.',cwd=r); run('git','commit','-qm','initial',cwd=r)
         run(sys.executable,ENGINE/'project_brain.py','--root',r,'init')
         model_profile=json.loads((r/'.codemium/model-profile.json').read_text())
-        assert model_profile['schema_version']==2
-        assert model_profile['reasoning_profiles']['FAST']['preferred_effort']=='low'
-        assert model_profile['reasoning_profiles']['CRITICAL']['preferred_effort']=='xhigh'
+        assert model_profile['schema_version']==3
+        assert model_profile['generic_reasoning']['FAST']['preferred_class']=='economy'
+        assert model_profile['generic_reasoning']['CRITICAL']['preferred_class']=='frontier'
+        assert model_profile['host_profiles']['codex']['effort_by_depth']['FAST']['preferred_effort']=='low'
+        assert model_profile['host_profiles']['codex']['effort_by_depth']['CRITICAL']['preferred_effort']=='xhigh'
 
         out=json.loads(run(sys.executable,ENGINE/'project_brain.py','--root',r,'add-decision','--text','Auth sessions rotate in the auth module','--source','src/auth/session.py'))
         assert out['id']=='D0001'
@@ -34,17 +36,23 @@ def main():
         assert any('refresh_session' in f['symbols'] for f in graph['files'])
         run(sys.executable,ENGINE/'test_map.py','build','--root',r)
 
+        # Generic/core contract does not assume a vendor effort label.
         task=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--request','Fix auth refresh bug that logs users out'))
         assert task['type']=='FIX' and task['risk']=='high' and task['depth']=='CRITICAL'
-        assert task['reasoning']['preferred_effort']=='xhigh'
+        assert task['reasoning']['host']=='generic'
+        assert task['reasoning']['reasoning_class']=='frontier'
+        assert task['reasoning']['preferred_effort'] is None
 
+        # Codex adapter mapping is inferred from a GPT model.
         forced_fast=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','fast','--model','gpt-5.6-sol','--host-effort','low','--request','Fix auth refresh bug that logs users out'))
         assert forced_fast['requested_depth']=='fast' and forced_fast['depth']=='CRITICAL' and 'escalated' in forced_fast['depth_reason']
+        assert forced_fast['reasoning']['host']=='codex'
         assert forced_fast['reasoning']['preferred_effort']=='xhigh'
         assert forced_fast['reasoning']['alignment']=='host_below_minimum'
 
         trivial=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','fast','--model','gpt-5.6-sol','--host-effort','xhigh','--request','Change css spacing on card'))
         assert trivial['depth']=='FAST'
+        assert trivial['reasoning']['reasoning_class']=='economy'
         assert trivial['reasoning']['preferred_effort']=='low'
         assert trivial['reasoning']['alignment']=='host_above_preferred'
 
@@ -54,11 +62,20 @@ def main():
         deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--model','gpt-5.6-sol','--request','Investigate intermittent queue race bug'))
         assert deep['depth']=='DEEP' and deep['reasoning']['preferred_effort']=='high'
 
-        explicit_deep=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--depth','deep','--request','Build profile preferences page'))
-        assert explicit_deep['depth']=='DEEP' and explicit_deep['reasoning']['preferred_effort']=='high'
+        # Non-Codex hosts retain portable depth without inventing vendor effort changes.
+        claude=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--host','claude-code','--depth','deep','--request','Build profile preferences page'))
+        assert claude['depth']=='DEEP' and claude['reasoning']['host']=='claude-code'
+        assert claude['reasoning']['reasoning_class']=='strong'
+        assert claude['reasoning']['preferred_effort'] is None and claude['reasoning']['alignment']=='host_owned'
 
-        standalone=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','fast','--model','gpt-5.6-sol','--host-effort','xhigh'))
+        gemini=json.loads(run(sys.executable,ENGINE/'task_compiler.py','--root',r,'--no-write','--host','gemini-cli','--request','Build profile preferences page'))
+        assert gemini['depth']=='NORMAL' and gemini['reasoning']['host']=='gemini-cli'
+        assert gemini['reasoning']['reasoning_class']=='balanced' and gemini['reasoning']['preferred_effort'] is None
+
+        standalone=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','fast','--host','codex','--model','gpt-5.6-sol','--host-effort','xhigh'))
         assert standalone['preferred_effort']=='low' and standalone['alignment']=='host_above_preferred'
+        portable=json.loads(run(sys.executable,ENGINE/'reasoning_profile.py','--depth','critical','--host','claude-code'))
+        assert portable['reasoning_class']=='frontier' and portable['preferred_effort'] is None
 
         ws=json.loads(run(sys.executable,ENGINE/'working_set.py','--root',r,'--query','auth refresh session','--top','5'))
         assert any(x['path']=='src/auth/session.py' for x in ws['files'])
@@ -74,5 +91,5 @@ def main():
         assert hit['hit'] is True
         health=json.loads(run(sys.executable,ENGINE/'health.py','--root',r)); assert health['initialized'] is True
         tel=json.loads(run(sys.executable,ENGINE/'telemetry.py','--root',r)); assert 'approx_text_tokens_if_all_loaded' in tel
-    print('PASS: Codemium fixture + depth/reasoning policy')
+    print('PASS: Codemium fixture + portable host/depth/reasoning policy')
 if __name__=='__main__': main()
