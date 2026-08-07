@@ -1,30 +1,30 @@
 ---
 name: cm
-description: "Primary Codemium tag: auto-detect coding task, engineering depth, and preferred reasoning profile; reuse persistent project intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
+description: "Primary Codemium skill for OpenAI Codex: auto-detect coding task and engineering depth, reuse persistent project intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
 ---
 
-# Codemium — @cm
+# Codemium — $cm
 
 Act like the senior engineer who already knows this repository. Optimize **relearning and unjustified engineering**, never correctness.
 
 ## Invocation
 
-The normal entry point is `@cm`.
+Codex's native explicit Agent Skill marker is `$`.
 
-- `@cm` → auto task + auto depth;
-- `@cm fast` → requested FAST depth;
-- `@cm deep` → requested DEEP depth;
-- `@cm critical` → requested CRITICAL depth.
+- `$cm` → auto task + auto depth;
+- `$cm fast` → requested FAST depth;
+- `$cm deep` → requested DEEP depth;
+- `$cm critical` → requested CRITICAL depth.
 
 If no depth modifier is supplied, choose automatically. Do not require the user to type `normal`.
 
-Focused tags such as `@cm-fix`, `@cm-test`, and `@cm-review` pin task type but use the same depth/reasoning policy.
+Focused skills such as `$cm-fix`, `$cm-test`, and `$cm-review` pin task type but use the same depth/reasoning policy.
 
 ## Reasoning profile
 
-Depth and host reasoning effort are separate controls, but they should be aligned when the Codex runtime exposes safe per-task control.
+Engineering depth is portable Codemium behavior. Codex reasoning effort is a host-specific preference layered on top.
 
-Default current profile:
+Current Codex mapping:
 
 - FAST → preferred `low`;
 - NORMAL → preferred `medium`;
@@ -33,9 +33,7 @@ Default current profile:
 
 `max` is not an automatic CRITICAL default. Reserve it for the hardest quality-first workloads after representative evaluation shows a benefit over `xhigh`.
 
-A skill must not silently rewrite global Codex configuration or claim the model effort changed. If the runtime exposes confirmed per-task effort control, request the preferred effort. Otherwise keep the host setting and apply the Codemium orchestration depth only. If the current host effort is known, record whether it is below, aligned with, or above the preferred profile.
-
-Never allow a reasoning preference to weaken the safety floor. A FAST request that escalates to CRITICAL also receives the CRITICAL reasoning profile.
+A skill must not silently rewrite global Codex configuration or claim the model effort changed. If the runtime exposes confirmed per-task effort control, request the preferred effort. Otherwise keep the host setting and apply the Codemium orchestration depth only. Never allow a reasoning preference to weaken the safety floor.
 
 Use `engine/reasoning_profile.py` for deterministic profile/alignment output. Read `references/reasoning-policy.md` only when reasoning alignment or host integration matters.
 
@@ -51,7 +49,7 @@ Use `engine/reasoning_profile.py` for deterministic profile/alignment output. Re
 
 ## Task lifecycle
 
-1. Compile a short task contract: type, observed/expected behavior, objective, likely domain, acceptance, risk, change policy, depth, and reasoning profile.
+1. Compile a short task contract: type, observed/expected behavior, objective, likely domain, acceptance, risk, change policy, depth, and reasoning class.
 2. Read existing `.codemium` durable knowledge only when it can affect this task. Do not replay it all.
 3. Build/refresh repository graph only when stale or missing and the task is non-trivial.
 4. Generate a bounded Working Set. Open the most relevant symbols/files first.
