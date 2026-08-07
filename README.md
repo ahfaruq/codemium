@@ -1,6 +1,6 @@
 # Codemium
 
-[![Verify Codemium](https://github.com/admahmad/codemium/actions/workflows/verify.yml/badge.svg)](https://github.com/admahmad/codemium/actions/workflows/verify.yml)
+[![Codemium Core](https://github.com/admahmad/codemium/actions/workflows/verify.yml/badge.svg)](https://github.com/admahmad/codemium/actions/workflows/verify.yml)
 
 **Persistent coding intelligence for AI coding agents.**
 
@@ -302,7 +302,19 @@ python scripts/doctor.py --require-host cursor
 python scripts/doctor.py --require-host opencode
 ```
 
-## Repository verification
+## Verification model
+
+Codemium deliberately separates three different kinds of evidence:
+
+### 1. Core CI — every push / pull request
+
+```sh
+python scripts/verify_core.py
+```
+
+The badge at the top of this README represents **Codemium core integrity only**: engine syntax, Project Brain invariants, task/depth behavior, and the core fixture. It does not claim AI quality or full host compatibility.
+
+### 2. Full host validation — manual / release tags
 
 Linux/macOS:
 
@@ -313,10 +325,14 @@ sh plugins/codemium/scripts/verify.sh
 Windows:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
+./plugins/codemium/scripts/verify.ps1
 ```
 
-GitHub Actions runs the verification suite on both Linux and Windows.
+GitHub Actions workflow `Codemium Full Host Validation` runs manually (`workflow_dispatch`) or when a `v*` release tag is pushed. It validates host packaging, installers, Linux/Windows behavior, hidden benchmark publication gates, and cross-host contracts.
+
+### 3. AI benchmark — separate competitive evidence
+
+AI quality/performance is not inferred from CI. Competitive studies compare baseline, caveman, ponytail, and codemium on the same coding tasks and measure quality, safety, tokens, cost, time, and engineering surface.
 
 ## Benchmark policy
 
