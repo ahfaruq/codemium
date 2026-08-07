@@ -6,9 +6,11 @@ if ($Plugin.version -ne "0.4.0") { throw "Expected Codemium 0.4.0" }
 $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKILL.md") -Raw
 if ($MainSkill -notmatch "name: cm" -or $MainSkill -notmatch "@cm fast" -or $MainSkill -notmatch "reasoning-policy" -or $MainSkill -notmatch "preferred ``low``" -or $MainSkill -notmatch "preferred ``xhigh``") { throw "Short-tag/depth/reasoning contract missing" }
 $Readme = Get-Content (Join-Path $Root "README.md") -Raw
-if ($Readme -notmatch "@cm" -or $Readme -match '\$codemium:' -or $Readme -notmatch "FAST \| ``low``" -or $Readme -notmatch "CRITICAL \| ``xhigh``" -or $Readme -notmatch "## Numbers") { throw "README UX/Numbers is stale" }
+if ($Readme -notmatch "@cm" -or $Readme -match '\$codemium:' -or $Readme -notmatch "FAST \| ``low``" -or $Readme -notmatch "CRITICAL \| ``xhigh``") { throw "README UX is stale" }
+if ($Readme -match "## Numbers" -or $Readme -match "benchmarks/demo-numbers.svg") { throw "Numbers must remain hidden from the public README" }
 if ($Readme -match "Ponytail-style") { throw "Codemium is incorrectly framed as Ponytail-style" }
-foreach ($Phrase in @("**baseline**","**caveman**","**ponytail**","**codemium**")) { if ($Readme -notmatch [regex]::Escape($Phrase)) { throw "Missing competitive arm $Phrase" } }
+$ManifestText = Get-Content (Join-Path $Root "plugins\codemium\.codex-plugin\plugin.json") -Raw
+if ($ManifestText -match "benchmark dashboard") { throw "Benchmark dashboard must remain hidden from public plugin metadata" }
 $Demo = Get-Content (Join-Path $Root "benchmarks\example-runs-v2.json") -Raw | ConvertFrom-Json
 $Systems = @($Demo.runs | ForEach-Object { $_.system } | Select-Object -Unique)
 foreach ($Arm in @("baseline","caveman","ponytail","codemium")) { if ($Systems -notcontains $Arm) { throw "Missing demo arm $Arm" } }
