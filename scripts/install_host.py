@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
 from pathlib import Path
 
 HOST_DIRS = {
@@ -76,7 +75,9 @@ def install(host: str, scope: str, project: Path | None, force: bool, dry_run: b
     if target.exists() and force and not is_owned(target):
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(root / "adapters/agent-skill/cm/SKILL.md", target / "SKILL.md")
+    # skills/cm/SKILL.md is the single source of truth for Claude, Gemini,
+    # Cursor, OpenCode, and other Agent Skills-compatible hosts.
+    shutil.copy2(root / "skills/cm/SKILL.md", target / "SKILL.md")
     copy_tree(root / "plugins/codemium/engine", target / "engine")
     copy_tree(root / "plugins/codemium/skills/codemium/references", target / "references")
     shutil.copy2(root / "LICENSE", target / "LICENSE")
