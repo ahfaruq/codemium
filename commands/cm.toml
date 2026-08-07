@@ -1,10 +1,8 @@
-description = "Run Codemium with optional fast, deep, or critical depth."
+description = "Run Codemium with optional fast, deep, or critical engineering depth."
 prompt = """
-Apply Codemium to this coding request:
+Use the `cm` Codemium Agent Skill for this coding request:
 
 {{args}}
 
-If the first argument is `fast`, `deep`, or `critical`, treat it as the requested engineering-depth override and the remaining text as the coding task. Otherwise use automatic depth.
-
-Use persistent `.codemium/` project knowledge when available, keep a bounded working set, make the smallest justified change, avoid unrelated edits, verify according to risk and blast radius, and stop once the requested behavior is proven. Safety may escalate depth above the user's requested level.
+Interpret a leading `fast`, `deep`, or `critical` as the requested engineering-depth override. Otherwise use automatic depth. Apply the Codemium safety floor and shared `.codemium/` project intelligence. Do not expand this command into duplicate always-on doctrine; load detailed behavior from the `cm` skill when needed.
 """
