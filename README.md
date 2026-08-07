@@ -128,29 +128,6 @@ Codemium turns a repository into persistent engineering memory:
 - **Stop Engine** — stops once requested behavior is proven and material uncertainty is resolved.
 - **Model capability abstraction** — no permanent dependency on one GPT generation.
 
-## Numbers
-
-The purpose of **Numbers** is direct competitive measurement. Codemium is tested **against** the alternatives, not presented as an extension of them.
-
-A primary competitive study has four arms:
-
-- **baseline** — the same coding agent/model/reasoning with no optimization skill;
-- **caveman** — terse-prose/minimal-control arm;
-- **ponytail** — Ponytail under the same task and environment conditions;
-- **codemium** — Codemium `@cm` under those same conditions.
-
-Every arm must receive the **same tasks, same starting repository commit, same agent/model configuration, same environment, and same scoring protocol**. The dashboard compares **LOC, total tokens, measured cost, wall-clock time, quality pass rate, and safety pass rate**.
-
-![Codemium competitive Numbers dashboard — synthetic demo](benchmarks/demo-numbers.svg)
-
-The chart above is **synthetic demo data only** and is permanently watermarked. It demonstrates the competitive layout; it is not a Codemium performance claim.
-
-A public measured chart must pass the publication gate. Competitive publication requires `meta.kind = measured` and complete `baseline`, `caveman`, `ponytail`, and `codemium` arms covering identical task IDs.
-
-Internal variants such as `@cm fast`, `@cm deep`, or reasoning-profile ablations belong in separate ablation studies. They do not replace Ponytail or caveman in the main competitive benchmark.
-
-See [`benchmarks/README.md`](benchmarks/README.md) for the protocol and [`benchmarks/demo-NUMBERS.md`](benchmarks/demo-NUMBERS.md) for the generated demo summary.
-
 ## Install
 
 ```sh
@@ -263,7 +240,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.4.0` adds the competitive Numbers benchmark dashboard, measured-vs-synthetic publication gate, and reproducible benchmark renderer on top of adaptive reasoning profiles and persistent project intelligence.
+`v0.4.0` continues the short `@cm` UX, adaptive reasoning profiles, persistent project intelligence, scoped engineering, and risk-aware verification.
 
 ## License
 
