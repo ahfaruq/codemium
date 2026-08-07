@@ -2,7 +2,7 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 python - "$ROOT" <<'PYEOF'
-import json,sys
+import json,sys,tomllib
 from pathlib import Path
 root=Path(sys.argv[1])
 version=(root/'VERSION').read_text().strip()
@@ -20,6 +20,9 @@ for phrase in ['name: cm','@cm fast','preferred `low`','preferred `xhigh`','smal
 # Claude Code adapter
 claude_market=json.loads((root/'.claude-plugin/marketplace.json').read_text())
 assert claude_market['name']=='codemium'
+entry=next(p for p in claude_market['plugins'] if p['name']=='codemium')
+assert entry['version']==version and entry['source']=='./adapters/claude-code'
+assert (root/'adapters/claude-code').is_dir()
 claude_plugin=json.loads((root/'adapters/claude-code/.claude-plugin/plugin.json').read_text())
 assert claude_plugin['name']=='codemium' and claude_plugin['version']==version
 claude_skill=(root/'adapters/claude-code/skills/cm/SKILL.md').read_text()
@@ -32,7 +35,8 @@ gemini=json.loads((root/'gemini-extension.json').read_text())
 assert gemini['name']=='codemium' and gemini['version']==version and gemini['contextFileName']=='GEMINI.md'
 assert 'host-agnostic coding-intelligence layer' in (root/'GEMINI.md').read_text()
 cm_toml=(root/'commands/cm.toml').read_text()
-assert '{{args}}' in cm_toml and 'Run Codemium' in cm_toml
+parsed_cm=tomllib.loads(cm_toml)
+assert '{{args}}' in parsed_cm['prompt'] and 'Run Codemium' in parsed_cm['description']
 
 # Public positioning
 readme=(root/'README.md').read_text()
