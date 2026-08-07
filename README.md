@@ -130,21 +130,24 @@ Codemium turns a repository into persistent engineering memory:
 
 ## Numbers
 
-The honest measurement is a **real coding agent doing real work on the same repository state and task set**, scored on the code, tests, safety, token usage, cost, and wall-clock time it leaves behind.
+The purpose of **Numbers** is direct competitive measurement. Codemium is tested **against** the alternatives, not presented as an extension of them.
 
-Codemium now includes a Ponytail-style benchmark dashboard, but **no real Codemium performance numbers are published yet**. The visual below is generated from synthetic demo data and is permanently watermarked so it cannot be confused with product performance.
+A primary competitive study has four arms:
 
-![Codemium Numbers dashboard — synthetic demo](benchmarks/demo-numbers.svg)
+- **baseline** — the same coding agent/model/reasoning with no optimization skill;
+- **caveman** — terse-prose/minimal-control arm;
+- **ponytail** — Ponytail under the same task and environment conditions;
+- **codemium** — Codemium `@cm` under those same conditions.
 
-A measured public chart must pass the benchmark publication gate (`meta.kind = measured`). The renderer refuses `--publish` for synthetic datasets.
+Every arm must receive the **same tasks, same starting repository commit, same agent/model configuration, same environment, and same scoring protocol**. The dashboard compares **LOC, total tokens, measured cost, wall-clock time, quality pass rate, and safety pass rate**.
 
-Real studies should compare at least:
+![Codemium competitive Numbers dashboard — synthetic demo](benchmarks/demo-numbers.svg)
 
-- **vanilla** — same Codex host/model/reasoning without Codemium;
-- **codemium-auto** — `@cm` on the same tasks and repository state;
-- optional external controls such as Ponytail, only when they are run on the exact same task set.
+The chart above is **synthetic demo data only** and is permanently watermarked. It demonstrates the competitive layout; it is not a Codemium performance claim.
 
-Core public metrics mirror the dashboard: **LOC, total tokens, measured cost, time, quality pass rate, and safety pass rate**. Lower is better for the first four; higher is better for quality and safety.
+A public measured chart must pass the publication gate. Competitive publication requires `meta.kind = measured` and complete `baseline`, `caveman`, `ponytail`, and `codemium` arms covering identical task IDs.
+
+Internal variants such as `@cm fast`, `@cm deep`, or reasoning-profile ablations belong in separate ablation studies. They do not replace Ponytail or caveman in the main competitive benchmark.
 
 See [`benchmarks/README.md`](benchmarks/README.md) for the protocol and [`benchmarks/demo-NUMBERS.md`](benchmarks/demo-NUMBERS.md) for the generated demo summary.
 
@@ -260,7 +263,7 @@ powershell -ExecutionPolicy Bypass -File plugins/codemium/scripts/verify.ps1
 
 ## Status
 
-`v0.4.0` adds the Numbers benchmark dashboard, measured-vs-synthetic publication gate, and reproducible benchmark renderer on top of adaptive reasoning profiles and persistent project intelligence.
+`v0.4.0` adds the competitive Numbers benchmark dashboard, measured-vs-synthetic publication gate, and reproducible benchmark renderer on top of adaptive reasoning profiles and persistent project intelligence.
 
 ## License
 
