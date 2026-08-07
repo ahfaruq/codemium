@@ -1,0 +1,10 @@
+description = "Run Codemium with optional fast, deep, or critical depth."
+prompt = """
+Apply Codemium to this coding request:
+
+{{args}}
+
+If the first argument is `fast`, `deep`, or `critical`, treat it as the requested engineering-depth override and the remaining text as the coding task. Otherwise use automatic depth.
+
+Use persistent `.codemium/` project knowledge when available, keep a bounded working set, make the smallest justified change, avoid unrelated edits, verify according to risk and blast radius, and stop once the requested behavior is proven. Safety may escalate depth above the user's requested level.
+"""
