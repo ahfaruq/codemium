@@ -1,9 +1,9 @@
 ---
 name: cm-review
-description: "Short Codemium review tag: actual-diff review across correctness, scope, architecture, security, testing, compatibility, and complexity with adaptive depth."
+description: "Short Codemium review skill: actual-diff review across correctness, scope, architecture, security, testing, compatibility, and complexity with adaptive depth."
 ---
 
-# @cm-review
+# $cm-review
 
 Pin task type to REVIEW. Accept `fast`, `deep`, or `critical` as optional depth requests; otherwise infer depth from diff risk and blast radius.
 
