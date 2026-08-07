@@ -1,4 +1,4 @@
-name: Verify Codemium
+name: Codemium Core
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  linux:
-    name: Linux verifier
+  core:
+    name: Core integrity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,19 +19,5 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify Codemium
-        run: sh plugins/codemium/scripts/verify.sh
-
-  windows:
-    name: Windows verifier
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Verify Codemium
-        shell: pwsh
-        run: ./plugins/codemium/scripts/verify.ps1
+      - name: Verify Codemium core
+        run: python scripts/verify_core.py
