@@ -7,8 +7,13 @@ $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKIL
 if ($MainSkill -notmatch "name: cm" -or $MainSkill -notmatch "@cm fast" -or $MainSkill -notmatch "reasoning-policy" -or $MainSkill -notmatch "preferred ``low``" -or $MainSkill -notmatch "preferred ``xhigh``") { throw "Short-tag/depth/reasoning contract missing" }
 $Readme = Get-Content (Join-Path $Root "README.md") -Raw
 if ($Readme -notmatch "@cm" -or $Readme -match '\$codemium:' -or $Readme -notmatch "FAST \| ``low``" -or $Readme -notmatch "CRITICAL \| ``xhigh``" -or $Readme -notmatch "## Numbers") { throw "README UX/Numbers is stale" }
+if ($Readme -match "Ponytail-style") { throw "Codemium is incorrectly framed as Ponytail-style" }
+foreach ($Phrase in @("**baseline**","**caveman**","**ponytail**","**codemium**")) { if ($Readme -notmatch [regex]::Escape($Phrase)) { throw "Missing competitive arm $Phrase" } }
+$Demo = Get-Content (Join-Path $Root "benchmarks\example-runs-v2.json") -Raw | ConvertFrom-Json
+$Systems = @($Demo.runs | ForEach-Object { $_.system } | Select-Object -Unique)
+foreach ($Arm in @("baseline","caveman","ponytail","codemium")) { if ($Systems -notcontains $Arm) { throw "Missing demo arm $Arm" } }
 $DemoSvg = Get-Content (Join-Path $Root "benchmarks\demo-numbers.svg") -Raw
-if ($DemoSvg -notmatch "SYNTHETIC / DEMO DATA") { throw "Synthetic benchmark watermark missing" }
+foreach ($Phrase in @("SYNTHETIC / DEMO DATA","caveman","ponytail","codemium")) { if ($DemoSvg -notmatch $Phrase) { throw "Demo SVG missing $Phrase" } }
 if (-not (Test-Path (Join-Path $Root "plugins\codemium\engine\reasoning_profile.py"))) { throw "reasoning_profile.py missing" }
 if (-not (Test-Path (Join-Path $Root "plugins\codemium\skills\codemium\references\reasoning-policy.md"))) { throw "reasoning-policy.md missing" }
 if (-not (Test-Path (Join-Path $Root "benchmarks\render_numbers.py"))) { throw "render_numbers.py missing" }
@@ -20,7 +25,8 @@ $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("codemium-" + [System.Gu
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 try {
   python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $Root "benchmarks\example-runs-v2.json") --svg (Join-Path $TempDir "demo.svg") --markdown (Join-Path $TempDir "demo.md") | Out-Null
-  if ((Get-Content (Join-Path $TempDir "demo.svg") -Raw) -notmatch "SYNTHETIC / DEMO DATA") { throw "Renderer watermark missing" }
+  $Rendered = Get-Content (Join-Path $TempDir "demo.svg") -Raw
+  foreach ($Phrase in @("SYNTHETIC / DEMO DATA","caveman","ponytail","codemium")) { if ($Rendered -notmatch $Phrase) { throw "Rendered benchmark missing $Phrase" } }
   python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $Root "benchmarks\example-runs-v2.json") --publish --svg (Join-Path $TempDir "publish.svg") --markdown (Join-Path $TempDir "publish.md") *> $null
   if ($LASTEXITCODE -eq 0) { throw "Synthetic benchmark passed publication gate" }
 } finally { Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue }
