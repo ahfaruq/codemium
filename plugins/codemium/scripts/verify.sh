@@ -7,7 +7,7 @@ import json,sys,tomllib
 from pathlib import Path
 root=Path(sys.argv[1])
 version=(root/'VERSION').read_text().strip()
-assert version=='0.6.0', version
+assert version=='0.6.1', version
 
 # Codex adapter
 for p in [root/'.agents/plugins/marketplace.json',root/'plugins/codemium/.codex-plugin/plugin.json']:
@@ -16,8 +16,9 @@ codex=json.loads((root/'plugins/codemium/.codex-plugin/plugin.json').read_text()
 assert codex['name']=='codemium' and codex['version']==version
 assert codex['interface']['displayName']=='Codemium'
 assert '@Codemium' in codex['interface']['longDescription']
+assert 'automatically initialize or reuse .codemium Project Brain' in ' '.join(codex['interface']['defaultPrompt'])
 main=(root/'plugins/codemium/skills/codemium/SKILL.md').read_text()
-for phrase in ['name: cm','# Codemium','@Codemium','$cm fast','preferred `low`','preferred `xhigh`','smallest **justified** change','Minimal production code **does not imply minimal tests**']:
+for phrase in ['name: cm','# Codemium','@Codemium','$cm fast','preferred `low`','preferred `xhigh`','Project Brain persistence contract','Persistence gate','smallest **justified** change','Minimal production code **does not imply minimal tests**']:
     assert phrase in main, phrase
 focused={
     'fix':'# $cm-fix','test':'# $cm-test','review':'# $cm-review',
@@ -29,7 +30,7 @@ for folder,heading in focused.items():
 
 # One shared Agent Skill for Claude/Gemini/Cursor/OpenCode.
 shared=(root/'skills/cm/SKILL.md').read_text()
-for phrase in ['name: cm','portable Agent Skill','opencode/slash: "true"','Vendor model/thinking controls remain host-owned']:
+for phrase in ['name: cm','portable Agent Skill','opencode/slash: "true"','Vendor model/thinking controls remain host-owned','Project Brain persistence is automatic']:
     assert phrase in shared, phrase
 
 # Claude Code adapter: repository root is plugin root.
@@ -61,7 +62,7 @@ for phrase in [
     'Persistent coding intelligence for AI coding agents',
     'OpenAI Codex | **Stable**', 'Claude Code | **Beta**', 'Gemini CLI | **Beta**',
     'Cursor | **Beta**', 'OpenCode | **Beta**', '@Codemium',
-    'INSTALL.md', 'HOSTS.md'
+    'Project Brain is zero-setup for normal use', 'INSTALL.md', 'HOSTS.md'
 ]:
     assert phrase in readme, phrase
 assert 'Codex-first plugin' not in readme
@@ -73,6 +74,7 @@ prd=(root/'PRD.md').read_text()
 assert 'host-agnostic persistent coding-intelligence layer' in prd
 assert 'v0.6 release definition' in prd
 assert '@Codemium' in prd
+assert 'Automatic lifecycle' in prd and 'Durable capture policy' in prd
 
 # Hidden benchmark infrastructure remains retained and non-publishable when synthetic.
 demo=json.loads((root/'benchmarks/example-runs-v2.json').read_text())
@@ -81,7 +83,7 @@ assert {'baseline','caveman','ponytail','codemium'} <= systems
 svg=(root/'benchmarks/demo-numbers.svg').read_text()
 assert 'SYNTHETIC / DEMO DATA' in svg
 
-print('PASS: v0.6 native host layouts, plugin mention UX, single-source skill, docs, and invocation contracts')
+print('PASS: v0.6.1 native host layouts, plugin mention UX, Project Brain persistence, docs, and invocation contracts')
 PYEOF
 
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
@@ -108,6 +110,7 @@ test ! -e "$TMPDIR/.cursor/skills/cm"
 python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" >/dev/null
 test -f "$TMPDIR/.opencode/skills/cm/SKILL.md"
 grep -q 'opencode/slash: "true"' "$TMPDIR/.opencode/skills/cm/SKILL.md"
+python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" >/dev/null
 python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" --uninstall >/dev/null
 test ! -e "$TMPDIR/.opencode/skills/cm"
 printf '%s\n' 'PASS: Cursor/OpenCode portable installer lifecycle'
