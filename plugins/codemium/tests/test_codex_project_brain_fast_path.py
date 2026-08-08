@@ -125,8 +125,12 @@ def main() -> None:
             "matched_entries",
             "total_active_entries",
             "prompt_epoch_ms",
+            "gate_write_ms",
+            "hook_total_ms",
         ):
             assert key in diagnostics, key
+        assert diagnostics["gate_write_ms"] >= 0
+        assert diagnostics["hook_total_ms"] >= diagnostics["hook_total_before_gate_ms"]
         # Existing Project Brain means the memory fast path must not spawn the
         # normal init helper merely to answer a retrieval-only question.
         assert diagnostics["state_init_ms"] < 1000
