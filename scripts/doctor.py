@@ -51,12 +51,15 @@ def validate(root: Path) -> tuple[list[str], dict]:
     codex_manifest = load_json(root / "plugins/codemium/.codex-plugin/plugin.json", errors)
     check(codex_manifest.get("version") == version, "Codex manifest version mismatch", errors)
     check(codex_manifest.get("name") == "codemium", "Codex plugin name mismatch", errors)
+    check(codex_manifest.get("interface", {}).get("displayName") == "Codemium", "Codex displayName must be Codemium", errors)
+    check("@Codemium" in codex_manifest.get("interface", {}).get("longDescription", ""), "Codex manifest must document @Codemium primary invocation", errors)
     codex_skill = root / "plugins/codemium/skills/codemium/SKILL.md"
     check(codex_skill.exists(), "Codex cm skill missing", errors)
     if codex_skill.exists():
         text = codex_skill.read_text(encoding="utf-8")
-        check("# Codemium — $cm" in text, "Codex skill must document native $cm invocation", errors)
-        check("# Codemium — @cm" not in text, "stale @cm Codex invocation remains", errors)
+        check("# Codemium" in text, "Codex skill heading missing", errors)
+        check("@Codemium" in text, "Codex skill must document @Codemium primary plugin invocation", errors)
+        check("$cm" in text, "Codex skill must preserve direct $cm compatibility invocation", errors)
     if codex_market:
         entries = codex_market.get("plugins", [])
         check(any(p.get("name") == "codemium" for p in entries), "Codex marketplace entry missing", errors)
