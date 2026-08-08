@@ -17,6 +17,11 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_BRAIN = PLUGIN_ROOT / "engine" / "project_brain.py"
 FINAL_STATUSES = {"captured", "reused", "none", "skipped_by_user_constraint", "enforcement_failed"}
 ACTIVATION_RE = re.compile(r"(?i)(@codemium\b|\$cm(?:\b|-)|/codemium:cm\b|\bcodemium\b)")
+CONTINUATION_MARKERS = (
+    "Project Brain persistence is still pending for this task.",
+    "project_brain_gate.py\" finalize",
+    "project_brain_gate.py' finalize",
+)
 
 
 def now_iso() -> str:
@@ -108,6 +113,10 @@ def forbids_all_workspace_writes(prompt: str) -> bool:
     return any(re.search(pattern, text) for pattern in patterns)
 
 
+def is_persistence_continuation(prompt: str) -> bool:
+    return any(marker.casefold() in prompt.casefold() for marker in CONTINUATION_MARKERS)
+
+
 def begin_gate(root: Path, session_id: str, turn_id: str) -> dict[str, Any]:
     path = gate_path(root, session_id, turn_id)
     current = read_json(path)
@@ -191,27 +200,55 @@ def finalize_gate(root: Path, session_id: str, turn_id: str, entries: list[dict[
     return gate
 
 
-def finalization_instruction(root: Path, gate: dict[str, Any]) -> str:
+def empty_finalize_command(root: Path, gate: dict[str, Any]) -> str:
     hook = Path(__file__).resolve()
     session_id = str(gate.get("session_id", ""))
     turn_id = str(gate.get("turn_id", ""))
     return (
+        f'python "{hook}" finalize --root "{root}" --session-id "{session_id}" '
+        f'--turn-id "{turn_id}" --knowledge-json "[]"'
+    )
+
+
+def finalization_instruction(root: Path, gate: dict[str, Any]) -> str:
+    return (
         "Project Brain persistence is still pending for this task. Before finishing, classify durable knowledge and finalize the gate. "
-        "Run the hook helper with the exact pending session/turn IDs. Use an empty JSON array when the task produced no durable project fact; "
-        "otherwise pass only durable source-backed decisions, constraints, interfaces, patterns, or known bugs/risks. Do not invent entries.\n\n"
-        f'python "{hook}" finalize --root "{root}" --session-id "{session_id}" --turn-id "{turn_id}" --knowledge-json \'[]\'\n\n'
+        "Use an empty JSON array when the task produced no durable project fact; otherwise pass only durable source-backed decisions, "
+        "constraints, interfaces, patterns, or known bugs/risks. Do not invent entries.\n\n"
+        f"{empty_finalize_command(root, gate)}\n\n"
         "For non-empty knowledge, replace [] with a JSON array of objects containing kind, text, source, and optional why/risk. "
         "After the command succeeds, finish the task normally."
     )
 
 
 def emit(payload: dict[str, Any] | None) -> None:
-    if payload:
+    if payload is not None:
         print(json.dumps(payload, ensure_ascii=False))
 
 
 def handle_user_prompt(data: dict[str, Any]) -> None:
     prompt = str(data.get("prompt", ""))
+    root = repository_root(str(data.get("cwd") or Path.cwd()))
+    session_id = str(data.get("session_id") or "")
+    turn_id = str(data.get("turn_id") or "")
+
+    # A Stop continuation is itself submitted as a new user prompt. Reuse the
+    # original pending gate instead of accidentally creating a second gate for
+    # the continuation turn.
+    if session_id and is_persistence_continuation(prompt):
+        pending = latest_pending_gate(root, session_id)
+        if pending:
+            _, gate = pending
+            emit(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "UserPromptSubmit",
+                        "additionalContext": finalization_instruction(root, gate),
+                    }
+                }
+            )
+        return
+
     if not ACTIVATION_RE.search(prompt):
         return
 
@@ -229,9 +266,6 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         )
         return
 
-    root = repository_root(str(data.get("cwd") or Path.cwd()))
-    session_id = str(data.get("session_id") or "")
-    turn_id = str(data.get("turn_id") or "")
     if not session_id or not turn_id:
         emit({"systemMessage": "Codemium Project Brain hook received no session/turn id; persistence enforcement is unavailable for this turn."})
         return
@@ -253,12 +287,11 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
 
     if gate.get("status") in FINAL_STATUSES:
         return
-    hook = Path(__file__).resolve()
     context = (
         "A deterministic Project Brain persistence gate is active for this repository-bound task. Source/product code may remain read-only while .codemium bookkeeping is updated. "
-        "Complete the investigation/implementation first. Before your final answer, finalize this exact gate by running:\n\n"
-        f'python "{hook}" finalize --root "{root}" --session-id "{session_id}" --turn-id "{turn_id}" --knowledge-json \'[]\'\n\n'
-        "Use [] only if no durable project knowledge was learned. Otherwise replace it with a JSON array containing only durable source-backed facts with kind, text, source, and optional why/risk. "
+        "Complete the investigation/implementation first. Before your final answer, finalize this exact gate. If no durable project knowledge was learned, run:\n\n"
+        f"{empty_finalize_command(root, gate)}\n\n"
+        "If durable knowledge was learned, replace [] with a JSON array containing only durable source-backed facts with kind, text, source, and optional why/risk. "
         "The Stop hook will continue the turn if this gate is still pending."
     )
     emit(
@@ -276,14 +309,18 @@ def handle_stop(data: dict[str, Any]) -> None:
     session_id = str(data.get("session_id") or "")
     turn_id = str(data.get("turn_id") or "")
     if not session_id:
+        emit({})
         return
 
     pending = latest_pending_gate(root, session_id, turn_id or None)
     if not pending:
+        # Stop requires JSON stdout on a successful hook invocation.
+        emit({})
         return
     path, gate = pending
     attempts = int(gate.get("stop_attempts", 0)) + 1
     gate["stop_attempts"] = attempts
+    gate["stop_hook_active"] = bool(data.get("stop_hook_active", False))
     gate["updated_at"] = now_iso()
 
     if attempts <= 2:
