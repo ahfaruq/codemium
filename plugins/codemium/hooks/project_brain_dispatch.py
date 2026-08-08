@@ -265,7 +265,7 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         gate_start = time.perf_counter_ns()
         if writes_allowed and session_id and turn_id:
             diagnostics["hook_total_before_gate_ms"] = elapsed_ms(total_start)
-            mark_fast_gate(
+            record = mark_fast_gate(
                 root,
                 session_id,
                 turn_id,
@@ -274,7 +274,18 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
                 prompt_epoch_ms=prompt_epoch_ms,
                 diagnostics=diagnostics,
             )
-        diagnostics["gate_write_ms"] = elapsed_ms(gate_start)
+            diagnostics["gate_write_ms"] = elapsed_ms(gate_start)
+            diagnostics["hook_total_ms"] = elapsed_ms(total_start)
+            record["diagnostics"] = {
+                **record.get("diagnostics", {}),
+                "gate_write_ms": diagnostics["gate_write_ms"],
+                "hook_total_ms": diagnostics["hook_total_ms"],
+            }
+            record["updated_at"] = gate.now_iso()
+            gate.atomic_json(gate.gate_path(root, session_id, turn_id), record)
+        else:
+            diagnostics["gate_write_ms"] = 0.0
+            diagnostics["hook_total_ms"] = elapsed_ms(total_start)
     except Exception as exc:
         gate.emit(
             {
