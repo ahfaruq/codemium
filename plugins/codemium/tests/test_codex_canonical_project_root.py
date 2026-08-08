@@ -136,8 +136,6 @@ def main() -> None:
         assert Path(location["runtime_git_root"]).resolve() == active_worktree.resolve()
         assert location["is_linked_worktree"] is True
         assert location["migration_status"] == "merged_all"
-        assert str(legacy_worktree.resolve()) in location["migration_sources"]
-        assert str(active_worktree.resolve()) not in location["migration_sources"]
 
         location_file = json.loads(
             (local / ".codemium" / "runtime" / "project-location.json").read_text(encoding="utf-8")
@@ -146,6 +144,8 @@ def main() -> None:
         assert Path(location_file["last_runtime_git_root"]).resolve() == active_worktree.resolve()
         assert location_file["is_linked_worktree"] is True
         assert str(legacy_worktree.resolve()) in location_file["migrated_source_stamps"]
+        assert str(legacy_worktree.resolve()) in location_file["last_migration"]["sources"]
+        assert str(active_worktree.resolve()) not in location_file["last_migration"]["sources"]
 
         # Re-running from the active worktree should not re-import unchanged
         # legacy memory, but should still reuse the canonical entries.
