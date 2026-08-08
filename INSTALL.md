@@ -30,7 +30,9 @@ Mention the installed plugin naturally:
 @Codemium safely change this authentication flow and verify the impact
 ```
 
-Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to learn internal skill names or specify `normal`.
+Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to learn internal skill names, specify `normal`, or initialize Project Brain manually before ordinary use.
+
+On the first repository-bound task, `.codemium/` is initialized automatically when workspace-state writes are allowed. Read-only source-code requests can still update Project Brain; an explicit prohibition on all file/workspace changes disables that bookkeeping for the task.
 
 ### Advanced direct skill invocation
 
@@ -43,7 +45,7 @@ $cm deep <task>
 $cm critical <task>
 ```
 
-Focused direct skills remain available for advanced use: `$cm-fix`, `$cm-test`, `$cm-review`, `$cm-audit`, `$cm-health`, `$cm-init`.
+Focused direct skills remain available for advanced use: `$cm-fix`, `$cm-test`, `$cm-review`, `$cm-audit`, `$cm-health`. `$cm-init` remains a manual maintenance/diagnostic path but is not a prerequisite for normal `@Codemium` work.
 
 The public Codemium plugin UX is `@Codemium`; `$cm` is the direct skill/compatibility path.
 
@@ -234,19 +236,22 @@ python scripts/doctor.py --require-host opencode
 
 The doctor recognizes Cursor's modern `agent` entrypoint and the `cursor-agent` compatibility alias.
 
-## Initialize project intelligence
+## Project intelligence lifecycle
 
-Normal Codemium use may initialize `.codemium/` when durable state is useful. Manual deterministic initialization:
+Normal Codemium use initializes `.codemium/` automatically on the first repository-bound task when state writes are allowed. At completion Codemium captures only durable, source-backed decisions, constraints, interfaces, patterns, and known bugs/risks that are likely to matter later; equivalent active entries are reused rather than duplicated.
+
+Manual deterministic initialization/capture is available for diagnostics or host integration:
 
 ```sh
 python plugins/codemium/engine/project_brain.py --root . init
+python plugins/codemium/engine/project_brain.py --root . capture --entries '[{"kind":"bug","text":"Durable source-backed finding","source":"src/example.py:42"}]'
 python plugins/codemium/engine/repo_graph.py build --root .
 python plugins/codemium/engine/test_map.py build --root .
 ```
 
 Portable Cursor/OpenCode installs include copies of these engine helpers inside the installed `cm` skill directory.
 
-Project Brain deliberately keeps transient repository maps, runtime state, the active task contract, and completed task snapshots out of Git by default while leaving durable sanitized architecture/decision knowledge available to the project.
+Project Brain deliberately keeps transient repository maps, runtime state, the active task contract, and completed task snapshots out of Git by default while leaving durable sanitized architecture/decision knowledge available to the project. It never treats chat transcripts, secrets, speculative hypotheses, or temporary runtime observations as durable project knowledge.
 
 ## Safety note
 
