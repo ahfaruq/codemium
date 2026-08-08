@@ -1,6 +1,6 @@
 # Codemium
 
-[![Codemium Core](https://github.com/admahmad/codemium/actions/workflows/verify.yml/badge.svg)](https://github.com/admahmad/codemium/actions/workflows/verify.yml)
+[![Codemium Core](https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg)](https://github.com/ahfaruq/codemium/actions/workflows/verify.yml)
 
 **Persistent coding intelligence for AI coding agents.**
 
@@ -89,7 +89,7 @@ Codex is currently the stable/reference adapter.
 ## Install
 
 ```sh
-codex plugin marketplace add admahmad/codemium --ref main
+codex plugin marketplace add ahfaruq/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
@@ -143,7 +143,7 @@ Claude Code uses the repository itself as the plugin root so the adapter has acc
 Inside Claude Code:
 
 ```text
-/plugin marketplace add admahmad/codemium
+/plugin marketplace add ahfaruq/codemium
 /plugin install codemium@codemium
 ```
 
@@ -171,7 +171,7 @@ Codemium is packaged as a native Gemini CLI extension with `gemini-extension.jso
 From a terminal:
 
 ```sh
-gemini extensions install https://github.com/admahmad/codemium --ref main
+gemini extensions install https://github.com/ahfaruq/codemium --ref main
 ```
 
 Restart Gemini CLI after installation or update so extension commands/context refresh.
