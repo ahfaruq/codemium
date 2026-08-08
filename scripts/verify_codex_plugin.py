@@ -16,6 +16,7 @@ HOOK_SCRIPT = PLUGIN / "hooks" / "project_brain_gate.py"
 DISPATCH_SCRIPT = PLUGIN / "hooks" / "project_brain_dispatch.py"
 HOOK_TEST = PLUGIN / "tests" / "test_codex_persistence_hook.py"
 FAST_PATH_TEST = PLUGIN / "tests" / "test_codex_project_brain_fast_path.py"
+CANONICAL_ROOT_TEST = PLUGIN / "tests" / "test_codex_canonical_project_root.py"
 
 
 def fail(message: str) -> None:
@@ -45,7 +46,7 @@ def main() -> None:
         if "project_brain_dispatch.py" not in command_text:
             fail(f"{event} must route through project_brain_dispatch.py")
 
-    for path in (HOOK_SCRIPT, DISPATCH_SCRIPT, HOOK_TEST, FAST_PATH_TEST):
+    for path in (HOOK_SCRIPT, DISPATCH_SCRIPT, HOOK_TEST, FAST_PATH_TEST, CANONICAL_ROOT_TEST):
         if not path.exists():
             fail(f"missing {path.relative_to(ROOT)}")
         py_compile.compile(str(path), doraise=True)
@@ -58,6 +59,10 @@ def main() -> None:
         "enforcement_failed",
         "finalize",
         "source",
+        "canonical_project_root",
+        "git-common-dir",
+        "migrate_legacy_project_brain",
+        "project-location.json",
     ):
         if phrase not in script:
             fail(f"hook contract missing: {phrase}")
@@ -67,9 +72,10 @@ def main() -> None:
         "CODEMIUM MEMORY RETRIEVAL MODE",
         "rank_entries",
         "Use minimum reasoning",
-        "fast_root",
         "memory_mode",
         "host_turn_to_stop_ms",
+        "prepare_project_root",
+        "canonical_project_root",
         "project_brain_gate",
     ):
         if phrase not in dispatch:
@@ -82,6 +88,7 @@ def main() -> None:
     for fixture, label in (
         (HOOK_TEST, "Codex persistence hook fixture"),
         (FAST_PATH_TEST, "Codex Project Brain memory-mode fixture"),
+        (CANONICAL_ROOT_TEST, "Codex canonical Project Brain root fixture"),
     ):
         result = subprocess.run(
             [sys.executable, str(fixture)],
@@ -106,7 +113,8 @@ def main() -> None:
             "Project Brain lightweight memory mode",
             "memory-mode pre-satisfied persistence",
             "memory-mode timing diagnostics",
-            "no-git Project Brain root resolution",
+            "canonical Project Brain root across Local/worktrees",
+            "legacy worktree memory migration",
             "workspace-write constraint",
             "retry loop guard",
         ],
