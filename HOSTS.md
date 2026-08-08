@@ -1,12 +1,12 @@
 # Codemium Hosts
 
-Codemium is **host-agnostic at the product/core level**. Each coding agent gets a thin native adapter that translates Codemium's task/depth/project-intelligence contract into that host's extension or Agent Skill model.
+Codemium is **host-agnostic at the product/core level**. Each coding agent gets a thin native adapter that translates Codemium's task/depth/project-intelligence contract into that host's extension, plugin, or Agent Skill model.
 
 ## Support matrix
 
-| Host | Status | Native surface | Explicit invocation |
+| Host | Status | Native surface | Primary invocation |
 | --- | --- | --- | --- |
-| OpenAI Codex | Stable | Codex plugin + Agent Skills | `$cm` |
+| OpenAI Codex | Stable | Codex plugin + Agent Skills | `@Codemium` |
 | Claude Code | Beta | repository-root Claude plugin + Agent Skill + slash command | `/codemium:cm` |
 | Gemini CLI | Beta | Gemini extension + context file + custom command | `/cm` |
 | Cursor | Beta | portable Agent Skill | `/cm` / skill picker |
@@ -33,13 +33,13 @@ A host adapter may change syntax and host-specific configuration, but it must pr
 
 Codemium intentionally does not fake one universal trigger when hosts expose different native mechanisms.
 
-- **Codex:** explicit skills use `$<skill-name>`, therefore `$cm`.
+- **Codex:** the installed plugin is invoked naturally with `@Codemium`. The internal `cm` Agent Skill remains directly invokable as `$cm` for advanced/compatibility use.
 - **Claude Code:** installed plugin commands are namespaced, therefore `/codemium:cm`; the `cm` skill may also auto-activate.
 - **Gemini CLI:** extension command `commands/cm.toml` becomes `/cm`.
 - **Cursor:** Agent Skills can be selected by the agent/skill UI and current releases expose skills in the slash menu; use `/cm` where available.
 - **OpenCode:** Agent Skills are advertised to the agent and loaded through the native skill tool. Codemium sets `opencode/slash: "true"` for releases that expose slash invocation.
 
-The short identifier is always **`cm`** even though the host marker differs.
+The portable internal skill identifier remains **`cm`**, while Codex exposes the product-level plugin identity as **`@Codemium`**.
 
 ## Shared state
 
@@ -108,7 +108,7 @@ A Beta adapter is promoted to Stable only after all of the following are true:
 - manifest/skill layout matches current host documentation;
 - repository CI validates the adapter bundle;
 - installation succeeds in the actual host;
-- explicit invocation resolves to Codemium correctly;
+- primary invocation resolves to Codemium correctly;
 - a fixture project demonstrates Project Brain reuse, bounded context behavior, scoped editing, and verification;
 - update/uninstall behavior is documented and tested;
 - no host-specific behavior silently weakens the Codemium safety floor.
