@@ -79,7 +79,7 @@ Typical Codex usage should be natural language:
 @Codemium safely change this authentication flow and verify the impact
 ```
 
-Codemium automatically classifies the task and selects the smallest safe depth. Users should not need to learn internal task/depth syntax for ordinary use.
+Codemium automatically classifies the task and selects the smallest safe depth. Users should not need to learn internal task/depth syntax for ordinary use, and they should not need to initialize Project Brain manually before their first normal repository task.
 
 Advanced direct skill invocation remains available:
 
@@ -160,6 +160,30 @@ It may contain:
 - deterministic cache/telemetry.
 
 Project Brain is not a conversation transcript and must not store secrets.
+
+### Automatic lifecycle
+
+Project Brain is a default runtime capability, not an opt-in setup ceremony.
+
+- On the first repository-bound Codemium task, initialize `.codemium/` automatically when it is missing and workspace-state writes are allowed.
+- Do not require `$cm-init` before ordinary use.
+- A source-code-only freeze such as “do not modify code” does not disable `.codemium/` bookkeeping. An explicit prohibition on **all** workspace/file/state changes must be respected.
+- Read-only investigations and reviews may improve Project Brain while leaving source code untouched.
+- At completion, source-backed facts that are durable enough to matter to future work must be captured or reused rather than left only in conversation context.
+
+### Durable capture policy
+
+Capture only concise, future-useful, evidence-backed:
+
+- decisions;
+- constraints;
+- interfaces and important cross-component flows;
+- established patterns;
+- known bugs, root causes, and material risks.
+
+Do not capture secrets, personal data, raw logs, temporary production snapshots, unverified hypotheses, tool/search history, or conversation transcripts. Equivalent ACTIVE entries should be reused rather than duplicated. If a task yields no durable fact, record none instead of inventing knowledge.
+
+Before completion, persistence must be classified as one of: **captured**, **reused**, **none**, or **skipped by user constraint**.
 
 ## Repository Intelligence
 
@@ -262,11 +286,12 @@ acceptance satisfied
 verification sufficient
 scope clean
 architecture/security preserved
+persistence obligation satisfied
 material uncertainty resolved
 required review complete
 ```
 
-Additional inspection after these gates requires a named unresolved risk that the next operation can reduce.
+Additional inspection after these gates requires a named unresolved risk or persistence obligation that the next operation can reduce.
 
 ## Host adapter contract
 
@@ -275,13 +300,15 @@ Every supported adapter must preserve:
 1. task classification;
 2. safety-bounded depth;
 3. shared `.codemium/` state;
-4. bounded context/working sets;
-5. minimum justified engineering;
-6. scope integrity;
-7. risk-aware testing;
-8. deterministic reuse where valid;
-9. explicit stop conditions;
-10. honest host/model-control reporting.
+4. automatic Project Brain initialization when state writes are allowed;
+5. durable knowledge capture/reuse before completion;
+6. bounded context/working sets;
+7. minimum justified engineering;
+8. scope integrity;
+9. risk-aware testing;
+10. deterministic reuse where valid;
+11. explicit stop conditions;
+12. honest host/model-control reporting.
 
 ## Distribution architecture
 
@@ -309,7 +336,7 @@ Repository CI runs the deterministic verifier and doctor on every main push/pull
 
 ## Functional requirements
 
-- FR-001 — initialize portable Project Brain.
+- FR-001 — initialize portable Project Brain automatically on first normal repository-bound task when state writes are allowed.
 - FR-002 — build lightweight repository/test intelligence.
 - FR-003 — compile task + safe depth contracts.
 - FR-004 — generate bounded Working Sets.
@@ -326,6 +353,8 @@ Repository CI runs the deterministic verifier and doctor on every main push/pull
 - FR-015 — provide safe install/uninstall for portable Agent Skill hosts.
 - FR-016 — never claim host reasoning changes or token savings without evidence.
 - FR-017 — expose `@Codemium` as the primary Codex plugin UX while preserving direct internal skill invocation.
+- FR-018 — capture or reuse durable source-backed project knowledge before task completion when state writes are allowed.
+- FR-019 — deduplicate equivalent ACTIVE Project Brain entries and never fabricate knowledge to satisfy persistence.
 
 ## Quality order
 
@@ -356,17 +385,20 @@ Codemium is not:
 - a promise that one model/reasoning level is best forever;
 - a vendor-specific project-memory format;
 - a reason to preload an entire repository;
-- permission to edit unrelated code.
+- permission to edit unrelated code;
+- a conversation-memory transcript disguised as project state.
 
 ## v0.6 release definition
 
 v0.6 is complete when:
 
 - Codex exposes `@Codemium` as the primary installed-plugin invocation while retaining `$cm` as the direct skill path;
+- normal repository-bound tasks auto-initialize Project Brain when permitted;
+- durable source-backed findings are captured/reused before completion rather than remaining only in chat;
 - Claude repository-root plugin includes shared core access;
 - Gemini extension manifests/command validate;
 - Cursor/OpenCode portable Agent Skill installation is safe and documented;
 - shared reasoning classes are vendor-neutral;
 - README/HOSTS/INSTALL/PRD agree on host status and invocation;
-- CI verifies versions/layout, portable installer behavior, engine fixtures, and hidden benchmark publication gate;
+- CI verifies versions/layout, automatic Project Brain persistence, portable installer behavior, engine fixtures, and hidden benchmark publication gate;
 - repository doctor reports a clean layout.
