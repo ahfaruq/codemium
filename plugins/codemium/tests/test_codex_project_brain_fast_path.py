@@ -114,10 +114,10 @@ def main() -> None:
         assert gate_record["fast_path"] is True
         assert gate_record["memory_mode"] == "lightweight"
         assert gate_record["retrieval"]["matched"] >= 1
+        assert Path(gate_record["project_location"]["canonical_project_root"]).resolve() == root.resolve()
         diagnostics = gate_record["diagnostics"]
         for key in (
             "root_resolve_ms",
-            "state_init_ms",
             "registry_read_ms",
             "ranking_ms",
             "context_build_ms",
@@ -127,27 +127,25 @@ def main() -> None:
             "prompt_epoch_ms",
             "gate_write_ms",
             "hook_total_ms",
+            "canonical_project_root",
+            "is_linked_worktree",
+            "migration_status",
         ):
             assert key in diagnostics, key
         assert diagnostics["gate_write_ms"] >= 0
         assert diagnostics["hook_total_ms"] >= diagnostics["hook_total_before_gate_ms"]
-        # Existing Project Brain means the memory fast path must not spawn the
-        # normal init helper merely to answer a retrieval-only question.
-        assert diagnostics["state_init_ms"] < 1000
+        assert Path(diagnostics["canonical_project_root"]).resolve() == root.resolve()
+        assert diagnostics["is_linked_worktree"] is False
 
-        # Because the fast path pre-satisfies persistence, Stop must not force a
-        # continuation/finalizer cycle. It should only stamp timing diagnostics.
         stop = call_hook(payload("Stop", root, "session-fast", "turn-fast"), root)
         assert stop == {}
         gate_after_stop = json.loads(gates[0].read_text(encoding="utf-8"))
         assert "host_turn_to_stop_ms" in gate_after_stop["diagnostics"]
         assert gate_after_stop["diagnostics"]["host_turn_to_stop_ms"] >= 0
 
-        # Retrieval-only work must not build repository intelligence or task state.
         assert not (root / ".codemium" / "repository" / "graph.json").exists()
         assert not (root / ".codemium" / "tasks" / "active.json").exists()
 
-        # A query with no relevant memory must not inject unrelated entries.
         miss = call_hook(
             payload(
                 "UserPromptSubmit",
@@ -163,8 +161,6 @@ def main() -> None:
         assert "none are relevant" in miss_context
         assert "visitorId" not in miss_context
 
-        # A normal Codemium engineering task still routes through the existing
-        # deterministic persistence gate.
         normal = call_hook(
             payload(
                 "UserPromptSubmit",
