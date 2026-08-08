@@ -143,7 +143,7 @@ try {
   python (Join-Path $Root "scripts\install_host.py") --host opencode --scope project --project $TempDir --uninstall | Out-Null
   if ($LASTEXITCODE -ne 0 -or (Test-Path (Join-Path $TempDir ".opencode\skills\cm"))) { throw "OpenCode portable uninstall failed" }
 
-  python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $TempDir "demo.svg") --markdown (Join-Path $TempDir "demo.md") | Out-Null
+  python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $Root "benchmarks\example-runs-v2.json") --svg (Join-Path $TempDir "demo.svg") --markdown (Join-Path $TempDir "demo.md") | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Synthetic benchmark render failed" }
   $Rendered = Get-Content (Join-Path $TempDir "demo.svg") -Raw
   Assert-Contains $Rendered 'SYNTHETIC / DEMO DATA' 'Synthetic watermark missing'
