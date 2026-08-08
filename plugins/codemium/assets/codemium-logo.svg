@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Codemium</title>
+  <desc id="desc">Codemium mark: a white C-shaped engineering intelligence symbol with three outward rays on a dark rounded square.</desc>
+  <rect width="1024" height="1024" rx="205" fill="#0D1117"/>
+  <path d="M692 253 C642 215 580 194 512 194 C336 194 194 336 194 512 C194 688 336 830 512 830 C580 830 642 809 692 771"
+        fill="none" stroke="#F6F8FA" stroke-width="126" stroke-linecap="round"/>
+  <rect x="447" y="447" width="130" height="130" rx="34" fill="#F6F8FA"/>
+  <circle cx="512" cy="512" r="22" fill="#0D1117"/>
+  <path d="M566 490 L708 448" fill="none" stroke="#F6F8FA" stroke-width="34" stroke-linecap="round"/>
+  <path d="M566 512 L734 512" fill="none" stroke="#F6F8FA" stroke-width="34" stroke-linecap="round"/>
+  <path d="M566 534 L708 576" fill="none" stroke="#F6F8FA" stroke-width="34" stroke-linecap="round"/>
+</svg>
