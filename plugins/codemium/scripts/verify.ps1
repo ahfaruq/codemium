@@ -7,7 +7,7 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.6.5") { throw "Expected Codemium 0.6.5" }
+if ($Version -ne "0.6.6") { throw "Expected Codemium 0.6.6" }
 
 function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
   if (-not $Text.Contains($Needle)) { throw $Message }
@@ -25,6 +25,7 @@ $DefaultPrompt = ($Codex.interface.defaultPrompt -join ' ')
 Assert-Contains $Codex.interface.longDescription '@Codemium' 'Codex manifest does not document @Codemium invocation'
 Assert-Contains $DefaultPrompt 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
 Assert-Contains $DefaultPrompt 'canonical project root shared across the Local checkout and linked worktrees' 'Codex manifest missing canonical Project Brain root'
+Assert-Contains $DefaultPrompt 'Consolidate durable legacy Project Brain knowledge discovered in any linked worktree' 'Codex manifest missing cross-worktree consolidation'
 Assert-Contains $DefaultPrompt 'bundled UserPromptSubmit and Stop lifecycle hooks' 'Codex manifest missing deterministic persistence gate'
 Assert-Contains $DefaultPrompt 'CODEMIUM MEMORY RETRIEVAL MODE' 'Codex manifest missing lightweight memory-mode policy'
 $Hooks = Get-Content (Join-Path $Root "plugins\codemium\hooks\hooks.json") -Raw | ConvertFrom-Json
@@ -37,7 +38,7 @@ foreach ($Event in @('UserPromptSubmit','Stop')) {
   Assert-Contains ($Handlers[0].command + $Handlers[0].commandWindows) 'project_brain_dispatch.py' "Codex hook must route through dispatcher: $Event"
 }
 $Gate = Get-Content (Join-Path $Root "plugins\codemium\hooks\project_brain_gate.py") -Raw
-foreach ($Phrase in @('canonical_project_root','git-common-dir','migrate_legacy_project_brain','project-location.json')) {
+foreach ($Phrase in @('canonical_project_root','git-common-dir','migrate_legacy_project_brain','migrate_legacy_project_brains','worktree list','migrated_source_stamps','project-location.json')) {
   Assert-Contains $Gate $Phrase "Canonical Project Brain root missing $Phrase"
 }
 $Dispatch = Get-Content (Join-Path $Root "plugins\codemium\hooks\project_brain_dispatch.py") -Raw
@@ -112,7 +113,7 @@ $Install = Get-Content (Join-Path $Root "INSTALL.md") -Raw
 Assert-Contains $Install '/hooks' 'INSTALL.md missing hook trust instructions'
 Assert-Contains $Install 'Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks' 'INSTALL.md missing v0.6.2 lifecycle documentation'
 $ChangeLog = Get-Content (Join-Path $Root "CHANGELOG.md") -Raw
-Assert-Contains $ChangeLog '## 0.6.5 — Canonical Project Brain root' 'CHANGELOG missing v0.6.5'
+Assert-Contains $ChangeLog '## 0.6.6 — Cross-worktree memory consolidation' 'CHANGELOG missing v0.6.6'
 
 # Python syntax + core/Codex verifier + doctor + fixture.
 $py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\hooks"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
