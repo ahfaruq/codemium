@@ -5,8 +5,8 @@
   "author": {
     "name": "Codemium"
   },
-  "homepage": "https://github.com/admahmad/codemium",
-  "repository": "https://github.com/admahmad/codemium",
+  "homepage": "https://github.com/ahfaruq/codemium",
+  "repository": "https://github.com/ahfaruq/codemium",
   "license": "MIT",
   "keywords": ["coding-agent", "project-intelligence", "context-engineering", "software-engineering"]
 }
