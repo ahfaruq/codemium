@@ -14,7 +14,7 @@
   "interface": {
     "displayName": "Codemium",
     "shortDescription": "The senior engineer who already knows your codebase.",
-    "longDescription": "The OpenAI Codex adapter for Codemium. Invoke the installed plugin naturally with @Codemium. Codemium auto-detects task type and engineering depth, maintains durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, detects scope pollution, reuses deterministic work, and stops when sufficient evidence proves completion. Direct $cm skill invocation remains available as an advanced compatibility path.",
+    "longDescription": "The OpenAI Codex adapter for Codemium. Invoke the installed plugin naturally with @Codemium. Codemium auto-detects task type and engineering depth, automatically establishes persistent Project Brain state for normal repository work, reuses durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, captures new source-backed durable knowledge at completion, detects scope pollution, reuses deterministic work, and stops when sufficient evidence proves completion. Direct $cm skill invocation remains available as an advanced compatibility path.",
     "developerName": "Ahmad Faruq",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
@@ -24,6 +24,7 @@
     "logo": "./assets/codemium-logo.svg",
     "defaultPrompt": [
       "Use Codemium for this coding task. Auto-detect the task type and engineering depth; preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
+      "For repository-bound work, automatically initialize or reuse .codemium Project Brain when workspace-state writes are allowed. Before completion, capture or reuse only durable source-backed decisions, constraints, interfaces, patterns, and known bugs/risks; never leave useful durable facts only in conversation context. A source-code-only freeze still permits .codemium bookkeeping, while an explicit prohibition on all workspace/file changes must be respected.",
       "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Codex reasoning preferences are advisory unless the runtime confirms a per-task change."
     ]
   }
