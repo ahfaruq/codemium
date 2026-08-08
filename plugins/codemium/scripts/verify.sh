@@ -7,7 +7,7 @@ import json,sys,tomllib
 from pathlib import Path
 root=Path(sys.argv[1])
 version=(root/'VERSION').read_text().strip()
-assert version=='0.6.5', version
+assert version=='0.6.6', version
 
 # Codex adapter
 for p in [root/'.agents/plugins/marketplace.json',root/'plugins/codemium/.codex-plugin/plugin.json']:
@@ -20,6 +20,7 @@ assert codex['hooks']=='./hooks/hooks.json'
 default_prompt=' '.join(codex['interface']['defaultPrompt'])
 assert 'automatically initialize or reuse .codemium Project Brain' in default_prompt
 assert 'canonical project root shared across the Local checkout and linked worktrees' in default_prompt
+assert 'Consolidate durable legacy Project Brain knowledge discovered in any linked worktree' in default_prompt
 assert 'bundled UserPromptSubmit and Stop lifecycle hooks' in default_prompt
 assert 'CODEMIUM MEMORY RETRIEVAL MODE' in default_prompt
 hooks=json.loads((root/'plugins/codemium/hooks/hooks.json').read_text())
@@ -30,7 +31,7 @@ for event in ['UserPromptSubmit','Stop']:
     assert 'commandWindows' in handler
     assert 'project_brain_dispatch.py' in (handler['command'] + handler['commandWindows'])
 gate=(root/'plugins/codemium/hooks/project_brain_gate.py').read_text()
-for phrase in ['canonical_project_root','git-common-dir','migrate_legacy_project_brain','project-location.json']:
+for phrase in ['canonical_project_root','git-common-dir','migrate_legacy_project_brain','migrate_legacy_project_brains','worktree list','migrated_source_stamps','project-location.json']:
     assert phrase in gate, phrase
 dispatch=(root/'plugins/codemium/hooks/project_brain_dispatch.py').read_text()
 for phrase in ['CODEMIUM MEMORY RETRIEVAL MODE','rank_entries','Use minimum reasoning','host_turn_to_stop_ms','memory_mode','prepare_project_root']:
@@ -96,7 +97,7 @@ assert 'Automatic lifecycle' in prd and 'Durable capture policy' in prd
 install=(root/'INSTALL.md').read_text()
 assert '/hooks' in install and 'Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks' in install
 changelog=(root/'CHANGELOG.md').read_text()
-assert '## 0.6.5 — Canonical Project Brain root' in changelog
+assert '## 0.6.6 — Cross-worktree memory consolidation' in changelog
 
 # Hidden benchmark infrastructure remains retained and non-publishable when synthetic.
 demo=json.loads((root/'benchmarks/example-runs-v2.json').read_text())
@@ -105,7 +106,7 @@ assert {'baseline','caveman','ponytail','codemium'} <= systems
 svg=(root/'benchmarks/demo-numbers.svg').read_text()
 assert 'SYNTHETIC / DEMO DATA' in svg
 
-print('PASS: v0.6.5 native host layouts, canonical Project Brain root, Codex persistence + memory mode, docs, and invocation contracts')
+print('PASS: v0.6.6 native host layouts, canonical Project Brain + cross-worktree consolidation, Codex persistence + memory mode, docs, and invocation contracts')
 PYEOF
 
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/hooks" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
