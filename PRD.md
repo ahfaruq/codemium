@@ -45,7 +45,7 @@ Codemium optimizes **minimum justified engineering**, not minimum LOC.
         │           │         │         │           │
       Codex       Claude    Gemini    Cursor     OpenCode
         │           │         │         │           │
-       $cm    /codemium:cm    /cm       /cm      cm skill
+  @Codemium  /codemium:cm    /cm       /cm      cm skill
 ```
 
 A host adapter may change invocation syntax, plugin/extension layout, model controls, and tool plumbing. It must not fork Codemium's durable project-state semantics or weaken its engineering/safety invariants.
@@ -58,9 +58,9 @@ A host adapter may change invocation syntax, plugin/extension layout, model cont
 
 Current release target:
 
-| Host | Status | Invocation |
+| Host | Status | Primary invocation |
 | --- | --- | --- |
-| OpenAI Codex | Stable | `$cm` |
+| OpenAI Codex | Stable | `@Codemium` |
 | Claude Code | Beta | `/codemium:cm` or skill auto-selection |
 | Gemini CLI | Beta | `/cm` |
 | Cursor | Beta | `/cm` / Agent Skill UI |
@@ -68,20 +68,31 @@ Current release target:
 
 ## User experience
 
-The identifier should stay short: **`cm`**.
+Codemium should expose the most natural host-level identity available. On OpenAI Codex, the primary product UX is the installed plugin mention **`@Codemium`**. The portable internal Agent Skill identifier remains **`cm`** for direct skill invocation and non-plugin hosts.
 
-Depth modifiers are portable:
+Typical Codex usage should be natural language:
 
 ```text
-cm
-cm fast
-cm deep
-cm critical
+@Codemium review this repository before making changes
+@Codemium fix the profile save bug
+@Codemium deeply investigate this intermittent queue failure
+@Codemium safely change this authentication flow and verify the impact
 ```
 
-The host adds its native marker:
+Codemium automatically classifies the task and selects the smallest safe depth. Users should not need to learn internal task/depth syntax for ordinary use.
 
-- Codex: `$cm`, `$cm fast`, `$cm deep`, `$cm critical`.
+Advanced direct skill invocation remains available:
+
+```text
+$cm
+$cm fast
+$cm deep
+$cm critical
+```
+
+Other hosts retain their native surfaces:
+
+- Codex: `@Codemium ...` primary; `$cm ...` direct Agent Skill fallback.
 - Claude Code: `/codemium:cm ...`.
 - Gemini CLI: `/cm ...`.
 - Cursor: `/cm` where the Agent Skill slash UI is available.
@@ -276,7 +287,7 @@ Every supported adapter must preserve:
 
 ### Codex
 
-Codex plugin lives under `plugins/codemium/`, including the canonical deterministic engine and Agent Skills. Explicit invocation uses `$cm`.
+Codex plugin lives under `plugins/codemium/`, including the canonical deterministic engine and Agent Skills. The primary product invocation is `@Codemium`; direct `$cm` invocation remains available for advanced/compatibility use.
 
 ### Claude Code
 
@@ -314,6 +325,7 @@ Repository CI runs the deterministic verifier and doctor on every main push/pull
 - FR-014 — keep adapter versions synchronized with repository VERSION.
 - FR-015 — provide safe install/uninstall for portable Agent Skill hosts.
 - FR-016 — never claim host reasoning changes or token savings without evidence.
+- FR-017 — expose `@Codemium` as the primary Codex plugin UX while preserving direct internal skill invocation.
 
 ## Quality order
 
@@ -350,7 +362,7 @@ Codemium is not:
 
 v0.6 is complete when:
 
-- Codex uses native `$cm` explicit invocation;
+- Codex exposes `@Codemium` as the primary installed-plugin invocation while retaining `$cm` as the direct skill path;
 - Claude repository-root plugin includes shared core access;
 - Gemini extension manifests/command validate;
 - Cursor/OpenCode portable Agent Skill installation is safe and documented;
