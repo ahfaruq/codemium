@@ -7,7 +7,7 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.6.1") { throw "Expected Codemium 0.6.1" }
+if ($Version -ne "0.6.2") { throw "Expected Codemium 0.6.2" }
 
 function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
   if (-not $Text.Contains($Needle)) { throw $Message }
@@ -20,8 +20,18 @@ function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
 $Codex = Get-Content (Join-Path $Root "plugins\codemium\.codex-plugin\plugin.json") -Raw | ConvertFrom-Json
 if ($Codex.name -ne "codemium" -or $Codex.version -ne $Version) { throw "Codex adapter version mismatch" }
 if ($Codex.interface.displayName -ne "Codemium") { throw "Codex displayName mismatch" }
+if ($Codex.hooks -ne './hooks/hooks.json') { throw "Codex manifest missing lifecycle hooks" }
 Assert-Contains $Codex.interface.longDescription '@Codemium' 'Codex manifest does not document @Codemium invocation'
 Assert-Contains ($Codex.interface.defaultPrompt -join ' ') 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
+Assert-Contains ($Codex.interface.defaultPrompt -join ' ') 'bundled UserPromptSubmit and Stop lifecycle hooks' 'Codex manifest missing deterministic persistence gate'
+$Hooks = Get-Content (Join-Path $Root "plugins\codemium\hooks\hooks.json") -Raw | ConvertFrom-Json
+foreach ($Event in @('UserPromptSubmit','Stop')) {
+  $Groups = @($Hooks.hooks.$Event)
+  if ($Groups.Count -lt 1) { throw "Missing Codex hook event: $Event" }
+  $Handlers = @($Groups[0].hooks)
+  if ($Handlers.Count -lt 1 -or $Handlers[0].type -ne 'command') { throw "Invalid Codex hook handler: $Event" }
+  if (-not $Handlers[0].commandWindows) { throw "Missing commandWindows for Codex hook: $Event" }
+}
 $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKILL.md") -Raw
 foreach ($Phrase in @(
   'name: cm', '# Codemium', '@Codemium', '$cm fast', 'preferred `low`', 'preferred `xhigh`',
@@ -65,7 +75,7 @@ Assert-Contains $GeminiContext 'host-agnostic coding-intelligence layer' 'Gemini
 Assert-Contains $GeminiCommand '{{args}}' 'Gemini command does not forward arguments'
 
 # Docs and portable installer.
-foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","INSTALL.md","HOSTS.md","PRD.md","CHANGELOG.md")) {
+foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","scripts\verify_codex_plugin.py","INSTALL.md","HOSTS.md","PRD.md","CHANGELOG.md")) {
   if (-not (Test-Path (Join-Path $Root $Path))) { throw "Missing $Path" }
 }
 $Readme = Get-Content (Join-Path $Root "README.md") -Raw
@@ -86,13 +96,22 @@ $Prd = Get-Content (Join-Path $Root "PRD.md") -Raw
 Assert-Contains $Prd '@Codemium' 'PRD.md missing @Codemium invocation'
 Assert-Contains $Prd 'Automatic lifecycle' 'PRD.md missing Project Brain automatic lifecycle'
 Assert-Contains $Prd 'Durable capture policy' 'PRD.md missing durable capture policy'
+$Install = Get-Content (Join-Path $Root "INSTALL.md") -Raw
+Assert-Contains $Install '/hooks' 'INSTALL.md missing hook trust instructions'
+Assert-Contains $Install 'Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks' 'INSTALL.md missing v0.6.2 lifecycle documentation'
+$ChangeLog = Get-Content (Join-Path $Root "CHANGELOG.md") -Raw
+Assert-Contains $ChangeLog '## 0.6.2 — Deterministic Codex persistence gate' 'CHANGELOG missing v0.6.2'
 
-# Python syntax + doctor + fixture.
-$py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
+# Python syntax + core/Codex verifier + doctor + fixture.
+$py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\hooks"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
 foreach ($f in $py) {
   python -m py_compile $f.FullName
   if ($LASTEXITCODE -ne 0) { throw "Python syntax check failed: $($f.FullName)" }
 }
+python (Join-Path $Root "scripts\verify_core.py")
+if ($LASTEXITCODE -ne 0) { throw "Core verification failed" }
+python (Join-Path $Root "scripts\verify_codex_plugin.py")
+if ($LASTEXITCODE -ne 0) { throw "Codex lifecycle verification failed" }
 python (Join-Path $Root "scripts\doctor.py") --repo $Root | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Cross-host doctor failed" }
 python (Join-Path $Root "plugins\codemium\tests\test_fixture.py")
