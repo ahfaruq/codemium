@@ -1,6 +1,6 @@
 {
   "name": "codemium",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Codemium adapter for OpenAI Codex: persistent project intelligence, bounded working sets, scoped changes, risk-aware verification, and adaptive Codex reasoning preferences.",
   "author": {
     "name": "Ahmad Faruq",
@@ -27,6 +27,7 @@
       "Use Codemium for this coding task. Auto-detect the task type and engineering depth; preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
       "For repository-bound work, automatically initialize or reuse .codemium Project Brain when workspace-state writes are allowed. Before completion, capture or reuse only durable source-backed decisions, constraints, interfaces, patterns, and known bugs/risks; never leave useful durable facts only in conversation context. A source-code-only freeze still permits .codemium bookkeeping, while an explicit prohibition on all workspace/file changes must be respected.",
       "Use the bundled UserPromptSubmit and Stop lifecycle hooks as a deterministic persistence gate: normal Codemium turns should not finish while their Project Brain gate remains pending.",
+      "For explicit Project Brain-only retrieval requests, use the hook-provided Project Brain fast-path snapshot directly. Do not run task compilation, repository mapping, working-set discovery, git inspection, or source scans unless the user explicitly asks to refresh or verify stored knowledge.",
       "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Codex reasoning preferences are advisory unless the runtime confirms a per-task change."
     ]
   }
