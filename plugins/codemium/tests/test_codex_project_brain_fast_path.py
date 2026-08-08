@@ -29,7 +29,6 @@ def run(*args: object, cwd: Path | None = None, stdin: str | None = None) -> sub
 
 def init_repo(root: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
-    run("git", "init", "-q", cwd=root)
 
 
 def call_hook(payload: dict[str, object], root: Path) -> dict[str, object] | None:
@@ -100,26 +99,65 @@ def main() -> None:
         )
         assert start is not None
         context = str(start["hookSpecificOutput"]["additionalContext"])
-        assert "PROJECT BRAIN FAST PATH" in context
+        assert "CODEMIUM MEMORY RETRIEVAL MODE" in context
+        assert "overrides the normal Codemium engineering lifecycle" in context
+        assert "Use minimum reasoning" in context
         assert "visitorId" in context
-        assert "Do not run task_compiler" in context
-        assert "Do not rescan the repository" in context
+        assert "Do not classify task/depth" in context
+        assert "inspect git" in context
+        assert len(context) < 5000
 
         gates = list((root / ".codemium" / "runtime" / "persistence-gates").glob("*.json"))
         assert len(gates) == 1
-        gate = json.loads(gates[0].read_text(encoding="utf-8"))
-        assert gate["status"] == "reused"
-        assert gate["fast_path"] is True
-        assert gate["retrieval"]["matched"] >= 1
+        gate_record = json.loads(gates[0].read_text(encoding="utf-8"))
+        assert gate_record["status"] == "reused"
+        assert gate_record["fast_path"] is True
+        assert gate_record["memory_mode"] == "lightweight"
+        assert gate_record["retrieval"]["matched"] >= 1
+        diagnostics = gate_record["diagnostics"]
+        for key in (
+            "root_resolve_ms",
+            "state_init_ms",
+            "registry_read_ms",
+            "ranking_ms",
+            "context_build_ms",
+            "context_chars",
+            "matched_entries",
+            "total_active_entries",
+            "prompt_epoch_ms",
+        ):
+            assert key in diagnostics, key
+        # Existing Project Brain means the memory fast path must not spawn the
+        # normal init helper merely to answer a retrieval-only question.
+        assert diagnostics["state_init_ms"] < 1000
 
         # Because the fast path pre-satisfies persistence, Stop must not force a
-        # continuation/finalizer cycle.
+        # continuation/finalizer cycle. It should only stamp timing diagnostics.
         stop = call_hook(payload("Stop", root, "session-fast", "turn-fast"), root)
         assert stop == {}
+        gate_after_stop = json.loads(gates[0].read_text(encoding="utf-8"))
+        assert "host_turn_to_stop_ms" in gate_after_stop["diagnostics"]
+        assert gate_after_stop["diagnostics"]["host_turn_to_stop_ms"] >= 0
 
         # Retrieval-only work must not build repository intelligence or task state.
         assert not (root / ".codemium" / "repository" / "graph.json").exists()
         assert not (root / ".codemium" / "tasks" / "active.json").exists()
+
+        # A query with no relevant memory must not inject unrelated entries.
+        miss = call_hook(
+            payload(
+                "UserPromptSubmit",
+                root,
+                "session-miss",
+                "turn-miss",
+                prompt="@Codemium berdasarkan hanya Project Brain, apa yang diketahui tentang sistem pembayaran Stripe? Jangan scan ulang repository.",
+            ),
+            root,
+        )
+        assert miss is not None
+        miss_context = str(miss["hookSpecificOutput"]["additionalContext"])
+        assert "none are relevant" in miss_context
+        assert "visitorId" not in miss_context
 
         # A normal Codemium engineering task still routes through the existing
         # deterministic persistence gate.
@@ -137,7 +175,7 @@ def main() -> None:
         normal_context = str(normal["hookSpecificOutput"]["additionalContext"])
         assert "persistence gate is active" in normal_context.lower()
 
-    print("PASS: Codex Project Brain retrieval fast path")
+    print("PASS: Codex Project Brain lightweight retrieval mode")
 
 
 if __name__ == "__main__":

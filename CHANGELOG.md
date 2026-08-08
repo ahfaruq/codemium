@@ -2,6 +2,17 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.6.4 — Lightweight Project Brain memory mode
+
+- Reworked Project Brain-only follow-up questions into an explicit `CODEMIUM MEMORY RETRIEVAL MODE` that overrides the normal engineering lifecycle for that turn.
+- Added stronger no-work instructions for memory-only turns: no task/depth classification, planning, git inspection, repository search, source reads, working-set/repository-state creation, tests, source verification, or normal completion workflow.
+- Reduced the retrieval payload to a bounded six-entry snapshot and instructs Codex to use minimum reasoning and answer concisely unless more detail is requested.
+- Removed the fast path's unnecessary `git rev-parse` repository-root lookup; Project Brain is resolved by walking parent directories for `.codemium/` instead.
+- Avoids spawning the Project Brain init helper on retrieval-only turns when `.codemium/` already exists.
+- Added deterministic timing diagnostics for root resolution, state init, registry read, ranking, context construction, gate write, and approximate host turn time to `Stop` under the transient persistence-gate record.
+- Added test coverage for lightweight-mode override semantics, timing diagnostics, no repository/task-state creation, relevant-entry filtering, and normal engineering fallback.
+- Kept `plugins/codemium/hooks/hooks.json` unchanged from 0.6.3 so existing Codex hook trust remains valid after this update.
+
 ## 0.6.3 — Project Brain retrieval fast path
 
 - Added a Codex `UserPromptSubmit` dispatcher that recognizes explicit Project Brain-only retrieval requests before normal engineering orchestration begins.
@@ -31,7 +42,7 @@ All notable Codemium changes are recorded here.
 - Made Project Brain initialization automatic for normal repository-bound Codemium tasks when workspace-state writes are allowed; users no longer need a separate `$cm-init` step before ordinary use.
 - Added deterministic batched Project Brain capture with duplicate reuse for durable decisions, constraints, interfaces, patterns, and known bugs/risks.
 - Added a completion persistence gate so source-backed durable findings from reviews/investigations are captured, reused, explicitly classified as none, or skipped only when the user forbids workspace-state writes.
-- Clarified that “do not modify code” still permits `.codemium/` bookkeeping while an explicit prohibition on all file/workspace changes is respected.
+- Clarified that “do not modify code” still permits `.codemium/` bookkeeping while an explicit prohibition on all workspace/file changes is respected.
 - Added core regression coverage for automatic initialization, durable capture, and duplicate avoidance.
 
 ## 0.6.0 — Multi-host architecture

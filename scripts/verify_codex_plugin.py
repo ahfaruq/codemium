@@ -64,18 +64,24 @@ def main() -> None:
 
     dispatch = DISPATCH_SCRIPT.read_text(encoding="utf-8")
     for phrase in (
-        "PROJECT BRAIN FAST PATH",
+        "CODEMIUM MEMORY RETRIEVAL MODE",
         "rank_entries",
-        "Do not run task_compiler",
-        "fast_path",
+        "Use minimum reasoning",
+        "fast_root",
+        "memory_mode",
+        "host_turn_to_stop_ms",
         "project_brain_gate",
     ):
         if phrase not in dispatch:
-            fail(f"fast-path contract missing: {phrase}")
+            fail(f"memory-mode contract missing: {phrase}")
+
+    skill = (PLUGIN / "skills" / "codemium" / "SKILL.md").read_text(encoding="utf-8")
+    if "Lightweight Project Brain memory mode" not in skill:
+        fail("Codex skill missing lightweight memory mode override")
 
     for fixture, label in (
         (HOOK_TEST, "Codex persistence hook fixture"),
-        (FAST_PATH_TEST, "Codex Project Brain fast-path fixture"),
+        (FAST_PATH_TEST, "Codex Project Brain memory-mode fixture"),
     ):
         result = subprocess.run(
             [sys.executable, str(fixture)],
@@ -97,8 +103,10 @@ def main() -> None:
             "UserPromptSubmit activation",
             "Stop persistence enforcement",
             "captured/reused/none states",
-            "Project Brain retrieval fast path",
-            "fast-path pre-satisfied persistence",
+            "Project Brain lightweight memory mode",
+            "memory-mode pre-satisfied persistence",
+            "memory-mode timing diagnostics",
+            "no-git Project Brain root resolution",
             "workspace-write constraint",
             "retry loop guard",
         ],
