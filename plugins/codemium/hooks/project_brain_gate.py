@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,18 @@ CONTINUATION_MARKERS = (
     "Project Brain persistence is still pending for this task.",
     "project_brain_gate.py\" finalize",
     "project_brain_gate.py' finalize",
+)
+REGISTRY_FILES = {
+    "decision": "decisions.jsonl",
+    "constraint": "constraints.jsonl",
+    "interface": "interfaces.jsonl",
+    "pattern": "patterns.jsonl",
+    "bug": "bugs.jsonl",
+}
+DURABLE_STATE_FILES = (
+    "PROJECT.md",
+    "model-profile.json",
+    "architecture/system.json",
 )
 
 
@@ -53,20 +66,106 @@ def read_json(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def repository_root(cwd: str | Path) -> Path:
-    root = Path(cwd).resolve()
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    out: list[dict[str, Any]] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict):
+            out.append(item)
+    return out
+
+
+def git_output(cwd: str | Path, *args: str, timeout: int = 10) -> str | None:
     try:
         proc = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            ["git", "-C", str(Path(cwd).resolve()), *args],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=timeout,
         )
-        if proc.returncode == 0 and proc.stdout.strip():
-            return Path(proc.stdout.strip()).resolve()
     except (OSError, subprocess.TimeoutExpired):
-        pass
-    return root
+        return None
+    if proc.returncode != 0:
+        return None
+    value = proc.stdout.strip()
+    return value or None
+
+
+def _reported_git_path(value: str | None, base: Path) -> Path | None:
+    if not value:
+        return None
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = base / candidate
+    try:
+        return candidate.resolve()
+    except OSError:
+        return candidate.absolute()
+
+
+def project_context(cwd: str | Path) -> dict[str, Any]:
+    """Resolve one stable Project Brain root across Local and linked worktrees."""
+    runtime_cwd = Path(cwd).resolve()
+    top = git_output(runtime_cwd, "rev-parse", "--show-toplevel")
+    runtime_git_root = _reported_git_path(top, runtime_cwd)
+
+    if runtime_git_root is None:
+        for candidate in (runtime_cwd, *runtime_cwd.parents):
+            if (candidate / ".codemium").exists():
+                return {
+                    "runtime_cwd": str(runtime_cwd),
+                    "runtime_git_root": None,
+                    "git_common_dir": None,
+                    "canonical_project_root": str(candidate),
+                    "is_linked_worktree": False,
+                    "resolution": "ancestor_project_brain",
+                }
+        return {
+            "runtime_cwd": str(runtime_cwd),
+            "runtime_git_root": None,
+            "git_common_dir": None,
+            "canonical_project_root": str(runtime_cwd),
+            "is_linked_worktree": False,
+            "resolution": "cwd_fallback",
+        }
+
+    common_raw = git_output(runtime_git_root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    if common_raw is None:
+        common_raw = git_output(runtime_git_root, "rev-parse", "--git-common-dir")
+    common_dir = _reported_git_path(common_raw, runtime_git_root)
+
+    canonical = runtime_git_root
+    resolution = "git_toplevel"
+    if common_dir is not None and common_dir.name.casefold() == ".git":
+        candidate = common_dir.parent.resolve()
+        if candidate.exists():
+            canonical = candidate
+            resolution = "git_common_dir"
+
+    return {
+        "runtime_cwd": str(runtime_cwd),
+        "runtime_git_root": str(runtime_git_root),
+        "git_common_dir": str(common_dir) if common_dir is not None else None,
+        "canonical_project_root": str(canonical),
+        "is_linked_worktree": canonical != runtime_git_root,
+        "resolution": resolution,
+    }
+
+
+def repository_root(cwd: str | Path) -> Path:
+    """Compatibility entry point; now returns the canonical project root."""
+    return Path(project_context(cwd)["canonical_project_root"]).resolve()
 
 
 def gate_dir(root: Path) -> Path:
@@ -99,6 +198,124 @@ def run_project_brain(root: Path, *args: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise RuntimeError("Project Brain helper returned a non-object payload")
     return data
+
+
+def _legacy_source_root(context: dict[str, Any], canonical: Path) -> Path | None:
+    value = context.get("runtime_git_root")
+    if not value:
+        return None
+    candidate = Path(str(value)).resolve()
+    if candidate == canonical or not (candidate / ".codemium").exists():
+        return None
+    return candidate
+
+
+def _capture_entries_from_legacy(source: Path) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    registry = source / ".codemium" / "registry"
+    for kind, filename in REGISTRY_FILES.items():
+        for raw in read_jsonl(registry / filename):
+            if str(raw.get("status", "ACTIVE")).upper() != "ACTIVE":
+                continue
+            text = str(raw.get("text", "")).strip()
+            if not text:
+                continue
+            entry: dict[str, Any] = {
+                "kind": str(raw.get("kind") or kind),
+                "text": text,
+            }
+            for key in ("why", "source", "risk"):
+                if raw.get(key) not in (None, ""):
+                    entry[key] = raw[key]
+            entries.append(entry)
+    return entries
+
+
+def migrate_legacy_project_brain(source: Path, target: Path, target_preexisting: bool) -> dict[str, Any]:
+    """Move durable v0.6.4 worktree memory into the canonical Local project root."""
+    source_state = source / ".codemium"
+    target_state = target / ".codemium"
+    if source == target or not source_state.exists():
+        return {"status": "not_needed", "source": str(source), "target": str(target)}
+
+    if not target_preexisting:
+        copied = 0
+        for relative in DURABLE_STATE_FILES:
+            src = source_state / relative
+            dst = target_state / relative
+            if not src.exists() or not src.is_file():
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            copied += 1
+        for filename in REGISTRY_FILES.values():
+            src = source_state / "registry" / filename
+            dst = target_state / "registry" / filename
+            if not src.exists():
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            copied += len(read_jsonl(src))
+        run_project_brain(target, "init")
+        return {
+            "status": "copied",
+            "source": str(source),
+            "target": str(target),
+            "durable_items": copied,
+        }
+
+    entries = _capture_entries_from_legacy(source)
+    if not entries:
+        return {"status": "nothing_to_merge", "source": str(source), "target": str(target)}
+    result = run_project_brain(target, "capture", "--entries", json.dumps(entries, ensure_ascii=False))
+    counts = result.get("counts") if isinstance(result.get("counts"), dict) else {}
+    return {
+        "status": "merged",
+        "source": str(source),
+        "target": str(target),
+        "added": int(counts.get("added", 0)),
+        "reused": int(counts.get("reused", 0)),
+    }
+
+
+def write_project_location(root: Path, context: dict[str, Any], migration: dict[str, Any]) -> None:
+    path = root / ".codemium" / "runtime" / "project-location.json"
+    existing = read_json(path) or {}
+    observed = existing.get("observed_runtime_git_roots")
+    observed_roots = [str(x) for x in observed] if isinstance(observed, list) else []
+    runtime_git_root = context.get("runtime_git_root")
+    if runtime_git_root and str(runtime_git_root) not in observed_roots:
+        observed_roots.append(str(runtime_git_root))
+    payload = {
+        "schema_version": 1,
+        "canonical_project_root": context.get("canonical_project_root"),
+        "git_common_dir": context.get("git_common_dir"),
+        "last_runtime_cwd": context.get("runtime_cwd"),
+        "last_runtime_git_root": context.get("runtime_git_root"),
+        "is_linked_worktree": bool(context.get("is_linked_worktree")),
+        "resolution": context.get("resolution"),
+        "observed_runtime_git_roots": observed_roots[-20:],
+        "last_migration": migration,
+        "updated_at": now_iso(),
+    }
+    atomic_json(path, payload)
+
+
+def prepare_project_root(cwd: str | Path, writes_allowed: bool = True) -> tuple[Path, dict[str, Any], dict[str, Any]]:
+    """Resolve canonical root, initialize it, and migrate legacy worktree memory when allowed."""
+    context = project_context(cwd)
+    root = Path(str(context["canonical_project_root"])).resolve()
+    migration: dict[str, Any] = {"status": "skipped_read_only" if not writes_allowed else "not_needed"}
+    if not writes_allowed:
+        return root, context, migration
+
+    target_preexisting = (root / ".codemium").exists()
+    run_project_brain(root, "init")
+    source = _legacy_source_root(context, root)
+    if source is not None:
+        migration = migrate_legacy_project_brain(source, root, target_preexisting)
+    write_project_location(root, context, migration)
+    return root, context, migration
 
 
 def forbids_all_workspace_writes(prompt: str) -> bool:
@@ -228,13 +445,11 @@ def emit(payload: dict[str, Any] | None) -> None:
 
 def handle_user_prompt(data: dict[str, Any]) -> None:
     prompt = str(data.get("prompt", ""))
-    root = repository_root(str(data.get("cwd") or Path.cwd()))
+    cwd = str(data.get("cwd") or Path.cwd())
+    root = repository_root(cwd)
     session_id = str(data.get("session_id") or "")
     turn_id = str(data.get("turn_id") or "")
 
-    # A Stop continuation is itself submitted as a new user prompt. Reuse the
-    # original pending gate instead of accidentally creating a second gate for
-    # the continuation turn.
     if session_id and is_persistence_continuation(prompt):
         pending = latest_pending_gate(root, session_id)
         if pending:
@@ -271,9 +486,17 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         return
 
     try:
-        run_project_brain(root, "init")
+        root, context, migration = prepare_project_root(cwd, writes_allowed=True)
         gate = begin_gate(root, session_id, turn_id)
-    except Exception as exc:  # hook must fail visibly rather than block the user's prompt
+        gate["project_location"] = {
+            "canonical_project_root": context.get("canonical_project_root"),
+            "runtime_git_root": context.get("runtime_git_root"),
+            "git_common_dir": context.get("git_common_dir"),
+            "is_linked_worktree": bool(context.get("is_linked_worktree")),
+            "migration_status": migration.get("status"),
+        }
+        atomic_json(gate_path(root, session_id, turn_id), gate)
+    except Exception as exc:
         emit(
             {
                 "systemMessage": f"Codemium Project Brain initialization failed: {str(exc)[:500]}",
@@ -287,9 +510,10 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
 
     if gate.get("status") in FINAL_STATUSES:
         return
-    context = (
-        "A deterministic Project Brain persistence gate is active for this repository-bound task. Source/product code may remain read-only while .codemium bookkeeping is updated. "
-        "Complete the investigation/implementation first. Before your final answer, finalize this exact gate. If no durable project knowledge was learned, run:\n\n"
+    context_text = (
+        "A deterministic Project Brain persistence gate is active at the canonical project root, shared across Local and linked worktrees. "
+        "Source/product code may remain read-only while .codemium bookkeeping is updated. Complete the investigation/implementation first. "
+        "Before your final answer, finalize this exact gate. If no durable project knowledge was learned, run:\n\n"
         f"{empty_finalize_command(root, gate)}\n\n"
         "If durable knowledge was learned, replace [] with a JSON array containing only durable source-backed facts with kind, text, source, and optional why/risk. "
         "The Stop hook will continue the turn if this gate is still pending."
@@ -298,7 +522,7 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
-                "additionalContext": context,
+                "additionalContext": context_text,
             }
         }
     )
@@ -314,7 +538,6 @@ def handle_stop(data: dict[str, Any]) -> None:
 
     pending = latest_pending_gate(root, session_id, turn_id or None)
     if not pending:
-        # Stop requires JSON stdout on a successful hook invocation.
         emit({})
         return
     path, gate = pending
