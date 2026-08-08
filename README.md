@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml"><img src="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg" alt="Codemium Core" /></a>
-  <img src="https://img.shields.io/badge/version-v0.6.0-2F81F7" alt="Version v0.6.0" />
+  <img src="https://img.shields.io/badge/version-v0.6.1-2F81F7" alt="Version v0.6.1" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3FB950" alt="MIT License" /></a>
   <a href="https://github.com/sponsors/ahfaruq"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor Codemium" /></a>
 </p>
@@ -409,7 +409,7 @@ Codemium does not publish synthetic performance numbers as product claims. The b
 
 ## Status
 
-`v0.6.0` makes the host boundary explicit: Codex uses the installed `@Codemium` plugin mention as its primary product UX while retaining `$cm` as the direct Agent Skill path; Project Brain now initializes automatically for normal repository work and captures durable source-backed findings at completion; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
+`v0.6.1` adds zero-setup Project Brain persistence: Codex uses the installed `@Codemium` plugin mention as its primary product UX while retaining `$cm` as the direct Agent Skill path; Project Brain initializes automatically for normal repository work and captures durable source-backed findings at completion; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
 
 ## Support Codemium
 
