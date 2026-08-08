@@ -27,6 +27,20 @@ Direct Agent Skill invocation remains available as an advanced/compatibility pat
 
 Focused direct skills such as `$cm-fix`, `$cm-test`, and `$cm-review` pin task type but use the same depth/reasoning policy. They are implementation-level shortcuts, not the primary public UX.
 
+## Lightweight Project Brain memory mode
+
+When hook context explicitly declares **`CODEMIUM MEMORY RETRIEVAL MODE`**, it overrides the normal engineering lifecycle for that turn.
+
+- Answer from the supplied Project Brain snapshot only.
+- Use the minimum reasoning needed to summarize the stored facts accurately.
+- Do **not** classify engineering depth, compile a task contract, plan repository work, inspect git, search/read source files, build repository/working-set state, run tests, perform source verification, or execute normal engineering/completion workflows.
+- Do not create new Project Brain entries for a retrieval-only turn; persistence is already classified by the hook as `reused` or `none`.
+- Do not infer missing facts. If relevant knowledge is not present, say that Project Brain does not currently contain it.
+- Keep the response concise unless the user explicitly requests detail.
+- Exit memory mode only when the user explicitly asks to refresh, verify, investigate, or compare stored knowledge against repository/source evidence.
+
+This mode exists to make follow-up memory questions behave like lightweight retrieval rather than a full coding task.
+
 ## Project Brain persistence contract
 
 Persistent project intelligence is a default Codemium behavior, not a separate setup task.
@@ -85,6 +99,8 @@ Use `engine/reasoning_profile.py` for deterministic profile/alignment output. Re
 13. Complete/clear transient task state when applicable.
 14. Stop once acceptance, verification, scope, persistence, and material uncertainty gates pass.
 
+The lifecycle above does **not** run while `CODEMIUM MEMORY RETRIEVAL MODE` is active.
+
 ## Persistence gate
 
 A normal `@Codemium` task must not finish with a source-backed durable project fact existing only in chat when Project Brain writes are allowed. Before completion, explicitly decide one of these:
@@ -94,7 +110,7 @@ A normal `@Codemium` task must not finish with a source-backed durable project f
 - **none** — the task produced no durable knowledge worth storing;
 - **skipped by user constraint** — the user explicitly prohibited all workspace/state writes.
 
-This gate applies to read-only investigations and reviews too; source code may remain untouched while Project Brain improves.
+This gate applies to read-only investigations and reviews too; source code may remain untouched while Project Brain improves. Retrieval-only memory mode is pre-classified by the hook and does not run this completion gate.
 
 ## Context policy
 
