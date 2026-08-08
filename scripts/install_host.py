@@ -89,7 +89,7 @@ def install(host: str, scope: str, project: Path | None, force: bool, dry_run: b
                 "version": version(root),
                 "host": host,
                 "scope": scope,
-                "source": "https://github.com/admahmad/codemium",
+                "source": "https://github.com/ahfaruq/codemium",
             },
             indent=2,
         )
