@@ -2,6 +2,16 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.6.5 — Canonical Project Brain root
+
+- Anchored Codex Project Brain state to one canonical project root derived from Git's shared common directory, so Local checkout tasks and linked/Codex-managed worktrees reuse the same `.codemium/` instead of creating isolated memories per worktree.
+- Added canonical project-location metadata under `.codemium/runtime/project-location.json`, recording the canonical root, runtime cwd, runtime git root, git common directory, linked-worktree status, and observed runtime roots.
+- Added automatic migration for legacy v0.6.4 Project Brain state found inside a linked worktree: a new canonical brain copies durable registry/project metadata, while an existing canonical brain merges active durable entries through normal deduplication.
+- Routed normal persistence gates, Stop handling, and lightweight memory retrieval through the same canonical-root resolver.
+- Added project-location information to persistence-gate and memory-mode diagnostics so live Desktop behavior can be verified without guessing where state was written.
+- Added an integration fixture that creates a real Git linked worktree, seeds legacy memory there, verifies migration into the Local checkout, and confirms Local/worktree tasks reuse the same durable brain.
+- Kept `plugins/codemium/hooks/hooks.json` unchanged from 0.6.3/0.6.4, so existing Codex hook trust remains valid after this update.
+
 ## 0.6.4 — Lightweight Project Brain memory mode
 
 - Reworked Project Brain-only follow-up questions into an explicit `CODEMIUM MEMORY RETRIEVAL MODE` that overrides the normal engineering lifecycle for that turn.
@@ -42,7 +52,7 @@ All notable Codemium changes are recorded here.
 - Made Project Brain initialization automatic for normal repository-bound Codemium tasks when workspace-state writes are allowed; users no longer need a separate `$cm-init` step before ordinary use.
 - Added deterministic batched Project Brain capture with duplicate reuse for durable decisions, constraints, interfaces, patterns, and known bugs/risks.
 - Added a completion persistence gate so source-backed durable findings from reviews/investigations are captured, reused, explicitly classified as none, or skipped only when the user forbids workspace-state writes.
-- Clarified that “do not modify code” still permits `.codemium/` bookkeeping while an explicit prohibition on all workspace/file changes is respected.
+- Clarified that “do not modify code” still permits `.codemium/` bookkeeping while an explicit prohibition on all file/workspace changes is respected.
 - Added core regression coverage for automatic initialization, durable capture, and duplicate avoidance.
 
 ## 0.6.0 — Multi-host architecture
