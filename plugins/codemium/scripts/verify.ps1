@@ -7,7 +7,7 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.6.0") { throw "Expected Codemium 0.6.0" }
+if ($Version -ne "0.6.1") { throw "Expected Codemium 0.6.1" }
 
 function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
   if (-not $Text.Contains($Needle)) { throw $Message }
@@ -21,9 +21,11 @@ $Codex = Get-Content (Join-Path $Root "plugins\codemium\.codex-plugin\plugin.jso
 if ($Codex.name -ne "codemium" -or $Codex.version -ne $Version) { throw "Codex adapter version mismatch" }
 if ($Codex.interface.displayName -ne "Codemium") { throw "Codex displayName mismatch" }
 Assert-Contains $Codex.interface.longDescription '@Codemium' 'Codex manifest does not document @Codemium invocation'
+Assert-Contains ($Codex.interface.defaultPrompt -join ' ') 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
 $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKILL.md") -Raw
 foreach ($Phrase in @(
   'name: cm', '# Codemium', '@Codemium', '$cm fast', 'preferred `low`', 'preferred `xhigh`',
+  'Project Brain persistence contract', 'Persistence gate',
   'smallest **justified** change', 'Minimal production code **does not imply minimal tests**'
 )) {
   Assert-Contains $MainSkill $Phrase "Codex skill missing $Phrase"
@@ -39,7 +41,7 @@ foreach ($Spec in @(
 
 # Shared Agent Skill for Claude/Gemini/Cursor/OpenCode.
 $Shared = Get-Content (Join-Path $Root "skills\cm\SKILL.md") -Raw
-foreach ($Phrase in @('name: cm', 'portable Agent Skill', 'opencode/slash: "true"', 'Vendor model/thinking controls remain host-owned')) {
+foreach ($Phrase in @('name: cm', 'portable Agent Skill', 'opencode/slash: "true"', 'Vendor model/thinking controls remain host-owned', 'Project Brain persistence is automatic')) {
   Assert-Contains $Shared $Phrase "Shared cm skill missing $Phrase"
 }
 
@@ -70,7 +72,7 @@ $Readme = Get-Content (Join-Path $Root "README.md") -Raw
 foreach ($Phrase in @(
   'Persistent coding intelligence for AI coding agents', 'OpenAI Codex | **Stable**',
   'Claude Code | **Beta**', 'Gemini CLI | **Beta**', 'Cursor | **Beta**',
-  'OpenCode | **Beta**', '@Codemium', 'INSTALL.md', 'HOSTS.md'
+  'OpenCode | **Beta**', '@Codemium', 'Project Brain is zero-setup for normal use', 'INSTALL.md', 'HOSTS.md'
 )) {
   Assert-Contains $Readme $Phrase "README missing $Phrase"
 }
@@ -82,6 +84,8 @@ $Hosts = Get-Content (Join-Path $Root "HOSTS.md") -Raw
 Assert-Contains $Hosts '@Codemium' 'HOSTS.md missing @Codemium invocation'
 $Prd = Get-Content (Join-Path $Root "PRD.md") -Raw
 Assert-Contains $Prd '@Codemium' 'PRD.md missing @Codemium invocation'
+Assert-Contains $Prd 'Automatic lifecycle' 'PRD.md missing Project Brain automatic lifecycle'
+Assert-Contains $Prd 'Durable capture policy' 'PRD.md missing durable capture policy'
 
 # Python syntax + doctor + fixture.
 $py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
