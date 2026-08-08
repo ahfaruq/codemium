@@ -52,13 +52,16 @@ def main() -> None:
         fail("missing host-agnostic core fixture")
     py_compile.compile(str(fixture), doraise=True)
 
-    # Project Brain schema is a core contract, not a host-adapter contract.
+    # Project Brain schema/persistence is a core contract, not a host-adapter contract.
     brain = (ENGINE / "project_brain.py").read_text(encoding="utf-8")
     for phrase in [
         "GENERIC_REASONING",
         "TRANSIENT_IGNORE",
         "tasks/active.json",
         "host_profiles",
+        "def capture(",
+        "find_active_duplicate",
+        "init(root, emit=False)",
     ]:
         if phrase not in brain:
             fail(f"Project Brain contract missing: {phrase}")
@@ -67,6 +70,19 @@ def main() -> None:
     for depth in ["FAST", "NORMAL", "DEEP", "CRITICAL"]:
         if depth not in compiler:
             fail(f"task compiler depth missing: {depth}")
+    if "init_project_brain(root, emit=False)" not in compiler:
+        fail("normal task compilation must auto-initialize Project Brain")
+
+    codex_skill = (ROOT / "plugins/codemium/skills/codemium/SKILL.md").read_text(encoding="utf-8")
+    for phrase in [
+        "Project Brain persistence contract",
+        "Do **not** require the user to run `$cm-init` first",
+        "Persistence gate",
+        "captured",
+        "skipped by user constraint",
+    ]:
+        if phrase not in codex_skill:
+            fail(f"Codex persistence behavior missing: {phrase}")
 
     result = subprocess.run(
         [sys.executable, str(fixture)],
@@ -86,6 +102,7 @@ def main() -> None:
         "checked": [
             "engine syntax",
             "Project Brain invariants",
+            "automatic Project Brain initialization/capture",
             "generic task/depth contract",
             "host-agnostic core fixture",
         ],
