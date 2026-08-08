@@ -11,7 +11,7 @@ Codemium uses one shared engineering core with host-native installation surfaces
 ## OpenAI Codex — Stable
 
 ```sh
-codex plugin marketplace add admahmad/codemium --ref main
+codex plugin marketplace add ahfaruq/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
@@ -37,7 +37,7 @@ Upgrade the marketplace/plugin using the Codex plugin commands available in your
 Inside Claude Code:
 
 ```text
-/plugin marketplace add admahmad/codemium
+/plugin marketplace add ahfaruq/codemium
 /plugin install codemium@codemium
 ```
 
@@ -65,7 +65,7 @@ claude plugin validate . --strict
 From a terminal (extension management is not performed from Gemini CLI interactive mode):
 
 ```sh
-gemini extensions install https://github.com/admahmad/codemium --ref main
+gemini extensions install https://github.com/ahfaruq/codemium --ref main
 ```
 
 Restart Gemini CLI after installing or updating the extension.
