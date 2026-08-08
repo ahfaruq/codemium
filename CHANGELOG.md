@@ -2,6 +2,16 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.6.3 — Project Brain retrieval fast path
+
+- Added a Codex `UserPromptSubmit` dispatcher that recognizes explicit Project Brain-only retrieval requests before normal engineering orchestration begins.
+- Injects a bounded set of relevant active Project Brain entries directly into the turn, using lightweight lexical ranking plus a small bilingual synonym bridge for common engineering terms.
+- Pre-satisfies the persistence gate as `reused` (or `none` when no stored knowledge exists), so retrieval-only turns do not enter the Stop/finalizer continuation cycle.
+- Explicitly tells Codex not to run task compilation, repository mapping, working-set discovery, git inspection, repository search, or source-file reads for Project Brain-only queries unless the user asks to refresh/verify stored knowledge.
+- Preserves the existing deterministic persistence gate unchanged for normal investigation, implementation, review, and other repository-bound Codemium work.
+- Added a dedicated fast-path fixture proving stored knowledge is reused without repository graph/task-state creation and that Stop exits immediately.
+- Routed both Codex lifecycle hooks through the new dispatcher while retaining the existing manual finalizer compatibility path.
+
 ## 0.6.2 — Deterministic Codex persistence gate
 
 - Replaced prompt-only Project Brain completion enforcement in the OpenAI Codex adapter with bundled lifecycle hooks.
