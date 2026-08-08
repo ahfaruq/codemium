@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +53,21 @@ SYNONYMS = {
     "user": {"pengguna", "akun", "account", "buyer"},
 }
 
+FAST_ENTRY_LIMIT = 6
+
+
+def elapsed_ms(start_ns: int) -> float:
+    return round((time.perf_counter_ns() - start_ns) / 1_000_000, 3)
+
+
+def fast_root(cwd: str | Path) -> Path:
+    """Resolve Project Brain without invoking git for memory-only retrieval."""
+    start = Path(cwd).resolve()
+    for candidate in (start, *start.parents):
+        if (candidate / ".codemium").exists():
+            return candidate
+    return start
+
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
@@ -91,7 +107,7 @@ def tokens(text: str) -> set[str]:
     return expanded
 
 
-def rank_entries(prompt: str, entries: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
+def rank_entries(prompt: str, entries: list[dict[str, Any]], limit: int = FAST_ENTRY_LIMIT) -> list[dict[str, Any]]:
     query = tokens(prompt)
     if not entries:
         return []
@@ -130,50 +146,81 @@ def concise_entry(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def mark_fast_gate(root: Path, session_id: str, turn_id: str, matched: list[dict[str, Any]]) -> dict[str, Any]:
-    current = gate.begin_gate(root, session_id, turn_id)
+def mark_fast_gate(
+    root: Path,
+    session_id: str,
+    turn_id: str,
+    matched: list[dict[str, Any]],
+    *,
+    total_entries: int,
+    prompt_epoch_ms: int,
+    diagnostics: dict[str, Any],
+) -> dict[str, Any]:
+    now = gate.now_iso()
     status = "reused" if matched else "none"
-    current.update(
-        {
+    current = {
+        "schema_version": 1,
+        "session_id": session_id,
+        "turn_id": turn_id,
+        "status": status,
+        "stop_attempts": 0,
+        "created_at": now,
+        "updated_at": now,
+        "fast_path": True,
+        "memory_mode": "lightweight",
+        "retrieval": {
+            "matched": len(matched),
+            "total_active": total_entries,
+            "entry_ids": [str(x.get("id", "")) for x in matched if x.get("id")],
+        },
+        "capture": {
             "status": status,
-            "updated_at": gate.now_iso(),
-            "fast_path": True,
-            "retrieval": {
-                "matched": len(matched),
-                "entry_ids": [str(x.get("id", "")) for x in matched if x.get("id")],
-            },
-            "capture": {
-                "status": status,
-                "counts": {"added": 0, "reused": len(matched)},
-            },
-        }
-    )
+            "counts": {"added": 0, "reused": len(matched)},
+        },
+        "diagnostics": {
+            **diagnostics,
+            "prompt_epoch_ms": prompt_epoch_ms,
+        },
+    }
     gate.atomic_json(gate.gate_path(root, session_id, turn_id), current)
     return current
 
 
-def fast_context(root: Path, matched: list[dict[str, Any]], total: int, writes_allowed: bool) -> str:
+def fast_context(matched: list[dict[str, Any]], total: int, writes_allowed: bool) -> str:
+    persistence = (
+        "Persistence is already satisfied as reused; do not write duplicate knowledge."
+        if matched and writes_allowed
+        else "Persistence is already satisfied as none; do not create knowledge."
+        if writes_allowed
+        else "Workspace writes are forbidden; do not write Project Brain state."
+    )
     if matched:
         payload = json.dumps([concise_entry(x) for x in matched], ensure_ascii=False, separators=(",", ":"))
-        persistence = "The persistence gate is already satisfied as reused." if writes_allowed else "Workspace writes are forbidden, so no persistence gate was written."
         return (
-            "CODEMIUM PROJECT BRAIN FAST PATH. Answer directly from the stored Project Brain snapshot below. "
-            "Do not run task_compiler, repository graph/working-set helpers, git inspection, repository search, or source-file reads. "
-            "Do not rescan the repository unless the user explicitly asks to refresh/verify against source. "
-            f"{persistence} Do not create duplicate Project Brain entries for this retrieval-only turn. "
-            f"Relevant active entries ({len(matched)} of {total}): {payload}"
+            "CODEMIUM MEMORY RETRIEVAL MODE. This mode overrides the normal Codemium engineering lifecycle for this turn. "
+            "Use minimum reasoning and answer directly from SNAPSHOT only. Do not classify task/depth, plan, inspect git, search the repository, "
+            "read source files, build repository/working-set state, run tests, verify against source, or execute engineering/completion workflows. "
+            "Do not infer missing facts. Keep the answer concise unless the user explicitly asks for detail. "
+            f"{persistence} SNAPSHOT({len(matched)}/{total})={payload}"
         )
-    persistence = "The persistence gate is already satisfied as none." if writes_allowed else "Workspace writes are forbidden, so no persistence gate was written."
     availability = (
-        "Project Brain contains active entries, but none matched this query."
+        "Project Brain has active entries, but none are relevant to this query."
         if total > 0
-        else "Project Brain has no active durable entries yet."
+        else "Project Brain has no active durable entries."
     )
     return (
-        f"CODEMIUM PROJECT BRAIN FAST PATH. {availability} "
-        "Do not scan the repository or open source files merely to fill the gap; answer that Project Brain does not currently contain the requested knowledge. "
-        f"{persistence}"
+        "CODEMIUM MEMORY RETRIEVAL MODE. This mode overrides the normal Codemium engineering lifecycle for this turn. "
+        f"{availability} Answer that the requested knowledge is not currently stored. Do not inspect git, repository files, source code, tests, or tools to fill the gap. "
+        f"Use minimum reasoning. {persistence}"
     )
+
+
+def latest_fast_gate(root: Path, session_id: str, turn_id: str) -> tuple[Path, dict[str, Any]] | None:
+    exact = gate.gate_path(root, session_id, turn_id)
+    data = gate.read_json(exact)
+    if data and data.get("fast_path") is True:
+        return exact, data
+    return None
 
 
 def handle_user_prompt(data: dict[str, Any]) -> None:
@@ -182,26 +229,59 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         gate.handle_user_prompt(data)
         return
 
-    root = gate.repository_root(str(data.get("cwd") or Path.cwd()))
+    total_start = time.perf_counter_ns()
+    prompt_epoch_ms = int(time.time() * 1000)
+    diagnostics: dict[str, Any] = {}
+
+    root_start = time.perf_counter_ns()
+    root = fast_root(str(data.get("cwd") or Path.cwd()))
+    diagnostics["root_resolve_ms"] = elapsed_ms(root_start)
+
     session_id = str(data.get("session_id") or "")
     turn_id = str(data.get("turn_id") or "")
     writes_allowed = not gate.forbids_all_workspace_writes(prompt)
 
     try:
-        if writes_allowed:
+        init_start = time.perf_counter_ns()
+        if writes_allowed and not (root / ".codemium").exists():
             gate.run_project_brain(root, "init")
+        diagnostics["state_init_ms"] = elapsed_ms(init_start)
+
+        read_start = time.perf_counter_ns()
         entries = active_entries(root)
+        diagnostics["registry_read_ms"] = elapsed_ms(read_start)
+
+        rank_start = time.perf_counter_ns()
         matched = rank_entries(prompt, entries)
+        diagnostics["ranking_ms"] = elapsed_ms(rank_start)
+
+        context_start = time.perf_counter_ns()
+        context = fast_context(matched, len(entries), writes_allowed)
+        diagnostics["context_build_ms"] = elapsed_ms(context_start)
+        diagnostics["context_chars"] = len(context)
+        diagnostics["matched_entries"] = len(matched)
+        diagnostics["total_active_entries"] = len(entries)
+
+        gate_start = time.perf_counter_ns()
         if writes_allowed and session_id and turn_id:
-            mark_fast_gate(root, session_id, turn_id, matched)
-        context = fast_context(root, matched, len(entries), writes_allowed)
+            diagnostics["hook_total_before_gate_ms"] = elapsed_ms(total_start)
+            mark_fast_gate(
+                root,
+                session_id,
+                turn_id,
+                matched,
+                total_entries=len(entries),
+                prompt_epoch_ms=prompt_epoch_ms,
+                diagnostics=diagnostics,
+            )
+        diagnostics["gate_write_ms"] = elapsed_ms(gate_start)
     except Exception as exc:
         gate.emit(
             {
-                "systemMessage": f"Codemium Project Brain fast-path retrieval failed: {str(exc)[:500]}",
+                "systemMessage": f"Codemium Project Brain lightweight retrieval failed: {str(exc)[:500]}",
                 "hookSpecificOutput": {
                     "hookEventName": "UserPromptSubmit",
-                    "additionalContext": "Fast-path retrieval failed. Fall back to normal Codemium behavior, but do not claim Project Brain was reused unless verified.",
+                    "additionalContext": "Memory retrieval failed. Fall back to normal Codemium behavior, but do not claim Project Brain was reused unless verified.",
                 },
             }
         )
@@ -217,6 +297,28 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
     )
 
 
+def handle_stop(data: dict[str, Any]) -> None:
+    root = fast_root(str(data.get("cwd") or Path.cwd()))
+    session_id = str(data.get("session_id") or "")
+    turn_id = str(data.get("turn_id") or "")
+    if session_id and turn_id:
+        current = latest_fast_gate(root, session_id, turn_id)
+        if current:
+            path, record = current
+            now_ms = int(time.time() * 1000)
+            diagnostics = record.get("diagnostics") if isinstance(record.get("diagnostics"), dict) else {}
+            prompt_ms = diagnostics.get("prompt_epoch_ms")
+            if isinstance(prompt_ms, int):
+                diagnostics["host_turn_to_stop_ms"] = max(0, now_ms - prompt_ms)
+            diagnostics["stop_epoch_ms"] = now_ms
+            record["diagnostics"] = diagnostics
+            record["updated_at"] = gate.now_iso()
+            gate.atomic_json(path, record)
+            gate.emit({})
+            return
+    gate.handle_stop(data)
+
+
 def handle_hook() -> None:
     try:
         payload = json.load(sys.stdin)
@@ -229,7 +331,7 @@ def handle_hook() -> None:
     if event == "UserPromptSubmit":
         handle_user_prompt(payload)
     elif event == "Stop":
-        gate.handle_stop(payload)
+        handle_stop(payload)
 
 
 def main() -> int:
