@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from common import state_root, now_iso, write_json
+from project_brain import init as init_project_brain
 from reasoning_profile import EFFORT_ORDER, HOSTS, resolve_reasoning_profile
 
 DEPTH_RANK = {'FAST': 0, 'NORMAL': 1, 'DEEP': 2, 'CRITICAL': 3}
@@ -141,6 +142,10 @@ def main():
     task = compile_task(ns.request, ns.depth, ns.model, ns.host_effort, ns.host)
     root = Path(ns.root).resolve()
     if not ns.no_write:
+        # A normal task is sufficient reason to establish Codemium state. Users
+        # should not need a separate init invocation before the first task.
+        if not state_root(root).exists():
+            init_project_brain(root, emit=False)
         p = state_root(root) / 'tasks/active.json'
         p.parent.mkdir(parents=True, exist_ok=True)
         write_json(p, task)
