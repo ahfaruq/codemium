@@ -27,11 +27,40 @@ Codemium is a host-agnostic engineering layer for long-running software projects
 
 Codemium keeps durable project intelligence in `.codemium/`, then exposes the same engineering doctrine through native adapters for each coding-agent host.
 
+## Quick start with OpenAI Codex
+
+Install Codemium:
+
+```sh
+codex plugin marketplace add ahfaruq/codemium --ref main
+codex plugin add codemium@codemium
+```
+
+Start a fresh Codex session, then mention the plugin naturally:
+
+```text
+@Codemium review this repository before making any changes
+@Codemium fix the profile save bug
+@Codemium deeply investigate why this websocket disconnects intermittently
+@Codemium safely change this authentication flow and verify the impact
+```
+
+**`@Codemium` is the primary Codex plugin UX.** Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to memorize internal skill names or depth syntax.
+
+Direct Agent Skill invocation remains available for advanced/compatibility use:
+
+```text
+$cm <task>
+$cm fast <task>
+$cm deep <task>
+$cm critical <task>
+```
+
 ## Supported hosts
 
-| Host | Status | Native integration | Explicit invocation |
+| Host | Status | Native integration | Primary invocation |
 | --- | --- | --- | --- |
-| OpenAI Codex | **Stable** | Codex plugin + Agent Skills | `$cm` |
+| OpenAI Codex | **Stable** | Codex plugin + Agent Skills | `@Codemium` |
 | Claude Code | **Beta** | Claude plugin + Agent Skill + command | `/codemium:cm` |
 | Gemini CLI | **Beta** | Gemini extension + context + command | `/cm` |
 | Cursor | **Beta** | Portable Agent Skill | `/cm` / skill picker |
@@ -54,7 +83,7 @@ See [`INSTALL.md`](INSTALL.md) for installation, [`HOSTS.md`](HOSTS.md) for the 
         │           │       │        │            │
       Codex       Claude  Gemini   Cursor      OpenCode
         │           │       │        │            │
-       $cm    /codemium:cm  /cm      /cm        cm skill
+  @Codemium  /codemium:cm  /cm      /cm        cm skill
 ```
 
 Invocation syntax, extension format, model controls, and tool surfaces are host-specific. The engineering invariants are not.
@@ -110,20 +139,33 @@ codex plugin marketplace add ahfaruq/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
-Start a fresh Codex task after installation if the runtime has cached its skill inventory.
+Start a fresh Codex task after installation if the runtime has cached its plugin or skill inventory.
 
 ## Use
 
-Codex's native explicit Agent Skill syntax is `$<skill-name>`:
+Primary plugin invocation:
 
 ```text
-$cm fix the profile save bug
-$cm fast adjust the card spacing
-$cm deep investigate why the websocket disconnects intermittently
-$cm critical change the authentication flow
+@Codemium fix the profile save bug
+@Codemium review this repository before making any changes
+@Codemium deeply investigate a race condition
+@Codemium safely change authorization behavior and verify the impact
 ```
 
-Focused skills:
+Codemium infers task type and engineering depth automatically. Natural language such as “quickly”, “deeply investigate”, or “safely review this critical flow” can express intent, but the safety floor always wins.
+
+### Advanced direct skills
+
+Codex also supports direct Agent Skill invocation:
+
+```text
+$cm
+$cm fast
+$cm deep
+$cm critical
+```
+
+Focused direct skills:
 
 ```text
 $cm-fix
@@ -134,7 +176,7 @@ $cm-health
 $cm-init
 ```
 
-> **v0.6 migration note:** earlier Codemium drafts documented `@cm`. Current Codex uses `$cm` for explicit skill invocation, so v0.6 standardizes on the native marker.
+These direct skills are useful for advanced/compatibility workflows; the public product-level entry point is `@Codemium`.
 
 ### Codex reasoning mapping
 
@@ -357,7 +399,7 @@ Codemium does not publish synthetic performance numbers as product claims. The b
 
 ## Status
 
-`v0.6.0` makes the host boundary explicit: Codex uses native `$cm`; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
+`v0.6.0` makes the host boundary explicit: Codex uses the installed `@Codemium` plugin mention as its primary product UX while retaining `$cm` as the direct Agent Skill path; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
 
 ## Support Codemium
 
