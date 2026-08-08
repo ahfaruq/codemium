@@ -7,6 +7,11 @@ All notable Codemium changes are recorded here.
 - Made `@Codemium` the primary OpenAI Codex plugin invocation for the public user experience.
 - Kept `$cm` and focused `$cm-*` skills as advanced/direct Agent Skill compatibility paths.
 - Updated the Codex plugin manifest, installation guide, host contract, PRD, doctor, and cross-host verifiers to distinguish plugin-level invocation from internal skill invocation.
+- Made Project Brain initialization automatic for normal repository-bound Codemium tasks when workspace-state writes are allowed; users no longer need a separate `$cm-init` step before ordinary use.
+- Added deterministic batched Project Brain capture with duplicate reuse for durable decisions, constraints, interfaces, patterns, and known bugs/risks.
+- Added a completion persistence gate so source-backed durable findings from reviews/investigations are captured, reused, explicitly classified as none, or skipped only when the user forbids workspace-state writes.
+- Clarified that “do not modify code” still permits `.codemium/` bookkeeping while an explicit prohibition on all file/workspace changes is respected.
+- Added core regression coverage for automatic initialization, durable capture, and duplicate avoidance.
 
 ## 0.6.0 — Multi-host architecture
 
