@@ -1,6 +1,6 @@
 {
   "name": "codemium",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Persistent coding intelligence for AI coding projects with bounded context, scoped changes, risk-aware verification, and portable project memory.",
   "contextFileName": "GEMINI.md"
 }
