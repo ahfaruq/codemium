@@ -1,6 +1,6 @@
 {
   "name": "codemium",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Codemium adapter for OpenAI Codex: persistent project intelligence, bounded working sets, scoped changes, risk-aware verification, and adaptive Codex reasoning preferences.",
   "author": {
     "name": "Ahmad Faruq",
@@ -15,7 +15,7 @@
   "interface": {
     "displayName": "Codemium",
     "shortDescription": "The senior engineer who already knows your codebase.",
-    "longDescription": "The OpenAI Codex adapter for Codemium. Invoke the installed plugin naturally with @Codemium. Codemium auto-detects task type and engineering depth, automatically establishes persistent Project Brain state for normal repository work, reuses durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, captures new source-backed durable knowledge at completion, detects scope pollution, reuses deterministic work, and stops when sufficient evidence proves completion. Direct $cm skill invocation remains available as an advanced compatibility path.",
+    "longDescription": "The OpenAI Codex adapter for Codemium. Invoke the installed plugin naturally with @Codemium. Codemium auto-detects task type and engineering depth, anchors Project Brain to one canonical project root shared across Local and linked worktrees, reuses durable project knowledge, selects bounded working sets, enforces minimum justified engineering, maps change impact to tests, captures new source-backed durable knowledge at completion, detects scope pollution, reuses deterministic work, and stops when sufficient evidence proves completion. Direct $cm skill invocation remains available as an advanced compatibility path.",
     "developerName": "Ahmad Faruq",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
@@ -25,9 +25,9 @@
     "logo": "./assets/codemium-logo.svg",
     "defaultPrompt": [
       "Use Codemium for this coding task. Auto-detect the task type and engineering depth; preserve project understanding, make the smallest justified change, verify according to risk, and stop when proven.",
-      "For repository-bound work, automatically initialize or reuse .codemium Project Brain when workspace-state writes are allowed. Before completion, capture or reuse only durable source-backed decisions, constraints, interfaces, patterns, and known bugs/risks; never leave useful durable facts only in conversation context. A source-code-only freeze still permits .codemium bookkeeping, while an explicit prohibition on all workspace/file changes must be respected.",
+      "For repository-bound work, automatically initialize or reuse .codemium Project Brain at the canonical project root shared across the Local checkout and linked worktrees when workspace-state writes are allowed. Before completion, capture or reuse only durable source-backed decisions, constraints, interfaces, patterns, and known bugs/risks; never leave useful durable facts only in conversation context. A source-code-only freeze still permits .codemium bookkeeping, while an explicit prohibition on all workspace/file changes must be respected.",
       "Use the bundled UserPromptSubmit and Stop lifecycle hooks as a deterministic persistence gate: normal Codemium turns should not finish while their Project Brain gate remains pending.",
-      "If hook context declares CODEMIUM MEMORY RETRIEVAL MODE, that mode overrides the normal engineering lifecycle for that turn. Use minimum reasoning, answer directly from the supplied Project Brain snapshot, and do not classify depth, plan work, inspect git, search/read the repository, run tests, verify against source, or execute normal completion/persistence workflows unless the user explicitly asks to refresh or verify stored knowledge.",
+      "If hook context declares CODEMIUM MEMORY RETRIEVAL MODE, that mode overrides the normal engineering lifecycle for that turn. Use minimum reasoning, answer directly from the supplied canonical Project Brain snapshot, and do not classify depth, plan work, inspect git, search/read the repository, run tests, verify against source, or execute normal completion/persistence workflows unless the user explicitly asks to refresh or verify stored knowledge.",
       "Use Codemium project intelligence and reuse unchanged deterministic work instead of relearning the repository. Codex reasoning preferences are advisory unless the runtime confirms a per-task change."
     ]
   }
