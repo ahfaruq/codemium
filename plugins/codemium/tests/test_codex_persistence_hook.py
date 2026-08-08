@@ -74,6 +74,10 @@ def brain_status(root: Path) -> dict[str, object]:
     return json.loads(proc.stdout)
 
 
+def gate_files(root: Path) -> list[Path]:
+    return list((root / ".codemium" / "runtime" / "persistence-gates").glob("*.json"))
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
@@ -93,6 +97,7 @@ def main() -> None:
         assert start is not None
         context = start["hookSpecificOutput"]["additionalContext"]
         assert "persistence gate is active" in str(context).lower()
+        assert '--knowledge-json "[]"' in str(context)
         assert (root / ".codemium" / "PROJECT.md").exists()
         status = brain_status(root)
         assert all(value == 0 for value in status["registries"].values())
@@ -100,6 +105,22 @@ def main() -> None:
         first_stop = call_hook(hook_payload("Stop", root, "session-a", "turn-a"), root)
         assert first_stop is not None and first_stop["decision"] == "block"
         assert "finalize" in str(first_stop["reason"]).lower()
+
+        # Stop continuation is submitted as a new UserPromptSubmit. It must
+        # reuse the original pending gate, not create a second one for turn-a2.
+        continuation = call_hook(
+            hook_payload(
+                "UserPromptSubmit",
+                root,
+                "session-a",
+                "turn-a2",
+                prompt=str(first_stop["reason"]),
+            ),
+            root,
+        )
+        assert continuation is not None
+        assert "still pending" in str(continuation["hookSpecificOutput"]["additionalContext"]).lower()
+        assert len(gate_files(root)) == 1
 
         knowledge = [
             {
@@ -112,8 +133,8 @@ def main() -> None:
         captured = finalize(root, "session-a", "turn-a", knowledge)
         assert captured["status"] == "captured"
         assert captured["capture"]["counts"] == {"added": 1, "reused": 0}
-        after_capture_stop = call_hook(hook_payload("Stop", root, "session-a", "turn-a"), root)
-        assert after_capture_stop is None
+        after_capture_stop = call_hook(hook_payload("Stop", root, "session-a", "turn-a2", stop_hook_active=True), root)
+        assert after_capture_stop == {}
         status = brain_status(root)
         assert status["registries"]["bug"] == 1
 
@@ -148,7 +169,7 @@ def main() -> None:
         )
         none = finalize(root, "session-c", "turn-c", [])
         assert none["status"] == "none"
-        assert call_hook(hook_payload("Stop", root, "session-c", "turn-c"), root) is None
+        assert call_hook(hook_payload("Stop", root, "session-c", "turn-c"), root) == {}
 
         # An explicit prohibition on every workspace/file write must prevent
         # even Project Brain initialization.
@@ -167,6 +188,7 @@ def main() -> None:
         assert skipped is not None
         assert "skipped by user constraint" in str(skipped["hookSpecificOutput"]["additionalContext"])
         assert not (frozen / ".codemium").exists()
+        assert call_hook(hook_payload("Stop", frozen, "session-d", "turn-d"), frozen) == {}
 
         # Merely enabling the plugin must not mutate unrelated Codex turns.
         unrelated = base / "unrelated"
@@ -182,6 +204,7 @@ def main() -> None:
             unrelated,
         ) is None
         assert not (unrelated / ".codemium").exists()
+        assert call_hook(hook_payload("Stop", unrelated, "session-e", "turn-e"), unrelated) == {}
 
         # The Stop hook retries persistence twice, then fails open visibly rather
         # than creating an infinite continuation loop.
@@ -198,13 +221,14 @@ def main() -> None:
             retry,
         )
         assert call_hook(hook_payload("Stop", retry, "session-f", "turn-f"), retry)["decision"] == "block"
-        assert call_hook(hook_payload("Stop", retry, "session-f", "turn-f"), retry)["decision"] == "block"
-        third = call_hook(hook_payload("Stop", retry, "session-f", "turn-f"), retry)
+        assert call_hook(hook_payload("Stop", retry, "session-f", "turn-f2", stop_hook_active=True), retry)["decision"] == "block"
+        third = call_hook(hook_payload("Stop", retry, "session-f", "turn-f3", stop_hook_active=True), retry)
         assert third is not None and "could not be finalized" in str(third["systemMessage"])
-        gate_files = list((retry / ".codemium" / "runtime" / "persistence-gates").glob("*.json"))
-        assert len(gate_files) == 1
-        gate = json.loads(gate_files[0].read_text(encoding="utf-8"))
+        retry_gates = gate_files(retry)
+        assert len(retry_gates) == 1
+        gate = json.loads(retry_gates[0].read_text(encoding="utf-8"))
         assert gate["status"] == "enforcement_failed"
+        assert gate["stop_hook_active"] is True
 
     print("PASS: Codex lifecycle hook enforces Project Brain persistence")
 
