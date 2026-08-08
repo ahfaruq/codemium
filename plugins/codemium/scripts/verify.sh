@@ -14,10 +14,11 @@ for p in [root/'.agents/plugins/marketplace.json',root/'plugins/codemium/.codex-
     json.loads(p.read_text())
 codex=json.loads((root/'plugins/codemium/.codex-plugin/plugin.json').read_text())
 assert codex['name']=='codemium' and codex['version']==version
+assert codex['interface']['displayName']=='Codemium'
+assert '@Codemium' in codex['interface']['longDescription']
 main=(root/'plugins/codemium/skills/codemium/SKILL.md').read_text()
-for phrase in ['name: cm','# Codemium — $cm','$cm fast','preferred `low`','preferred `xhigh`','smallest **justified** change','Minimal production code **does not imply minimal tests**']:
+for phrase in ['name: cm','# Codemium','@Codemium','$cm fast','preferred `low`','preferred `xhigh`','smallest **justified** change','Minimal production code **does not imply minimal tests**']:
     assert phrase in main, phrase
-assert '# Codemium — @cm' not in main
 focused={
     'fix':'# $cm-fix','test':'# $cm-test','review':'# $cm-review',
     'audit':'# $cm-audit','health':'# $cm-health','init':'# $cm-init'
@@ -59,7 +60,7 @@ readme=(root/'README.md').read_text()
 for phrase in [
     'Persistent coding intelligence for AI coding agents',
     'OpenAI Codex | **Stable**', 'Claude Code | **Beta**', 'Gemini CLI | **Beta**',
-    'Cursor | **Beta**', 'OpenCode | **Beta**', "Codex's native explicit Agent Skill syntax is `$<skill-name>`",
+    'Cursor | **Beta**', 'OpenCode | **Beta**', '@Codemium',
     'INSTALL.md', 'HOSTS.md'
 ]:
     assert phrase in readme, phrase
@@ -67,10 +68,11 @@ assert 'Codex-first plugin' not in readme
 assert '## Numbers' not in readme and 'benchmarks/demo-numbers.svg' not in readme
 assert 'Ponytail-style' not in readme
 hosts=(root/'HOSTS.md').read_text()
-assert 'host-agnostic at the product/core level' in hosts and 'OpenCode | Beta' in hosts
+assert 'host-agnostic at the product/core level' in hosts and 'OpenCode | Beta' in hosts and '@Codemium' in hosts
 prd=(root/'PRD.md').read_text()
 assert 'host-agnostic persistent coding-intelligence layer' in prd
 assert 'v0.6 release definition' in prd
+assert '@Codemium' in prd
 
 # Hidden benchmark infrastructure remains retained and non-publishable when synthetic.
 demo=json.loads((root/'benchmarks/example-runs-v2.json').read_text())
@@ -79,7 +81,7 @@ assert {'baseline','caveman','ponytail','codemium'} <= systems
 svg=(root/'benchmarks/demo-numbers.svg').read_text()
 assert 'SYNTHETIC / DEMO DATA' in svg
 
-print('PASS: v0.6 native host layouts, single-source skill, docs, and invocation contracts')
+print('PASS: v0.6 native host layouts, plugin mention UX, single-source skill, docs, and invocation contracts')
 PYEOF
 
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
