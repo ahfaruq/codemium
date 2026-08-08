@@ -2,6 +2,15 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.6.6 — Cross-worktree memory consolidation
+
+- Extended canonical Project Brain migration from only the current linked worktree to **all live Git worktrees** sharing the repository's common Git directory.
+- Fixes the real Codex Desktop sequence where an older task stored v0.6.4 memory in worktree A but a later task starts in a fresh worktree B: worktree B now discovers and consolidates durable memory from worktree A into the Local canonical `.codemium/`.
+- Added durable-source stamps in `.codemium/runtime/project-location.json` so unchanged legacy worktree brains are not re-imported on every turn; changed legacy registries are merged again through normal Project Brain deduplication.
+- When the canonical Project Brain is new, stable project metadata is taken from the freshest legacy brain while active durable registry entries from every discovered worktree are merged into the canonical registry.
+- Expanded the Git worktree integration fixture to use separate legacy-task and current-task worktrees, proving that memory can be recovered across different Desktop tasks rather than only from the current worktree.
+- Kept `plugins/codemium/hooks/hooks.json` unchanged, so existing Codex hook trust remains valid.
+
 ## 0.6.5 — Canonical Project Brain root
 
 - Anchored Codex Project Brain state to one canonical project root derived from Git's shared common directory, so Local checkout tasks and linked/Codex-managed worktrees reuse the same `.codemium/` instead of creating isolated memories per worktree.
