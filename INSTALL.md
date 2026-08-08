@@ -1,6 +1,6 @@
 # Installing Codemium
 
-Codemium uses one shared engineering core with host-native installation surfaces. The short identifier is `cm`; the invocation marker follows the host.
+Codemium uses one shared engineering core with host-native installation surfaces. The portable internal skill identifier is `cm`; the public invocation follows the host's native plugin or skill UX.
 
 ## Prerequisites
 
@@ -10,14 +10,31 @@ Codemium uses one shared engineering core with host-native installation surfaces
 
 ## OpenAI Codex — Stable
 
+Install Codemium from GitHub:
+
 ```sh
 codex plugin marketplace add ahfaruq/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
-Start a fresh task/session after installation if the current runtime has cached skill inventory.
+Start a fresh Codex task/session after installation if the runtime has cached its plugin or skill inventory.
 
-Use:
+### Primary use
+
+Mention the installed plugin naturally:
+
+```text
+@Codemium review this repository before making any changes
+@Codemium fix the profile save bug
+@Codemium deeply investigate why the websocket disconnects intermittently
+@Codemium safely change this authentication flow and verify the impact
+```
+
+Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to learn internal skill names or specify `normal`.
+
+### Advanced direct skill invocation
+
+Codex also supports direct Agent Skill invocation when you explicitly want the internal `cm` skill:
 
 ```text
 $cm <task>
@@ -26,11 +43,11 @@ $cm deep <task>
 $cm critical <task>
 ```
 
-Focused skills: `$cm-fix`, `$cm-test`, `$cm-review`, `$cm-audit`, `$cm-health`, `$cm-init`.
+Focused direct skills remain available for advanced use: `$cm-fix`, `$cm-test`, `$cm-review`, `$cm-audit`, `$cm-health`, `$cm-init`.
 
-Codex's explicit Agent Skill marker is `$<skill-name>`; older Codemium drafts that used `@cm` are obsolete.
+The public Codemium plugin UX is `@Codemium`; `$cm` is the direct skill/compatibility path.
 
-Upgrade the marketplace/plugin using the Codex plugin commands available in your installed Codex release, then start a fresh session if skill inventory is stale.
+Upgrade the marketplace/plugin using the Codex plugin commands available in your installed Codex release, then start a fresh session if plugin/skill inventory is stale.
 
 ## Claude Code — Beta
 
