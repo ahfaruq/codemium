@@ -13,7 +13,9 @@ PLUGIN = ROOT / "plugins" / "codemium"
 MANIFEST = PLUGIN / ".codex-plugin" / "plugin.json"
 HOOKS = PLUGIN / "hooks" / "hooks.json"
 HOOK_SCRIPT = PLUGIN / "hooks" / "project_brain_gate.py"
+DISPATCH_SCRIPT = PLUGIN / "hooks" / "project_brain_dispatch.py"
 HOOK_TEST = PLUGIN / "tests" / "test_codex_persistence_hook.py"
+FAST_PATH_TEST = PLUGIN / "tests" / "test_codex_project_brain_fast_path.py"
 
 
 def fail(message: str) -> None:
@@ -39,8 +41,11 @@ def main() -> None:
             fail(f"{event} must use a command hook")
         if "commandWindows" not in handlers[0]:
             fail(f"{event} must define commandWindows")
+        command_text = str(handlers[0].get("command", "")) + str(handlers[0].get("commandWindows", ""))
+        if "project_brain_dispatch.py" not in command_text:
+            fail(f"{event} must route through project_brain_dispatch.py")
 
-    for path in (HOOK_SCRIPT, HOOK_TEST):
+    for path in (HOOK_SCRIPT, DISPATCH_SCRIPT, HOOK_TEST, FAST_PATH_TEST):
         if not path.exists():
             fail(f"missing {path.relative_to(ROOT)}")
         py_compile.compile(str(path), doraise=True)
@@ -57,16 +62,31 @@ def main() -> None:
         if phrase not in script:
             fail(f"hook contract missing: {phrase}")
 
-    result = subprocess.run(
-        [sys.executable, str(HOOK_TEST)],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        sys.stdout.write(result.stdout)
-        sys.stderr.write(result.stderr)
-        fail("Codex persistence hook fixture failed")
+    dispatch = DISPATCH_SCRIPT.read_text(encoding="utf-8")
+    for phrase in (
+        "PROJECT BRAIN FAST PATH",
+        "rank_entries",
+        "Do not run task_compiler",
+        "fast_path",
+        "project_brain_gate",
+    ):
+        if phrase not in dispatch:
+            fail(f"fast-path contract missing: {phrase}")
+
+    for fixture, label in (
+        (HOOK_TEST, "Codex persistence hook fixture"),
+        (FAST_PATH_TEST, "Codex Project Brain fast-path fixture"),
+    ):
+        result = subprocess.run(
+            [sys.executable, str(fixture)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            sys.stdout.write(result.stdout)
+            sys.stderr.write(result.stderr)
+            fail(f"{label} failed")
 
     print(json.dumps({
         "status": "pass",
@@ -77,6 +97,8 @@ def main() -> None:
             "UserPromptSubmit activation",
             "Stop persistence enforcement",
             "captured/reused/none states",
+            "Project Brain retrieval fast path",
+            "fast-path pre-satisfied persistence",
             "workspace-write constraint",
             "retry loop guard",
         ],
