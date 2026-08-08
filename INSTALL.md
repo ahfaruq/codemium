@@ -5,7 +5,7 @@ Codemium uses one shared engineering core with host-native installation surfaces
 ## Prerequisites
 
 - Git for repository/extension installation where the host requires it.
-- Python 3.11+ for Codemium's deterministic engine, doctor, verification, and portable Cursor/OpenCode installer. The Agent Skill doctrine can still operate through normal host tools when a helper is unavailable, but the full deterministic optimization layer requires Python.
+- Python 3.11+ for Codemium's deterministic engine, doctor, verification, portable Cursor/OpenCode installer, and the Codex Project Brain lifecycle hook.
 - The target coding-agent host installed and authenticated according to that host's own setup.
 
 ## OpenAI Codex — Stable
@@ -18,6 +18,20 @@ codex plugin add codemium@codemium
 ```
 
 Start a fresh Codex task/session after installation if the runtime has cached its plugin or skill inventory.
+
+### Trust the Project Brain lifecycle hooks
+
+Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks. They are the deterministic enforcement layer that initializes Project Brain for a Codemium turn and prevents the turn from finishing while its Project Brain persistence gate is still pending.
+
+Codex intentionally does **not** auto-trust plugin command hooks. After installing or updating Codemium, open:
+
+```text
+/hooks
+```
+
+Review the hooks coming from the Codemium plugin and trust the current definitions. Codex records trust against the exact hook definition, so a later Codemium release that changes a hook can require review again.
+
+If the hooks are still untrusted or hooks are disabled in Codex, the plugin's skills/prompts may still load, but deterministic Project Brain completion enforcement will not run. In that state Codemium must not be treated as having guaranteed persistence.
 
 ### Primary use
 
@@ -32,7 +46,23 @@ Mention the installed plugin naturally:
 
 Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to learn internal skill names, specify `normal`, or initialize Project Brain manually before ordinary use.
 
-On the first repository-bound task, `.codemium/` is initialized automatically when workspace-state writes are allowed. Read-only source-code requests can still update Project Brain; an explicit prohibition on all file/workspace changes disables that bookkeeping for the task.
+On a repository-bound Codemium task, the lifecycle hook initializes or reuses `.codemium/` when workspace-state writes are allowed and opens a per-turn persistence gate. Before the turn is allowed to finish, durable source-backed project knowledge must be captured/reused or the task must explicitly classify that it learned nothing durable. A read-only **source-code** request can still update `.codemium/`; an explicit prohibition on **all** file/workspace changes disables that bookkeeping for the task.
+
+### Verify persistence after installation or update
+
+Use a real repository and run an investigation that is likely to produce a durable fact:
+
+```text
+@Codemium investigate this authentication flow. Do not modify source code. Persist any durable source-backed findings to Project Brain.
+```
+
+Then start a fresh Codex session and ask:
+
+```text
+@Codemium based only on Project Brain, explain the known authentication behavior. Do not rescan unless stored knowledge is stale.
+```
+
+The second turn should be able to reuse the durable registry entry created by the first turn. Codemium does not retroactively convert earlier chat history into Project Brain entries.
 
 ### Advanced direct skill invocation
 
@@ -49,7 +79,7 @@ Focused direct skills remain available for advanced use: `$cm-fix`, `$cm-test`, 
 
 The public Codemium plugin UX is `@Codemium`; `$cm` is the direct skill/compatibility path.
 
-Upgrade the marketplace/plugin using the Codex plugin commands available in your installed Codex release, then start a fresh session if plugin/skill inventory is stale.
+Upgrade the marketplace/plugin using the Codex plugin commands available in your installed Codex release, review any changed hook definitions with `/hooks`, then start a fresh session if plugin/skill inventory is stale.
 
 ## Claude Code — Beta
 
@@ -240,6 +270,8 @@ The doctor recognizes Cursor's modern `agent` entrypoint and the `cursor-agent` 
 
 Normal Codemium use initializes `.codemium/` automatically on the first repository-bound task when state writes are allowed. At completion Codemium captures only durable, source-backed decisions, constraints, interfaces, patterns, and known bugs/risks that are likely to matter later; equivalent active entries are reused rather than duplicated.
 
+For the OpenAI Codex adapter, `0.6.2` adds a host lifecycle enforcement layer around that contract. Other host adapters continue to use their native skill/command behavior unless that host provides and Codemium implements an equivalent deterministic lifecycle surface.
+
 Manual deterministic initialization/capture is available for diagnostics or host integration:
 
 ```sh
@@ -251,7 +283,7 @@ python plugins/codemium/engine/test_map.py build --root .
 
 Portable Cursor/OpenCode installs include copies of these engine helpers inside the installed `cm` skill directory.
 
-Project Brain deliberately keeps transient repository maps, runtime state, the active task contract, and completed task snapshots out of Git by default while leaving durable sanitized architecture/decision knowledge available to the project. It never treats chat transcripts, secrets, speculative hypotheses, or temporary runtime observations as durable project knowledge.
+Project Brain deliberately keeps transient repository maps, runtime state, the active task contract, completed task snapshots, and Codex persistence-gate state out of Git by default while leaving durable sanitized architecture/decision knowledge available to the project. It never treats chat transcripts, secrets, speculative hypotheses, or temporary runtime observations as durable project knowledge.
 
 ## Safety note
 
