@@ -26,6 +26,18 @@ A user may request `fast`, `deep`, or `critical`. Safety may escalate depth but 
 
 Codemium durable state lives in `.codemium/` and is intentionally portable across hosts. Reuse relevant decisions, constraints, interfaces, patterns, known bugs, repository intelligence, and current task state before rediscovering them. Never store secrets or full conversation transcripts.
 
+Project Brain persistence is automatic for normal repository-bound Codemium work:
+
+- if `.codemium/` is missing and workspace-state writes are allowed, initialize it automatically;
+- do not require a separate `cm-init` step before ordinary use;
+- “do not modify code” still permits `.codemium/` bookkeeping, while an explicit prohibition on all file/workspace changes must be respected;
+- at completion, persist only new durable, source-backed decisions, constraints, interfaces, patterns, and known bugs/risks;
+- do not store hypotheses, raw logs, temporary runtime observations, secrets, personal data, tool transcripts, or chat history;
+- reuse equivalent active entries instead of duplicating them;
+- if no durable knowledge was learned, record nothing rather than inventing an entry.
+
+A task should not end with useful durable project facts existing only in conversation context when Project Brain writes are allowed.
+
 ## Deterministic helpers
 
 Codemium ships a canonical Python engine. Use it only when it reduces model work.
@@ -34,9 +46,9 @@ Codemium ships a canonical Python engine. Use it only when it reduces model work
 - Repository-root extension installs contain the canonical engine under `plugins/codemium/engine/`.
 - If the host exposes neither path reliably, preserve Codemium behavior using normal repository tools rather than guessing an extension path.
 
-Typical helper operations include Project Brain initialization, repository mapping, test mapping, Working Set ranking, impact analysis, cache checks, health, and telemetry.
+Typical helper operations include Project Brain initialization and batched durable capture, repository mapping, test mapping, Working Set ranking, impact analysis, cache checks, health, and telemetry. When available, `project_brain.py ... capture --entries <json-or-file>` is the preferred deterministic path for storing a small batch of durable facts.
 
-Do not run helpers mechanically when the task is already obvious and local.
+Do not run expensive helpers mechanically when the task is already obvious and local. Project Brain initialization/capture is different: it is lightweight state management and should happen when persistence is applicable.
 
 ## Working-set discipline
 
@@ -56,4 +68,4 @@ Codemium engineering depth is portable. Vendor model/thinking controls remain ho
 
 ## Completion
 
-Stop when requested behavior is satisfied, relevant verification passes, scope is clean, architecture/security constraints are preserved, and no material unexplained uncertainty remains. Continue only when you can name the unresolved risk the next operation will reduce.
+Before stopping, classify Project Brain persistence as **captured**, **reused**, **none**, or **skipped by user constraint**. Then stop when requested behavior is satisfied, relevant verification passes, scope is clean, architecture/security constraints are preserved, persistence obligations are satisfied, and no material unexplained uncertainty remains. Continue only when you can name the unresolved risk or persistence obligation the next operation will reduce.
