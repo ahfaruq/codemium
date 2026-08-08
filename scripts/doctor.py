@@ -53,6 +53,23 @@ def validate(root: Path) -> tuple[list[str], dict]:
     check(codex_manifest.get("name") == "codemium", "Codex plugin name mismatch", errors)
     check(codex_manifest.get("interface", {}).get("displayName") == "Codemium", "Codex displayName must be Codemium", errors)
     check("@Codemium" in codex_manifest.get("interface", {}).get("longDescription", ""), "Codex manifest must document @Codemium primary invocation", errors)
+    check(codex_manifest.get("hooks") == "./hooks/hooks.json", "Codex manifest must bundle lifecycle hooks", errors)
+    codex_hooks_path = root / "plugins/codemium/hooks/hooks.json"
+    check(codex_hooks_path.exists(), "Codex hooks/hooks.json missing", errors)
+    if codex_hooks_path.exists():
+        codex_hooks = load_json(codex_hooks_path, errors)
+        events = codex_hooks.get("hooks", {}) if isinstance(codex_hooks.get("hooks", {}), dict) else {}
+        for event in ("UserPromptSubmit", "Stop"):
+            groups = events.get(event, [])
+            check(isinstance(groups, list) and bool(groups), f"Codex {event} hook missing", errors)
+            if isinstance(groups, list) and groups:
+                handlers = groups[0].get("hooks", []) if isinstance(groups[0], dict) else []
+                check(isinstance(handlers, list) and bool(handlers), f"Codex {event} hook handler missing", errors)
+                if isinstance(handlers, list) and handlers and isinstance(handlers[0], dict):
+                    check(handlers[0].get("type") == "command", f"Codex {event} hook must be command type", errors)
+                    check(bool(handlers[0].get("commandWindows")), f"Codex {event} hook missing commandWindows", errors)
+    check((root / "plugins/codemium/hooks/project_brain_gate.py").exists(), "Codex Project Brain gate hook missing", errors)
+    check((root / "scripts/verify_codex_plugin.py").exists(), "Codex lifecycle verifier missing", errors)
     codex_skill = root / "plugins/codemium/skills/codemium/SKILL.md"
     check(codex_skill.exists(), "Codex cm skill missing", errors)
     if codex_skill.exists():
