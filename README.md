@@ -47,6 +47,8 @@ Start a fresh Codex session, then mention the plugin naturally:
 
 **`@Codemium` is the primary Codex plugin UX.** Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to memorize internal skill names or depth syntax.
 
+**Project Brain is zero-setup for normal use.** On the first repository-bound task, Codemium initializes `.codemium/` automatically when workspace-state writes are allowed. At completion it captures only durable, source-backed project knowledge worth reusing later; it does not store the conversation transcript. A source-code-only instruction such as “do not modify code” still allows Project Brain bookkeeping, while an explicit prohibition on all workspace/file changes is respected.
+
 Direct Agent Skill invocation remains available for advanced/compatibility use:
 
 ```text
@@ -103,13 +105,13 @@ Safety may **escalate** depth but never downgrade below the safe minimum.
 
 Codemium then applies:
 
-- **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs;
+- **Project Brain** — automatically initialized durable decisions, constraints, interfaces, patterns, and known bugs with end-of-task capture/reuse;
 - **Repository Intelligence** — lightweight file/symbol/import/test discovery;
 - **Working Set Engine** — only context relevant to the current task;
 - **Scope Guard** — no unrelated edits or opportunistic cleanup;
 - **Impact & Test Intelligence** — verification follows behavior and blast radius;
 - **Read/Search Reuse** — unchanged deterministic work is not paid for twice;
-- **Stop Engine** — stop once the requested result is sufficiently proven;
+- **Stop Engine** — stop once the requested result and persistence obligations are sufficiently proven;
 - **Model Capability Layer** — engineering depth is portable while vendor reasoning knobs remain host-owned.
 
 ## Engineering doctrine
@@ -154,6 +156,8 @@ Primary plugin invocation:
 
 Codemium infers task type and engineering depth automatically. Natural language such as “quickly”, “deeply investigate”, or “safely review this critical flow” can express intent, but the safety floor always wins.
 
+Normal `@Codemium` tasks also establish/reuse Project Brain automatically and persist only future-useful, source-backed project facts. You do not need to run `$cm-init` before ordinary use.
+
 ### Advanced direct skills
 
 Codex also supports direct Agent Skill invocation:
@@ -173,8 +177,9 @@ $cm-test
 $cm-review
 $cm-audit
 $cm-health
-$cm-init
 ```
+
+`$cm-init` remains available as a manual maintenance/diagnostic path, but it is not required before normal `@Codemium` work.
 
 These direct skills are useful for advanced/compatibility workflows; the public product-level entry point is `@Codemium`.
 
@@ -315,16 +320,21 @@ All adapters use the same project state:
 
 A project initialized under one host can be understood by another host because durable state is vendor-neutral. Transient repository maps/runtime/task state is ignored by Git by default; durable sanitized architecture and decision knowledge can remain project-owned.
 
+For normal repository-bound work, initialization is automatic when state writes are allowed. At completion Codemium classifies persistence as **captured**, **reused**, **none**, or **skipped by user constraint**. Durable entries are evidence-backed and deduplicated; chat transcripts, secrets, speculative hypotheses, and temporary runtime observations are not Project Brain knowledge.
+
 ## Deterministic core helpers
+
+Normal users do not need to run these manually. They are available for diagnostics, testing, and host adapters:
 
 ```sh
 python plugins/codemium/engine/project_brain.py --root . init
+python plugins/codemium/engine/project_brain.py --root . capture --entries '[{"kind":"bug","text":"Durable source-backed finding","source":"src/example.py:42"}]'
 python plugins/codemium/engine/repo_graph.py build --root .
 python plugins/codemium/engine/test_map.py build --root .
 python plugins/codemium/engine/working_set.py --root . --query "auth refresh" --top 8
 ```
 
-They are optional accelerators, not mandatory ceremony. Use them when they reduce repeated model work.
+They are deterministic accelerators and state helpers, not mandatory user ceremony. Use them when they reduce repeated model work or guarantee Project Brain persistence.
 
 ## Host installer safety
 
@@ -371,7 +381,7 @@ Codemium deliberately separates three different kinds of evidence:
 python scripts/verify_core.py
 ```
 
-The badge at the top of this README represents **Codemium core integrity only**: engine syntax, Project Brain invariants, task/depth behavior, and the core fixture. It does not claim AI quality or full host compatibility.
+The badge at the top of this README represents **Codemium core integrity only**: engine syntax, Project Brain invariants and automatic persistence, task/depth behavior, and the core fixture. It does not claim AI quality or full host compatibility.
 
 ### 2. Full host validation — manual / release tags
 
@@ -399,7 +409,7 @@ Codemium does not publish synthetic performance numbers as product claims. The b
 
 ## Status
 
-`v0.6.0` makes the host boundary explicit: Codex uses the installed `@Codemium` plugin mention as its primary product UX while retaining `$cm` as the direct Agent Skill path; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
+`v0.6.0` makes the host boundary explicit: Codex uses the installed `@Codemium` plugin mention as its primary product UX while retaining `$cm` as the direct Agent Skill path; Project Brain now initializes automatically for normal repository work and captures durable source-backed findings at completion; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
 
 ## Support Codemium
 
