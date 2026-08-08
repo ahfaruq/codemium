@@ -151,7 +151,8 @@ def main() -> None:
         assert len(gates_after) == 2
 
         # A Local retrieval reuses the exact same durable brain without creating
-        # a second Project Brain tree.
+        # a second Project Brain tree. Use an explicit stored identifier here so
+        # this assertion tests root sharing rather than bilingual ranking quality.
         local_memory = call_hook(
             payload(
                 "UserPromptSubmit",
@@ -159,8 +160,8 @@ def main() -> None:
                 "session-local",
                 "turn-local",
                 prompt=(
-                    "@Codemium berdasarkan hanya Project Brain yang sudah tersimpan, jelaskan sistem pemblokiran. "
-                    "Jangan scan ulang repository."
+                    "@Codemium berdasarkan hanya Project Brain yang sudah tersimpan, jelaskan apa yang diketahui "
+                    "tentang visitorId dan browser blocking. Jangan scan ulang repository."
                 ),
             ),
             local,
