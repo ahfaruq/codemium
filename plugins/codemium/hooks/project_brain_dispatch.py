@@ -111,11 +111,7 @@ def rank_entries(prompt: str, entries: list[dict[str, Any]], limit: int = 8) -> 
         if score > 0:
             scored.append((score, -index, entry))
     scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    if scored:
-        return [entry for _, _, entry in scored[:limit]]
-    # An explicit Project Brain-only query should still receive a bounded memory
-    # snapshot when lexical ranking cannot bridge wording/language differences.
-    return entries[-limit:]
+    return [entry for _, _, entry in scored[:limit]]
 
 
 def is_fast_path(prompt: str) -> bool:
@@ -168,8 +164,13 @@ def fast_context(root: Path, matched: list[dict[str, Any]], total: int, writes_a
             f"Relevant active entries ({len(matched)} of {total}): {payload}"
         )
     persistence = "The persistence gate is already satisfied as none." if writes_allowed else "Workspace writes are forbidden, so no persistence gate was written."
+    availability = (
+        "Project Brain contains active entries, but none matched this query."
+        if total > 0
+        else "Project Brain has no active durable entries yet."
+    )
     return (
-        "CODEMIUM PROJECT BRAIN FAST PATH. No active Project Brain entries are available for this Project Brain-only query. "
+        f"CODEMIUM PROJECT BRAIN FAST PATH. {availability} "
         "Do not scan the repository or open source files merely to fill the gap; answer that Project Brain does not currently contain the requested knowledge. "
         f"{persistence}"
     )
