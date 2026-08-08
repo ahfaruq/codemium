@@ -7,7 +7,7 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.6.3") { throw "Expected Codemium 0.6.3" }
+if ($Version -ne "0.6.4") { throw "Expected Codemium 0.6.4" }
 
 function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
   if (-not $Text.Contains($Needle)) { throw $Message }
@@ -25,7 +25,7 @@ $DefaultPrompt = ($Codex.interface.defaultPrompt -join ' ')
 Assert-Contains $Codex.interface.longDescription '@Codemium' 'Codex manifest does not document @Codemium invocation'
 Assert-Contains $DefaultPrompt 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
 Assert-Contains $DefaultPrompt 'bundled UserPromptSubmit and Stop lifecycle hooks' 'Codex manifest missing deterministic persistence gate'
-Assert-Contains $DefaultPrompt 'Project Brain-only retrieval requests' 'Codex manifest missing Project Brain fast-path policy'
+Assert-Contains $DefaultPrompt 'CODEMIUM MEMORY RETRIEVAL MODE' 'Codex manifest missing lightweight memory-mode policy'
 $Hooks = Get-Content (Join-Path $Root "plugins\codemium\hooks\hooks.json") -Raw | ConvertFrom-Json
 foreach ($Event in @('UserPromptSubmit','Stop')) {
   $Groups = @($Hooks.hooks.$Event)
@@ -36,13 +36,13 @@ foreach ($Event in @('UserPromptSubmit','Stop')) {
   Assert-Contains ($Handlers[0].command + $Handlers[0].commandWindows) 'project_brain_dispatch.py' "Codex hook must route through dispatcher: $Event"
 }
 $Dispatch = Get-Content (Join-Path $Root "plugins\codemium\hooks\project_brain_dispatch.py") -Raw
-foreach ($Phrase in @('PROJECT BRAIN FAST PATH','rank_entries','Do not run task_compiler','fast_path')) {
-  Assert-Contains $Dispatch $Phrase "Project Brain fast path missing $Phrase"
+foreach ($Phrase in @('CODEMIUM MEMORY RETRIEVAL MODE','rank_entries','Use minimum reasoning','host_turn_to_stop_ms','memory_mode')) {
+  Assert-Contains $Dispatch $Phrase "Project Brain memory mode missing $Phrase"
 }
 $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKILL.md") -Raw
 foreach ($Phrase in @(
   'name: cm', '# Codemium', '@Codemium', '$cm fast', 'preferred `low`', 'preferred `xhigh`',
-  'Project Brain persistence contract', 'Persistence gate',
+  'Lightweight Project Brain memory mode', 'Project Brain persistence contract', 'Persistence gate',
   'smallest **justified** change', 'Minimal production code **does not imply minimal tests**'
 )) {
   Assert-Contains $MainSkill $Phrase "Codex skill missing $Phrase"
@@ -79,7 +79,7 @@ if ($Gemini.name -ne "codemium" -or $Gemini.version -ne $Version -or $Gemini.con
 $GeminiContext = Get-Content (Join-Path $Root "GEMINI.md") -Raw
 $GeminiCommand = Get-Content (Join-Path $Root "commands\cm.toml") -Raw
 Assert-Contains $GeminiContext 'host-agnostic coding-intelligence layer' 'Gemini context contract missing'
-Assert-Contains $GeminiCommand '{{args}}' 'Gemini command does not forward arguments'
+Assert-Contains $GeminiCommand '{{args}}' 'Gemini /cm must forward {{args}}'
 
 # Docs and portable installer.
 foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","scripts\verify_codex_plugin.py","INSTALL.md","HOSTS.md","PRD.md","CHANGELOG.md")) {
@@ -107,7 +107,7 @@ $Install = Get-Content (Join-Path $Root "INSTALL.md") -Raw
 Assert-Contains $Install '/hooks' 'INSTALL.md missing hook trust instructions'
 Assert-Contains $Install 'Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks' 'INSTALL.md missing v0.6.2 lifecycle documentation'
 $ChangeLog = Get-Content (Join-Path $Root "CHANGELOG.md") -Raw
-Assert-Contains $ChangeLog '## 0.6.3 — Project Brain retrieval fast path' 'CHANGELOG missing v0.6.3'
+Assert-Contains $ChangeLog '## 0.6.4 — Lightweight Project Brain memory mode' 'CHANGELOG missing v0.6.4'
 
 # Python syntax + core/Codex verifier + doctor + fixture.
 $py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\hooks"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
@@ -143,7 +143,7 @@ try {
   python (Join-Path $Root "scripts\install_host.py") --host opencode --scope project --project $TempDir --uninstall | Out-Null
   if ($LASTEXITCODE -ne 0 -or (Test-Path (Join-Path $TempDir ".opencode\skills\cm"))) { throw "OpenCode portable uninstall failed" }
 
-  python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $Root "benchmarks\example-runs-v2.json") --svg (Join-Path $TempDir "demo.svg") --markdown (Join-Path $TempDir "demo.md") | Out-Null
+  python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $TempDir "demo.svg") --markdown (Join-Path $TempDir "demo.md") | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Synthetic benchmark render failed" }
   $Rendered = Get-Content (Join-Path $TempDir "demo.svg") -Raw
   Assert-Contains $Rendered 'SYNTHETIC / DEMO DATA' 'Synthetic watermark missing'
