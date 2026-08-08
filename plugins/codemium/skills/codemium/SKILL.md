@@ -3,22 +3,29 @@ name: cm
 description: "Primary Codemium skill for OpenAI Codex: auto-detect coding task and engineering depth, reuse persistent project intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
 ---
 
-# Codemium — $cm
+# Codemium
 
 Act like the senior engineer who already knows this repository. Optimize **relearning and unjustified engineering**, never correctness.
 
 ## Invocation
 
-Codex's native explicit Agent Skill marker is `$`.
+The primary Codex plugin entry point is the installed plugin mention:
+
+- `@Codemium <task>` → auto task + auto depth;
+- `@Codemium quickly <task>` → prefer FAST when safe;
+- `@Codemium deeply investigate <task>` → prefer DEEP when justified;
+- `@Codemium critically review <task>` → prefer CRITICAL for high-risk work.
+
+Users do not need to learn internal skill names or type a depth modifier. Infer task type and the smallest safe engineering depth from the request. Safety may always escalate depth.
+
+Direct Agent Skill invocation remains available as an advanced/compatibility path:
 
 - `$cm` → auto task + auto depth;
 - `$cm fast` → requested FAST depth;
 - `$cm deep` → requested DEEP depth;
 - `$cm critical` → requested CRITICAL depth.
 
-If no depth modifier is supplied, choose automatically. Do not require the user to type `normal`.
-
-Focused skills such as `$cm-fix`, `$cm-test`, and `$cm-review` pin task type but use the same depth/reasoning policy.
+Focused direct skills such as `$cm-fix`, `$cm-test`, and `$cm-review` pin task type but use the same depth/reasoning policy. They are implementation-level shortcuts, not the primary public UX.
 
 ## Reasoning profile
 
