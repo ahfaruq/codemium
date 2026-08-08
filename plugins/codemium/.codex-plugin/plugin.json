@@ -1,6 +1,6 @@
 {
   "name": "codemium",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Codemium adapter for OpenAI Codex: persistent project intelligence, bounded working sets, scoped changes, risk-aware verification, and adaptive Codex reasoning preferences.",
   "author": {
     "name": "Ahmad Faruq",
