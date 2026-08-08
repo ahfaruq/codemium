@@ -44,9 +44,19 @@ def main() -> None:
         run("git", "add", ".", cwd=root)
         run("git", "commit", "-qm", "initial", cwd=root)
 
-        run(sys.executable, ENGINE / "project_brain.py", "--root", root, "init")
+        # A normal written task must initialize Project Brain automatically.
+        task = json.loads(run(
+            sys.executable, ENGINE / "task_compiler.py", "--root", root,
+            "--request", "Fix auth refresh bug that logs users out"
+        ))
         state = root / ".codemium"
         assert (state / "PROJECT.md").exists()
+        assert task["type"] == "FIX"
+        assert task["depth"] == "CRITICAL"
+        assert task["reasoning"]["host"] == "generic"
+        assert task["reasoning"]["reasoning_class"] == "frontier"
+        assert task["reasoning"]["preferred_effort"] is None
+
         ignore = (state / ".gitignore").read_text(encoding="utf-8")
         for item in ["runtime/", "repository/", "tasks/active.json", "tasks/completed/"]:
             assert item in ignore
@@ -55,20 +65,43 @@ def main() -> None:
         assert profile["generic_reasoning"]["FAST"]["preferred_class"] == "economy"
         assert profile["generic_reasoning"]["CRITICAL"]["preferred_class"] == "frontier"
 
+        # Batched durable capture must work without a separate init command and
+        # must reuse equivalent ACTIVE entries instead of duplicating them.
+        knowledge = json.dumps([
+            {
+                "kind": "constraint",
+                "text": "Authentication refresh must preserve the current session boundary.",
+                "source": "src/auth/session.py",
+                "risk": "high",
+            },
+            {
+                "kind": "bug",
+                "text": "Missing refresh tokens can log users out unexpectedly.",
+                "source": "src/auth/session.py",
+                "risk": "high",
+            },
+        ])
+        first_capture = json.loads(run(
+            sys.executable, ENGINE / "project_brain.py", "--root", root,
+            "capture", "--entries", knowledge
+        ))
+        assert first_capture["counts"] == {"added": 2, "reused": 0}
+        second_capture = json.loads(run(
+            sys.executable, ENGINE / "project_brain.py", "--root", root,
+            "capture", "--entries", knowledge
+        ))
+        assert second_capture["counts"] == {"added": 0, "reused": 2}
+        status = json.loads(run(
+            sys.executable, ENGINE / "project_brain.py", "--root", root, "status"
+        ))
+        assert status["initialized"] is True
+        assert status["registries"]["constraint"] == 1
+        assert status["registries"]["bug"] == 1
+
         run(sys.executable, ENGINE / "repo_graph.py", "build", "--root", root)
         graph = json.loads((state / "repository/graph.json").read_text(encoding="utf-8"))
         assert graph["file_count"] == 2
         assert any("refresh_session" in f["symbols"] for f in graph["files"])
-
-        task = json.loads(run(
-            sys.executable, ENGINE / "task_compiler.py", "--root", root,
-            "--request", "Fix auth refresh bug that logs users out"
-        ))
-        assert task["type"] == "FIX"
-        assert task["depth"] == "CRITICAL"
-        assert task["reasoning"]["host"] == "generic"
-        assert task["reasoning"]["reasoning_class"] == "frontier"
-        assert task["reasoning"]["preferred_effort"] is None
 
         ws = json.loads(run(
             sys.executable, ENGINE / "working_set.py", "--root", root,
@@ -102,7 +135,19 @@ def main() -> None:
         ))
         assert hit["hit"] is True
 
-    print("PASS: host-agnostic Codemium core fixture")
+        # Capture itself must silently initialize state in a fresh repository.
+        fresh = root / "fresh-project"
+        fresh.mkdir()
+        fresh_capture = json.loads(run(
+            sys.executable, ENGINE / "project_brain.py", "--root", fresh,
+            "capture", "--entries", json.dumps([
+                {"kind": "pattern", "text": "Use repository-owned validation helpers."}
+            ])
+        ))
+        assert fresh_capture["counts"] == {"added": 1, "reused": 0}
+        assert (fresh / ".codemium/PROJECT.md").exists()
+
+    print("PASS: host-agnostic Codemium core fixture + automatic Project Brain persistence")
 
 
 if __name__ == "__main__":
