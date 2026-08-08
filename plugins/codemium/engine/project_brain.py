@@ -93,7 +93,7 @@ def ensure_state_gitignore(path: Path) -> None:
     atomic_write(path, text)
 
 
-def init(root: Path) -> None:
+def init(root: Path, emit: bool = True) -> dict:
     s = state_root(root)
     for d in ['architecture', 'registry', 'repository', 'tasks/completed', 'runtime/snapshots']:
         (s / d).mkdir(parents=True, exist_ok=True)
@@ -107,7 +107,10 @@ def init(root: Path) -> None:
     for fn, _ in REGISTRY.values():
         (s / 'registry' / fn).touch(exist_ok=True)
     ensure_state_gitignore(s / '.gitignore')
-    print(json.dumps({'status': 'initialized', 'state_dir': str(s)}, indent=2))
+    result = {'status': 'initialized', 'state_dir': str(s)}
+    if emit:
+        print(json.dumps(result, indent=2))
+    return result
 
 
 def next_id(path: Path, prefix: str) -> str:
@@ -120,6 +123,20 @@ def next_id(path: Path, prefix: str) -> str:
             except ValueError:
                 pass
     return f'{prefix}{n + 1:04d}'
+
+
+def normalize_entry_text(text: str) -> str:
+    return ' '.join(text.split()).casefold()
+
+
+def find_active_duplicate(path: Path, text: str) -> dict | None:
+    needle = normalize_entry_text(text)
+    for entry in read_jsonl(path):
+        if entry.get('status', 'ACTIVE') != 'ACTIVE':
+            continue
+        if normalize_entry_text(str(entry.get('text', ''))) == needle:
+            return entry
+    return None
 
 
 def add(root: Path, kind: str, text: str, extra: dict) -> dict:
@@ -137,6 +154,37 @@ def add(root: Path, kind: str, text: str, extra: dict) -> dict:
     return entry
 
 
+def capture(root: Path, entries: list[dict]) -> dict:
+    """Persist a small batch of source-backed durable facts without duplicating active entries."""
+    if not isinstance(entries, list):
+        raise ValueError('knowledge entries must be a JSON array')
+    added: list[dict] = []
+    reused: list[dict] = []
+    for raw in entries:
+        if not isinstance(raw, dict):
+            raise ValueError('each knowledge entry must be an object')
+        kind = str(raw.get('kind', '')).strip().lower()
+        text = str(raw.get('text', '')).strip()
+        if kind not in REGISTRY:
+            raise ValueError(f'unknown knowledge kind: {kind!r}')
+        if not text:
+            raise ValueError('knowledge entry text must not be empty')
+        fn, _ = REGISTRY[kind]
+        path = state_root(root) / 'registry' / fn
+        duplicate = find_active_duplicate(path, text)
+        if duplicate:
+            reused.append(duplicate)
+            continue
+        extra = {k: raw.get(k) for k in ('why', 'source', 'risk')}
+        added.append(add(root, kind, text, extra))
+    return {
+        'status': 'captured',
+        'added': added,
+        'reused': reused,
+        'counts': {'added': len(added), 'reused': len(reused)},
+    }
+
+
 def status(root: Path) -> dict:
     s = state_root(root)
     regs = {k: len(read_jsonl(s / 'registry' / fn)) for k, (fn, _) in REGISTRY.items()}
@@ -148,6 +196,16 @@ def status(root: Path) -> dict:
         'active_task': active,
         'model_profile': read_json(s / 'model-profile.json', None),
     }
+
+
+def load_json_argument(value: str):
+    try:
+        candidate = Path(value)
+        if len(value) < 4096 and candidate.exists():
+            return json.loads(candidate.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        pass
+    return json.loads(value)
 
 
 def main():
@@ -162,15 +220,21 @@ def main():
         p.add_argument('--why')
         p.add_argument('--source')
         p.add_argument('--risk')
+    c = sub.add_parser('capture')
+    c.add_argument('--entries', required=True, help='JSON array or path to a JSON file')
     a = sub.add_parser('start-task')
     a.add_argument('--contract', required=True, help='JSON string or path')
-    sub.add_parser('complete-task')
+    done = sub.add_parser('complete-task')
+    done.add_argument('--knowledge', help='optional JSON array/path of durable knowledge to capture before completion')
     ns = ap.parse_args()
     root = Path(ns.root)
     if ns.cmd == 'init':
         return init(root)
+    # Normal Codemium operations auto-initialize Project Brain silently. This is
+    # the deterministic counterpart to the plugin rule that users should not
+    # need a separate $cm-init step before ordinary repository work.
     if not state_root(root).exists():
-        init(root)
+        init(root, emit=False)
     if ns.cmd == 'status':
         print(json.dumps(status(root), indent=2))
         return
@@ -178,24 +242,30 @@ def main():
         kind = ns.cmd[4:]
         print(json.dumps(add(root, kind, ns.text, {'why': ns.why, 'source': ns.source, 'risk': ns.risk}), indent=2))
         return
+    if ns.cmd == 'capture':
+        entries = load_json_argument(ns.entries)
+        print(json.dumps(capture(root, entries), ensure_ascii=False, indent=2))
+        return
     if ns.cmd == 'start-task':
-        raw = Path(ns.contract).read_text() if Path(ns.contract).exists() else ns.contract
-        contract = json.loads(raw)
+        contract = load_json_argument(ns.contract)
         contract.setdefault('started_at', now_iso())
         write_json(state_root(root) / 'tasks/active.json', contract)
-        print(json.dumps(contract, indent=2))
+        print(json.dumps(contract, ensure_ascii=False, indent=2))
         return
     if ns.cmd == 'complete-task':
+        knowledge = None
+        if ns.knowledge:
+            knowledge = capture(root, load_json_argument(ns.knowledge))
         p = state_root(root) / 'tasks/active.json'
         task = read_json(p, None)
         if not task:
-            print(json.dumps({'status': 'no-active-task'}))
+            print(json.dumps({'status': 'no-active-task', 'knowledge': knowledge}, ensure_ascii=False, indent=2))
             return
         task['completed_at'] = now_iso()
         tid = task.get('id', 'task')
         write_json(state_root(root) / 'tasks/completed' / f'{tid}.json', task)
         p.unlink(missing_ok=True)
-        print(json.dumps({'status': 'completed', 'id': tid}, indent=2))
+        print(json.dumps({'status': 'completed', 'id': tid, 'knowledge': knowledge}, ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':
