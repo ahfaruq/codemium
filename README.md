@@ -1,8 +1,25 @@
-# Codemium
+<p align="center">
+  <img src="assets/codemium-logo.svg" alt="Codemium logo" width="160" />
+</p>
 
-[![Codemium Core](https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg)](https://github.com/ahfaruq/codemium/actions/workflows/verify.yml)
+<h1 align="center">Codemium</h1>
 
-**Persistent coding intelligence for AI coding agents.**
+<p align="center"><strong>Persistent coding intelligence for AI coding agents.</strong></p>
+
+<p align="center">
+  The engineering layer that helps coding agents work like a senior engineer who already knows your codebase.
+</p>
+
+<p align="center">
+  <a href="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml"><img src="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg" alt="Codemium Core" /></a>
+  <img src="https://img.shields.io/badge/version-v0.6.0-2F81F7" alt="Version v0.6.0" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3FB950" alt="MIT License" /></a>
+  <a href="https://github.com/sponsors/ahfaruq"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor Codemium" /></a>
+</p>
+
+<p align="center"><sub>Host-agnostic &nbsp;•&nbsp; Project-aware &nbsp;•&nbsp; Scope-disciplined &nbsp;•&nbsp; Verification-driven</sub></p>
+
+---
 
 Codemium is a host-agnostic engineering layer for long-running software projects. It aims for the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and context efficiency.
 
