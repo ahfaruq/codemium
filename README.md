@@ -342,6 +342,16 @@ Codemium does not publish synthetic performance numbers as product claims. The b
 
 `v0.6.0` makes the host boundary explicit: Codex uses native `$cm`; Claude Code uses a repository-root plugin; Gemini CLI uses a native extension plus on-demand skill; Cursor and OpenCode use safe portable Agent Skill installation; all adapters share `.codemium/` project intelligence and vendor-neutral engineering depth.
 
+## Support Codemium
+
+Codemium is developed and maintained as an open-source project.
+
+If Codemium helps your workflow or your team, consider supporting its continued development through GitHub Sponsors.
+
+Your sponsorship helps fund compatibility testing, documentation, benchmarks, new AI coding agent integrations, and long-term maintenance.
+
+❤️ [Sponsor Codemium](https://github.com/sponsors/ahfaruq)
+
 ## License
 
 MIT
