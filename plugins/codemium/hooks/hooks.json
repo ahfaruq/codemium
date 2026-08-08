@@ -1,0 +1,32 @@
+{
+  "description": "Codemium Project Brain lifecycle enforcement for repository-bound Codex tasks.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy; runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','project_brain_gate.py'), run_name='__main__')\"",
+            "commandWindows": "python -c \"import os,runpy; runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','project_brain_gate.py'), run_name='__main__')\"",
+            "timeout": 30,
+            "statusMessage": "Preparing Codemium Project Brain",
+            "additionalContextLimit": 2500
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy; runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','project_brain_gate.py'), run_name='__main__')\"",
+            "commandWindows": "python -c \"import os,runpy; runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','project_brain_gate.py'), run_name='__main__')\"",
+            "timeout": 30,
+            "statusMessage": "Checking Codemium Project Brain persistence"
+          }
+        ]
+      }
+    ]
+  }
+}
