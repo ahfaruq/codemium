@@ -1,6 +1,6 @@
 {
   "name": "codemium",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Persistent coding intelligence for Claude Code with project memory, bounded context, scoped changes, and risk-aware verification.",
   "author": {
     "name": "Codemium"
