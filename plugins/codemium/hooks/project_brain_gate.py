@@ -69,11 +69,11 @@ def read_json(path: Path) -> dict[str, Any] | None:
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
-    out: list[dict[str, Any]] = []
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError:
         return []
+    out: list[dict[str, Any]] = []
     for line in lines:
         if not line.strip():
             continue
@@ -117,8 +117,9 @@ def _reported_git_path(value: str | None, base: Path) -> Path | None:
 def project_context(cwd: str | Path) -> dict[str, Any]:
     """Resolve one stable Project Brain root across Local and linked worktrees."""
     runtime_cwd = Path(cwd).resolve()
-    top = git_output(runtime_cwd, "rev-parse", "--show-toplevel")
-    runtime_git_root = _reported_git_path(top, runtime_cwd)
+    runtime_git_root = _reported_git_path(
+        git_output(runtime_cwd, "rev-parse", "--show-toplevel"), runtime_cwd
+    )
 
     if runtime_git_root is None:
         for candidate in (runtime_cwd, *runtime_cwd.parents):
@@ -140,7 +141,9 @@ def project_context(cwd: str | Path) -> dict[str, Any]:
             "resolution": "cwd_fallback",
         }
 
-    common_raw = git_output(runtime_git_root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    common_raw = git_output(
+        runtime_git_root, "rev-parse", "--path-format=absolute", "--git-common-dir"
+    )
     if common_raw is None:
         common_raw = git_output(runtime_git_root, "rev-parse", "--git-common-dir")
     common_dir = _reported_git_path(common_raw, runtime_git_root)
@@ -164,7 +167,7 @@ def project_context(cwd: str | Path) -> dict[str, Any]:
 
 
 def repository_root(cwd: str | Path) -> Path:
-    """Compatibility entry point; now returns the canonical project root."""
+    """Compatibility entry point; returns the canonical project root."""
     return Path(project_context(cwd)["canonical_project_root"]).resolve()
 
 
@@ -200,14 +203,27 @@ def run_project_brain(root: Path, *args: str) -> dict[str, Any]:
     return data
 
 
-def _legacy_source_root(context: dict[str, Any], canonical: Path) -> Path | None:
-    value = context.get("runtime_git_root")
-    if not value:
-        return None
-    candidate = Path(str(value)).resolve()
-    if candidate == canonical or not (candidate / ".codemium").exists():
-        return None
-    return candidate
+def list_worktree_roots(canonical: Path) -> list[Path]:
+    """Return every live Git worktree sharing the canonical repository metadata."""
+    raw = git_output(canonical, "worktree", "list", "--porcelain")
+    if not raw:
+        return [canonical]
+    roots: list[Path] = []
+    for line in raw.splitlines():
+        if not line.startswith("worktree "):
+            continue
+        value = line[len("worktree ") :].strip()
+        if not value:
+            continue
+        try:
+            candidate = Path(value).resolve()
+        except OSError:
+            candidate = Path(value).absolute()
+        if candidate not in roots:
+            roots.append(candidate)
+    if canonical not in roots:
+        roots.insert(0, canonical)
+    return roots
 
 
 def _capture_entries_from_legacy(source: Path) -> list[dict[str, Any]]:
@@ -220,10 +236,7 @@ def _capture_entries_from_legacy(source: Path) -> list[dict[str, Any]]:
             text = str(raw.get("text", "")).strip()
             if not text:
                 continue
-            entry: dict[str, Any] = {
-                "kind": str(raw.get("kind") or kind),
-                "text": text,
-            }
+            entry: dict[str, Any] = {"kind": str(raw.get("kind") or kind), "text": text}
             for key in ("why", "source", "risk"):
                 if raw.get(key) not in (None, ""):
                     entry[key] = raw[key]
@@ -231,50 +244,110 @@ def _capture_entries_from_legacy(source: Path) -> list[dict[str, Any]]:
     return entries
 
 
-def migrate_legacy_project_brain(source: Path, target: Path, target_preexisting: bool) -> dict[str, Any]:
-    """Move durable v0.6.4 worktree memory into the canonical Local project root."""
-    source_state = source / ".codemium"
-    target_state = target / ".codemium"
-    if source == target or not source_state.exists():
-        return {"status": "not_needed", "source": str(source), "target": str(target)}
+def _legacy_source_stamp(source: Path) -> int:
+    state = source / ".codemium"
+    paths = [state / rel for rel in DURABLE_STATE_FILES]
+    paths.extend(state / "registry" / filename for filename in REGISTRY_FILES.values())
+    stamp = 0
+    for path in paths:
+        try:
+            stamp = max(stamp, path.stat().st_mtime_ns)
+        except OSError:
+            continue
+    return stamp
 
-    if not target_preexisting:
-        copied = 0
-        for relative in DURABLE_STATE_FILES:
-            src = source_state / relative
-            dst = target_state / relative
-            if not src.exists() or not src.is_file():
-                continue
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
-            copied += 1
-        for filename in REGISTRY_FILES.values():
-            src = source_state / "registry" / filename
-            dst = target_state / "registry" / filename
-            if not src.exists():
-                continue
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
-            copied += len(read_jsonl(src))
-        run_project_brain(target, "init")
+
+def _legacy_sources(context: dict[str, Any], canonical: Path) -> list[Path]:
+    """Discover legacy brains in every linked worktree, not only this turn's cwd."""
+    candidates = list_worktree_roots(canonical)
+    runtime_root = context.get("runtime_git_root")
+    if runtime_root:
+        candidate = Path(str(runtime_root)).resolve()
+        if candidate not in candidates:
+            candidates.append(candidate)
+    sources: list[Path] = []
+    for candidate in candidates:
+        if candidate == canonical:
+            continue
+        if (candidate / ".codemium").exists() and candidate not in sources:
+            sources.append(candidate)
+    return sources
+
+
+def _copy_durable_metadata(source: Path, target: Path) -> int:
+    copied = 0
+    for relative in DURABLE_STATE_FILES:
+        src = source / ".codemium" / relative
+        dst = target / ".codemium" / relative
+        if not src.exists() or not src.is_file():
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        copied += 1
+    return copied
+
+
+def migrate_legacy_project_brain(source: Path, target: Path, target_preexisting: bool) -> dict[str, Any]:
+    """Compatibility helper for migrating one legacy worktree brain."""
+    return migrate_legacy_project_brains([source], target, target_preexisting)
+
+
+def migrate_legacy_project_brains(
+    sources: list[Path],
+    target: Path,
+    target_preexisting: bool,
+    previous_stamps: dict[str, int] | None = None,
+) -> dict[str, Any]:
+    """Merge durable memory from all linked worktrees into one canonical brain."""
+    previous_stamps = previous_stamps or {}
+    valid: list[tuple[Path, int]] = []
+    for source in sources:
+        if source == target or not (source / ".codemium").exists():
+            continue
+        stamp = _legacy_source_stamp(source)
+        if stamp <= int(previous_stamps.get(str(source), -1)):
+            continue
+        valid.append((source, stamp))
+
+    if not valid:
         return {
-            "status": "copied",
-            "source": str(source),
+            "status": "not_needed",
+            "sources": [],
             "target": str(target),
-            "durable_items": copied,
+            "source_stamps": {},
+            "added": 0,
+            "reused": 0,
         }
 
-    entries = _capture_entries_from_legacy(source)
-    if not entries:
-        return {"status": "nothing_to_merge", "source": str(source), "target": str(target)}
-    result = run_project_brain(target, "capture", "--entries", json.dumps(entries, ensure_ascii=False))
-    counts = result.get("counts") if isinstance(result.get("counts"), dict) else {}
+    # Prefer the freshest legacy brain as the source for human-maintained project metadata.
+    freshest = max(valid, key=lambda item: item[1])[0]
+    metadata_copied = 0 if target_preexisting else _copy_durable_metadata(freshest, target)
+
+    entries: list[dict[str, Any]] = []
+    source_stamps: dict[str, int] = {}
+    for source, stamp in valid:
+        entries.extend(_capture_entries_from_legacy(source))
+        source_stamps[str(source)] = stamp
+
+    added = 0
+    reused = 0
+    if entries:
+        result = run_project_brain(
+            target, "capture", "--entries", json.dumps(entries, ensure_ascii=False)
+        )
+        counts = result.get("counts") if isinstance(result.get("counts"), dict) else {}
+        added = int(counts.get("added", 0))
+        reused = int(counts.get("reused", 0))
+
     return {
-        "status": "merged",
-        "source": str(source),
+        "status": "merged_all",
+        "sources": [str(source) for source, _ in valid],
         "target": str(target),
-        "added": int(counts.get("added", 0)),
-        "reused": int(counts.get("reused", 0)),
+        "metadata_source": str(freshest),
+        "metadata_files_copied": metadata_copied,
+        "source_stamps": source_stamps,
+        "added": added,
+        "reused": reused,
     }
 
 
@@ -286,15 +359,33 @@ def write_project_location(root: Path, context: dict[str, Any], migration: dict[
     runtime_git_root = context.get("runtime_git_root")
     if runtime_git_root and str(runtime_git_root) not in observed_roots:
         observed_roots.append(str(runtime_git_root))
+
+    migrated = existing.get("migrated_source_stamps")
+    migrated_stamps: dict[str, int] = {}
+    if isinstance(migrated, dict):
+        for key, value in migrated.items():
+            try:
+                migrated_stamps[str(key)] = int(value)
+            except (TypeError, ValueError):
+                continue
+    incoming = migration.get("source_stamps")
+    if isinstance(incoming, dict):
+        for key, value in incoming.items():
+            try:
+                migrated_stamps[str(key)] = int(value)
+            except (TypeError, ValueError):
+                continue
+
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "canonical_project_root": context.get("canonical_project_root"),
         "git_common_dir": context.get("git_common_dir"),
         "last_runtime_cwd": context.get("runtime_cwd"),
         "last_runtime_git_root": context.get("runtime_git_root"),
         "is_linked_worktree": bool(context.get("is_linked_worktree")),
         "resolution": context.get("resolution"),
-        "observed_runtime_git_roots": observed_roots[-20:],
+        "observed_runtime_git_roots": observed_roots[-50:],
+        "migrated_source_stamps": migrated_stamps,
         "last_migration": migration,
         "updated_at": now_iso(),
     }
@@ -302,18 +393,21 @@ def write_project_location(root: Path, context: dict[str, Any], migration: dict[
 
 
 def prepare_project_root(cwd: str | Path, writes_allowed: bool = True) -> tuple[Path, dict[str, Any], dict[str, Any]]:
-    """Resolve canonical root, initialize it, and migrate legacy worktree memory when allowed."""
+    """Resolve canonical root and consolidate durable memory from all linked worktrees."""
     context = project_context(cwd)
     root = Path(str(context["canonical_project_root"])).resolve()
-    migration: dict[str, Any] = {"status": "skipped_read_only" if not writes_allowed else "not_needed"}
     if not writes_allowed:
-        return root, context, migration
+        return root, context, {"status": "skipped_read_only"}
 
     target_preexisting = (root / ".codemium").exists()
     run_project_brain(root, "init")
-    source = _legacy_source_root(context, root)
-    if source is not None:
-        migration = migrate_legacy_project_brain(source, root, target_preexisting)
+    location = read_json(root / ".codemium" / "runtime" / "project-location.json") or {}
+    previous_stamps_raw = location.get("migrated_source_stamps")
+    previous_stamps = previous_stamps_raw if isinstance(previous_stamps_raw, dict) else {}
+    sources = _legacy_sources(context, root)
+    migration = migrate_legacy_project_brains(
+        sources, root, target_preexisting, previous_stamps=previous_stamps
+    )
     write_project_location(root, context, migration)
     return root, context, migration
 
@@ -340,7 +434,7 @@ def begin_gate(root: Path, session_id: str, turn_id: str) -> dict[str, Any]:
     if current and current.get("status") in FINAL_STATUSES:
         return current
     created_at = current.get("created_at") if current else now_iso()
-    gate = {
+    record = {
         "schema_version": 1,
         "session_id": session_id,
         "turn_id": turn_id,
@@ -349,8 +443,8 @@ def begin_gate(root: Path, session_id: str, turn_id: str) -> dict[str, Any]:
         "created_at": created_at,
         "updated_at": now_iso(),
     }
-    atomic_json(path, gate)
-    return gate
+    atomic_json(path, record)
+    return record
 
 
 def latest_pending_gate(root: Path, session_id: str, turn_id: str | None = None) -> tuple[Path, dict[str, Any]] | None:
@@ -380,11 +474,11 @@ def latest_pending_gate(root: Path, session_id: str, turn_id: str | None = None)
 
 def finalize_gate(root: Path, session_id: str, turn_id: str, entries: list[dict[str, Any]]) -> dict[str, Any]:
     path = gate_path(root, session_id, turn_id)
-    gate = read_json(path)
-    if not gate:
+    record = read_json(path)
+    if not record:
         raise ValueError("No pending persistence gate exists for this session/turn")
-    if gate.get("status") in FINAL_STATUSES:
-        return gate
+    if record.get("status") in FINAL_STATUSES:
+        return record
 
     if entries:
         for index, entry in enumerate(entries):
@@ -393,10 +487,7 @@ def finalize_gate(root: Path, session_id: str, turn_id: str, entries: list[dict[
             if not str(entry.get("source", "")).strip():
                 raise ValueError(f"knowledge entry {index + 1} must include a source")
         capture = run_project_brain(
-            root,
-            "capture",
-            "--entries",
-            json.dumps(entries, ensure_ascii=False),
+            root, "capture", "--entries", json.dumps(entries, ensure_ascii=False)
         )
         counts = capture.get("counts") if isinstance(capture.get("counts"), dict) else {}
         added = int(counts.get("added", 0))
@@ -406,33 +497,27 @@ def finalize_gate(root: Path, session_id: str, turn_id: str, entries: list[dict[
         capture = {"status": "none", "counts": {"added": 0, "reused": 0}}
         status = "none"
 
-    gate.update(
-        {
-            "status": status,
-            "updated_at": now_iso(),
-            "capture": capture,
-        }
-    )
-    atomic_json(path, gate)
-    return gate
+    record.update({"status": status, "updated_at": now_iso(), "capture": capture})
+    atomic_json(path, record)
+    return record
 
 
-def empty_finalize_command(root: Path, gate: dict[str, Any]) -> str:
+def empty_finalize_command(root: Path, record: dict[str, Any]) -> str:
     hook = Path(__file__).resolve()
-    session_id = str(gate.get("session_id", ""))
-    turn_id = str(gate.get("turn_id", ""))
+    session_id = str(record.get("session_id", ""))
+    turn_id = str(record.get("turn_id", ""))
     return (
         f'python "{hook}" finalize --root "{root}" --session-id "{session_id}" '
         f'--turn-id "{turn_id}" --knowledge-json "[]"'
     )
 
 
-def finalization_instruction(root: Path, gate: dict[str, Any]) -> str:
+def finalization_instruction(root: Path, record: dict[str, Any]) -> str:
     return (
         "Project Brain persistence is still pending for this task. Before finishing, classify durable knowledge and finalize the gate. "
         "Use an empty JSON array when the task produced no durable project fact; otherwise pass only durable source-backed decisions, "
         "constraints, interfaces, patterns, or known bugs/risks. Do not invent entries.\n\n"
-        f"{empty_finalize_command(root, gate)}\n\n"
+        f"{empty_finalize_command(root, record)}\n\n"
         "For non-empty knowledge, replace [] with a JSON array of objects containing kind, text, source, and optional why/risk. "
         "After the command succeeds, finish the task normally."
     )
@@ -453,32 +538,28 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
     if session_id and is_persistence_continuation(prompt):
         pending = latest_pending_gate(root, session_id)
         if pending:
-            _, gate = pending
-            emit(
-                {
-                    "hookSpecificOutput": {
-                        "hookEventName": "UserPromptSubmit",
-                        "additionalContext": finalization_instruction(root, gate),
-                    }
+            _, record = pending
+            emit({
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": finalization_instruction(root, record),
                 }
-            )
+            })
         return
 
     if not ACTIVATION_RE.search(prompt):
         return
 
     if forbids_all_workspace_writes(prompt):
-        emit(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": (
-                        "The user explicitly prohibited all file/workspace changes. Treat Project Brain persistence as skipped by user constraint. "
-                        "Do not create or update .codemium/ and do not claim persistence succeeded."
-                    ),
-                }
+        emit({
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": (
+                    "The user explicitly prohibited all file/workspace changes. Treat Project Brain persistence as skipped by user constraint. "
+                    "Do not create or update .codemium/ and do not claim persistence succeeded."
+                ),
             }
-        )
+        })
         return
 
     if not session_id or not turn_id:
@@ -487,45 +568,42 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
 
     try:
         root, context, migration = prepare_project_root(cwd, writes_allowed=True)
-        gate = begin_gate(root, session_id, turn_id)
-        gate["project_location"] = {
+        record = begin_gate(root, session_id, turn_id)
+        record["project_location"] = {
             "canonical_project_root": context.get("canonical_project_root"),
             "runtime_git_root": context.get("runtime_git_root"),
             "git_common_dir": context.get("git_common_dir"),
             "is_linked_worktree": bool(context.get("is_linked_worktree")),
             "migration_status": migration.get("status"),
+            "migration_sources": migration.get("sources", []),
         }
-        atomic_json(gate_path(root, session_id, turn_id), gate)
+        atomic_json(gate_path(root, session_id, turn_id), record)
     except Exception as exc:
-        emit(
-            {
-                "systemMessage": f"Codemium Project Brain initialization failed: {str(exc)[:500]}",
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": "Project Brain persistence is unavailable for this turn. Do not claim that durable knowledge was saved.",
-                },
-            }
-        )
+        emit({
+            "systemMessage": f"Codemium Project Brain initialization failed: {str(exc)[:500]}",
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": "Project Brain persistence is unavailable for this turn. Do not claim that durable knowledge was saved.",
+            },
+        })
         return
 
-    if gate.get("status") in FINAL_STATUSES:
+    if record.get("status") in FINAL_STATUSES:
         return
     context_text = (
         "A deterministic Project Brain persistence gate is active at the canonical project root, shared across Local and linked worktrees. "
         "Source/product code may remain read-only while .codemium bookkeeping is updated. Complete the investigation/implementation first. "
         "Before your final answer, finalize this exact gate. If no durable project knowledge was learned, run:\n\n"
-        f"{empty_finalize_command(root, gate)}\n\n"
+        f"{empty_finalize_command(root, record)}\n\n"
         "If durable knowledge was learned, replace [] with a JSON array containing only durable source-backed facts with kind, text, source, and optional why/risk. "
         "The Stop hook will continue the turn if this gate is still pending."
     )
-    emit(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "UserPromptSubmit",
-                "additionalContext": context_text,
-            }
+    emit({
+        "hookSpecificOutput": {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": context_text,
         }
-    )
+    })
 
 
 def handle_stop(data: dict[str, Any]) -> None:
@@ -540,29 +618,27 @@ def handle_stop(data: dict[str, Any]) -> None:
     if not pending:
         emit({})
         return
-    path, gate = pending
-    attempts = int(gate.get("stop_attempts", 0)) + 1
-    gate["stop_attempts"] = attempts
-    gate["stop_hook_active"] = bool(data.get("stop_hook_active", False))
-    gate["updated_at"] = now_iso()
+    path, record = pending
+    attempts = int(record.get("stop_attempts", 0)) + 1
+    record["stop_attempts"] = attempts
+    record["stop_hook_active"] = bool(data.get("stop_hook_active", False))
+    record["updated_at"] = now_iso()
 
     if attempts <= 2:
-        atomic_json(path, gate)
-        emit({"decision": "block", "reason": finalization_instruction(root, gate)})
+        atomic_json(path, record)
+        emit({"decision": "block", "reason": finalization_instruction(root, record)})
         return
 
-    gate["status"] = "enforcement_failed"
-    gate["updated_at"] = now_iso()
-    gate["failure_reason"] = "Persistence gate remained pending after two Stop continuations."
-    atomic_json(path, gate)
-    emit(
-        {
-            "systemMessage": (
-                "Codemium Project Brain persistence could not be finalized after two continuation attempts. "
-                "The turn is being allowed to stop to avoid a loop; do not treat persistence as successful."
-            )
-        }
-    )
+    record["status"] = "enforcement_failed"
+    record["updated_at"] = now_iso()
+    record["failure_reason"] = "Persistence gate remained pending after two Stop continuations."
+    atomic_json(path, record)
+    emit({
+        "systemMessage": (
+            "Codemium Project Brain persistence could not be finalized after two continuation attempts. "
+            "The turn is being allowed to stop to avoid a loop; do not treat persistence as successful."
+        )
+    })
 
 
 def handle_hook() -> None:
@@ -592,11 +668,11 @@ def cli_finalize(argv: list[str]) -> int:
         entries = json.loads(ns.knowledge_json)
         if not isinstance(entries, list):
             raise ValueError("--knowledge-json must be a JSON array")
-        gate = finalize_gate(Path(ns.root).resolve(), ns.session_id, ns.turn_id, entries)
+        record = finalize_gate(Path(ns.root).resolve(), ns.session_id, ns.turn_id, entries)
     except Exception as exc:
         print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2
-    print(json.dumps(gate, ensure_ascii=False, indent=2, sort_keys=True))
+    print(json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 
 
