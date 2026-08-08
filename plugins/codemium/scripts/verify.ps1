@@ -7,7 +7,7 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.6.2") { throw "Expected Codemium 0.6.2" }
+if ($Version -ne "0.6.3") { throw "Expected Codemium 0.6.3" }
 
 function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
   if (-not $Text.Contains($Needle)) { throw $Message }
@@ -21,9 +21,11 @@ $Codex = Get-Content (Join-Path $Root "plugins\codemium\.codex-plugin\plugin.jso
 if ($Codex.name -ne "codemium" -or $Codex.version -ne $Version) { throw "Codex adapter version mismatch" }
 if ($Codex.interface.displayName -ne "Codemium") { throw "Codex displayName mismatch" }
 if ($Codex.hooks -ne './hooks/hooks.json') { throw "Codex manifest missing lifecycle hooks" }
+$DefaultPrompt = ($Codex.interface.defaultPrompt -join ' ')
 Assert-Contains $Codex.interface.longDescription '@Codemium' 'Codex manifest does not document @Codemium invocation'
-Assert-Contains ($Codex.interface.defaultPrompt -join ' ') 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
-Assert-Contains ($Codex.interface.defaultPrompt -join ' ') 'bundled UserPromptSubmit and Stop lifecycle hooks' 'Codex manifest missing deterministic persistence gate'
+Assert-Contains $DefaultPrompt 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
+Assert-Contains $DefaultPrompt 'bundled UserPromptSubmit and Stop lifecycle hooks' 'Codex manifest missing deterministic persistence gate'
+Assert-Contains $DefaultPrompt 'Project Brain-only retrieval requests' 'Codex manifest missing Project Brain fast-path policy'
 $Hooks = Get-Content (Join-Path $Root "plugins\codemium\hooks\hooks.json") -Raw | ConvertFrom-Json
 foreach ($Event in @('UserPromptSubmit','Stop')) {
   $Groups = @($Hooks.hooks.$Event)
@@ -31,6 +33,11 @@ foreach ($Event in @('UserPromptSubmit','Stop')) {
   $Handlers = @($Groups[0].hooks)
   if ($Handlers.Count -lt 1 -or $Handlers[0].type -ne 'command') { throw "Invalid Codex hook handler: $Event" }
   if (-not $Handlers[0].commandWindows) { throw "Missing commandWindows for Codex hook: $Event" }
+  Assert-Contains ($Handlers[0].command + $Handlers[0].commandWindows) 'project_brain_dispatch.py' "Codex hook must route through dispatcher: $Event"
+}
+$Dispatch = Get-Content (Join-Path $Root "plugins\codemium\hooks\project_brain_dispatch.py") -Raw
+foreach ($Phrase in @('PROJECT BRAIN FAST PATH','rank_entries','Do not run task_compiler','fast_path')) {
+  Assert-Contains $Dispatch $Phrase "Project Brain fast path missing $Phrase"
 }
 $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKILL.md") -Raw
 foreach ($Phrase in @(
@@ -100,7 +107,7 @@ $Install = Get-Content (Join-Path $Root "INSTALL.md") -Raw
 Assert-Contains $Install '/hooks' 'INSTALL.md missing hook trust instructions'
 Assert-Contains $Install 'Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks' 'INSTALL.md missing v0.6.2 lifecycle documentation'
 $ChangeLog = Get-Content (Join-Path $Root "CHANGELOG.md") -Raw
-Assert-Contains $ChangeLog '## 0.6.2 — Deterministic Codex persistence gate' 'CHANGELOG missing v0.6.2'
+Assert-Contains $ChangeLog '## 0.6.3 — Project Brain retrieval fast path' 'CHANGELOG missing v0.6.3'
 
 # Python syntax + core/Codex verifier + doctor + fixture.
 $py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\hooks"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
