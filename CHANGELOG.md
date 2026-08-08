@@ -2,10 +2,16 @@
 
 All notable Codemium changes are recorded here.
 
+## Unreleased
+
+- Made `@Codemium` the primary OpenAI Codex plugin invocation for the public user experience.
+- Kept `$cm` and focused `$cm-*` skills as advanced/direct Agent Skill compatibility paths.
+- Updated the Codex plugin manifest, installation guide, host contract, PRD, doctor, and cross-host verifiers to distinguish plugin-level invocation from internal skill invocation.
+
 ## 0.6.0 — Multi-host architecture
 
 - Reframed Codemium as persistent coding intelligence for AI coding agents rather than a Codex-only product.
-- Standardized the native Codex invocation on `$cm` and `$cm-*` focused skills.
+- Added the Codex plugin and `cm` Agent Skill with automatic task/depth selection and focused direct skills.
 - Added a repository-root Claude Code plugin with `/codemium:cm` and on-demand `cm` Agent Skill support.
 - Added a native Gemini CLI extension with `/cm`, lean `GEMINI.md` bootstrap context, and on-demand `cm` Agent Skill support.
 - Added safe portable Agent Skill installation for Cursor and OpenCode, including the canonical deterministic engine and references.
