@@ -2,6 +2,17 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.6.2 — Deterministic Codex persistence gate
+
+- Replaced prompt-only Project Brain completion enforcement in the OpenAI Codex adapter with bundled lifecycle hooks.
+- Added a `UserPromptSubmit` hook that initializes/reuses Project Brain and creates a per-turn persistence gate for Codemium-invoked repository work when workspace-state writes are allowed.
+- Added a `Stop` hook that continues a turn while its persistence gate is still pending, requiring durable knowledge to be captured/reused or explicitly classified as none before normal completion.
+- Added source-backed capture validation, duplicate reuse through the existing Project Brain engine, and a bounded retry guard that fails visibly rather than looping forever.
+- Preserved read-only source-code workflows while respecting explicit prohibitions on all file/workspace changes.
+- Added protection against creating a second persistence gate when a `Stop` continuation is submitted as another `UserPromptSubmit` event.
+- Added a dedicated Codex lifecycle fixture and CI verifier that exercise actual hook behavior instead of merely asserting persistence wording exists in prompts/skills.
+- Documented Codex hook trust: plugin command hooks are skipped until the user reviews and trusts the current hook definition with `/hooks`.
+
 ## 0.6.1 — Automatic Project Brain persistence
 
 - Made `@Codemium` the primary OpenAI Codex plugin invocation for the public user experience.
