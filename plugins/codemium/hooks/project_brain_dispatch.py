@@ -60,15 +60,6 @@ def elapsed_ms(start_ns: int) -> float:
     return round((time.perf_counter_ns() - start_ns) / 1_000_000, 3)
 
 
-def fast_root(cwd: str | Path) -> Path:
-    """Resolve Project Brain without invoking git for memory-only retrieval."""
-    start = Path(cwd).resolve()
-    for candidate in (start, *start.parents):
-        if (candidate / ".codemium").exists():
-            return candidate
-    return start
-
-
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
@@ -155,6 +146,7 @@ def mark_fast_gate(
     total_entries: int,
     prompt_epoch_ms: int,
     diagnostics: dict[str, Any],
+    project_location: dict[str, Any],
 ) -> dict[str, Any]:
     now = gate.now_iso()
     status = "reused" if matched else "none"
@@ -168,6 +160,7 @@ def mark_fast_gate(
         "updated_at": now,
         "fast_path": True,
         "memory_mode": "lightweight",
+        "project_location": project_location,
         "retrieval": {
             "matched": len(matched),
             "total_active": total_entries,
@@ -198,6 +191,7 @@ def fast_context(matched: list[dict[str, Any]], total: int, writes_allowed: bool
         payload = json.dumps([concise_entry(x) for x in matched], ensure_ascii=False, separators=(",", ":"))
         return (
             "CODEMIUM MEMORY RETRIEVAL MODE. This mode overrides the normal Codemium engineering lifecycle for this turn. "
+            "The SNAPSHOT comes from the canonical Project Brain shared by the Local checkout and linked worktrees. "
             "Use minimum reasoning and answer directly from SNAPSHOT only. Do not classify task/depth, plan, inspect git, search the repository, "
             "read source files, build repository/working-set state, run tests, verify against source, or execute engineering/completion workflows. "
             "Do not infer missing facts. Keep the answer concise unless the user explicitly asks for detail. "
@@ -232,21 +226,33 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
     total_start = time.perf_counter_ns()
     prompt_epoch_ms = int(time.time() * 1000)
     diagnostics: dict[str, Any] = {}
+    cwd = str(data.get("cwd") or Path.cwd())
+    writes_allowed = not gate.forbids_all_workspace_writes(prompt)
 
     root_start = time.perf_counter_ns()
-    root = fast_root(str(data.get("cwd") or Path.cwd()))
+    try:
+        root, context, migration = gate.prepare_project_root(cwd, writes_allowed=writes_allowed)
+    except Exception as exc:
+        gate.emit(
+            {
+                "systemMessage": f"Codemium canonical Project Brain resolution failed: {str(exc)[:500]}",
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": "Memory retrieval failed. Fall back to normal Codemium behavior, but do not claim Project Brain was reused unless verified.",
+                },
+            }
+        )
+        return
     diagnostics["root_resolve_ms"] = elapsed_ms(root_start)
+    diagnostics["canonical_project_root"] = str(root)
+    diagnostics["runtime_git_root"] = context.get("runtime_git_root")
+    diagnostics["is_linked_worktree"] = bool(context.get("is_linked_worktree"))
+    diagnostics["migration_status"] = migration.get("status")
 
     session_id = str(data.get("session_id") or "")
     turn_id = str(data.get("turn_id") or "")
-    writes_allowed = not gate.forbids_all_workspace_writes(prompt)
 
     try:
-        init_start = time.perf_counter_ns()
-        if writes_allowed and not (root / ".codemium").exists():
-            gate.run_project_brain(root, "init")
-        diagnostics["state_init_ms"] = elapsed_ms(init_start)
-
         read_start = time.perf_counter_ns()
         entries = active_entries(root)
         diagnostics["registry_read_ms"] = elapsed_ms(read_start)
@@ -256,15 +262,23 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         diagnostics["ranking_ms"] = elapsed_ms(rank_start)
 
         context_start = time.perf_counter_ns()
-        context = fast_context(matched, len(entries), writes_allowed)
+        response_context = fast_context(matched, len(entries), writes_allowed)
         diagnostics["context_build_ms"] = elapsed_ms(context_start)
-        diagnostics["context_chars"] = len(context)
+        diagnostics["context_chars"] = len(response_context)
         diagnostics["matched_entries"] = len(matched)
         diagnostics["total_active_entries"] = len(entries)
 
         gate_start = time.perf_counter_ns()
         if writes_allowed and session_id and turn_id:
             diagnostics["hook_total_before_gate_ms"] = elapsed_ms(total_start)
+            project_location = {
+                "canonical_project_root": context.get("canonical_project_root"),
+                "runtime_git_root": context.get("runtime_git_root"),
+                "git_common_dir": context.get("git_common_dir"),
+                "is_linked_worktree": bool(context.get("is_linked_worktree")),
+                "resolution": context.get("resolution"),
+                "migration_status": migration.get("status"),
+            }
             record = mark_fast_gate(
                 root,
                 session_id,
@@ -273,6 +287,7 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
                 total_entries=len(entries),
                 prompt_epoch_ms=prompt_epoch_ms,
                 diagnostics=diagnostics,
+                project_location=project_location,
             )
             diagnostics["gate_write_ms"] = elapsed_ms(gate_start)
             diagnostics["hook_total_ms"] = elapsed_ms(total_start)
@@ -302,14 +317,14 @@ def handle_user_prompt(data: dict[str, Any]) -> None:
         {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
-                "additionalContext": context,
+                "additionalContext": response_context,
             }
         }
     )
 
 
 def handle_stop(data: dict[str, Any]) -> None:
-    root = fast_root(str(data.get("cwd") or Path.cwd()))
+    root = gate.repository_root(str(data.get("cwd") or Path.cwd()))
     session_id = str(data.get("session_id") or "")
     turn_id = str(data.get("turn_id") or "")
     if session_id and turn_id:
@@ -346,7 +361,6 @@ def handle_hook() -> None:
 
 
 def main() -> int:
-    # Keep the existing manual finalizer CLI stable for Stop continuations.
     if len(sys.argv) > 1 and sys.argv[1] == "finalize":
         return gate.cli_finalize(sys.argv[1:])
     handle_hook()
