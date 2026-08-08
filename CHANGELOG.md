@@ -2,7 +2,7 @@
 
 All notable Codemium changes are recorded here.
 
-## Unreleased
+## 0.6.1 — Automatic Project Brain persistence
 
 - Made `@Codemium` the primary OpenAI Codex plugin invocation for the public user experience.
 - Kept `$cm` and focused `$cm-*` skills as advanced/direct Agent Skill compatibility paths.
