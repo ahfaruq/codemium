@@ -4,7 +4,7 @@
 
 <h1 align="center">Codemium</h1>
 
-<p align="center"><strong>Persistent coding intelligence for AI coding agents.</strong></p>
+<p align="center"><strong>Persistent engineering intelligence for AI coding agents.</strong></p>
 
 <p align="center">
   The engineering layer that helps coding agents work like a senior engineer who already knows your codebase.
@@ -24,8 +24,60 @@
 Codemium is a host-agnostic engineering layer for long-running software projects. It aims for the **smallest justified engineering change** while preserving project understanding, correctness, testing depth, architecture, scope discipline, and context efficiency.
 
 > **Positioning:** the senior engineer who already knows your codebase.
+>
+> **Investigate once. Preserve what matters. Reuse it safely.**
 
 Codemium keeps durable project intelligence in `.codemium/`, then exposes the same engineering doctrine through native adapters for each coding-agent host.
+
+## Why Codemium?
+
+AI coding agents are powerful, but long-running projects have a recurring problem: **the agent often has to rediscover the same repository knowledge across tasks.**
+
+Architecture, constraints, known bugs, interface behavior, prior decisions, and test boundaries may already have been investigated. Without durable project intelligence, that work can be repeated again and again.
+
+Codemium adds a persistent engineering layer:
+
+```text
+First task
+    │
+    ├─ investigate the repository
+    ├─ verify source-backed findings
+    │
+    ▼
+Project Brain
+    │
+    ├─ decisions
+    ├─ constraints
+    ├─ interfaces
+    ├─ patterns
+    └─ known bugs
+    │
+    ▼
+Later tasks
+    │
+    ├─ reuse what is still valid
+    ├─ inspect only what changed or is uncertain
+    ├─ keep the working set small
+    └─ verify according to risk
+```
+
+The goal is not to make the underlying model “smarter.” The goal is to stop making a capable coding agent repeatedly pay to understand the same project.
+
+**Investigate once. Preserve what matters. Reuse it safely.**
+
+## What makes Codemium different?
+
+Codemium is not another coding model and does not replace Codex, Claude Code, Gemini CLI, Cursor, or OpenCode. It sits above the host as a project-aware engineering layer.
+
+| Without Codemium | With Codemium |
+| --- | --- |
+| Repository knowledge often lives only in the current session | Durable findings live with the project |
+| Later tasks may rediscover architecture and constraints | Existing knowledge is reused before broad investigation |
+| Context can grow through repeated repository reading | Working sets are scoped to the current task |
+| Verification depends heavily on each prompt | Risk and blast radius guide verification depth |
+| Different coding hosts build separate understanding | Supported hosts can share the same Project Brain |
+
+Codemium does not blindly trust old knowledge. Durable entries are evidence-backed, deduplicated, and can be superseded when the source changes.
 
 ## Quick start with OpenAI Codex
 
