@@ -4,7 +4,7 @@
 
 <h1 align="center">Codemium</h1>
 
-<p align="center"><strong>Persistent engineering intelligence for AI coding agents.</strong></p>
+<p align="center"><strong>Persistent coding intelligence for AI coding agents.</strong></p>
 
 <p align="center">
   The engineering layer that helps coding agents work like a senior engineer who already knows your codebase.
@@ -12,12 +12,12 @@
 
 <p align="center">
   <a href="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml"><img src="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg" alt="Codemium Core" /></a>
-  <img src="https://img.shields.io/badge/version-v0.6.2-2F81F7" alt="Version v0.6.2" />
+  <img src="https://img.shields.io/badge/version-v0.7.0-2F81F7" alt="Version v0.7.0" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3FB950" alt="MIT License" /></a>
   <a href="https://github.com/sponsors/ahfaruq"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor Codemium" /></a>
 </p>
 
-<p align="center"><sub>Host-agnostic &nbsp;•&nbsp; Project-aware &nbsp;•&nbsp; Scope-disciplined &nbsp;•&nbsp; Verification-driven</sub></p>
+<p align="center"><sub>Host-agnostic &nbsp;•&nbsp; Project-aware &nbsp;•&nbsp; Evidence-backed &nbsp;•&nbsp; Scope-disciplined &nbsp;•&nbsp; Verification-driven</sub></p>
 
 ---
 
@@ -27,57 +27,63 @@ Codemium is a host-agnostic engineering layer for long-running software projects
 >
 > **Investigate once. Preserve what matters. Reuse it safely.**
 
-Codemium keeps durable project intelligence in `.codemium/`, then exposes the same engineering doctrine through native adapters for each coding-agent host.
+Codemium does not replace Codex, Claude Code, Gemini CLI, Cursor, or OpenCode. It gives those coding agents a shared engineering layer with two complementary forms of intelligence:
+
+- **Structural Intelligence** — what the repository currently contains and how its code relates;
+- **Project Brain** — durable engineering knowledge learned through verified work over time.
+
+The repository remains the source of truth. Tests/runtime evidence remain the proof of behavior. Codemium's structural graph is a derived navigation and impact index; Project Brain is durable, freshness-qualified engineering memory.
 
 ## Why Codemium?
 
-AI coding agents are powerful, but long-running projects have a recurring problem: **the agent often has to rediscover the same repository knowledge across tasks.**
+AI coding agents are powerful, but long-running projects repeatedly expose the same costs:
 
-Architecture, constraints, known bugs, interface behavior, prior decisions, and test boundaries may already have been investigated. Without durable project intelligence, that work can be repeated again and again.
+- the agent rediscovers architecture and dependencies;
+- earlier root-cause findings disappear with the session;
+- broad repository reads consume context before the relevant code is known;
+- impact and test selection depend too heavily on prompt quality;
+- old project knowledge can become unsafe after the supporting source changes.
 
-Codemium adds a persistent engineering layer:
+Codemium addresses those problems as one engineering loop:
 
 ```text
-First task
-    │
-    ├─ investigate the repository
-    ├─ verify source-backed findings
-    │
-    ▼
-Project Brain
-    │
-    ├─ decisions
-    ├─ constraints
-    ├─ interfaces
-    ├─ patterns
-    └─ known bugs
-    │
-    ▼
-Later tasks
-    │
-    ├─ reuse what is still valid
-    ├─ inspect only what changed or is uncertain
-    ├─ keep the working set small
-    └─ verify according to risk
+                         CODEMIUM
+                            │
+             ┌──────────────┴──────────────┐
+             │                             │
+   Structural Intelligence           Project Brain
+    derived from source          durable engineering truth
+             │                             │
+             └──────── Evidence Bridge ────┘
+                            │
+                            ▼
+                       Working Set
+                            │
+                            ▼
+                      Change Impact
+                            │
+                            ▼
+                       Verification
+                            │
+                            ▼
+                       Coding Agent
 ```
 
-The goal is not to make the underlying model “smarter.” The goal is to stop making a capable coding agent repeatedly pay to understand the same project.
-
-**Investigate once. Preserve what matters. Reuse it safely.**
+The goal is not to make the underlying model magically smarter. The goal is to stop making a capable coding agent repeatedly pay to understand the same project while still forcing stale or uncertain knowledge to be verified.
 
 ## What makes Codemium different?
-
-Codemium is not another coding model and does not replace Codex, Claude Code, Gemini CLI, Cursor, or OpenCode. It sits above the host as a project-aware engineering layer.
 
 | Without Codemium | With Codemium |
 | --- | --- |
 | Repository knowledge often lives only in the current session | Durable findings live with the project |
-| Later tasks may rediscover architecture and constraints | Existing knowledge is reused before broad investigation |
-| Context can grow through repeated repository reading | Working sets are scoped to the current task |
-| Verification depends heavily on each prompt | Risk and blast radius guide verification depth |
-| Different coding hosts build separate understanding | Supported hosts can share the same Project Brain |
+| Later tasks may rediscover architecture and constraints | Existing Project Brain knowledge is reused when still valid |
+| Broad search happens before dependencies are known | Structural relationships narrow where the agent should inspect |
+| Context grows through repeated repository reading | Working Sets stay bounded and evidence-triggered |
+| Blast radius may be guessed from filenames | Structural callers/dependencies/tests contribute impact evidence |
+| Old memory can silently become wrong | Supporting source changes mark knowledge for revalidation |
+| Different coding hosts build separate understanding | Supported hosts share one vendor-neutral Codemium core |
 
-Codemium does not blindly trust old knowledge. Durable entries are evidence-backed, deduplicated, and can be superseded when the source changes.
+Codemium does not blindly trust old knowledge. Durable entries are deduplicated, can carry structured source evidence, and are freshness-qualified before material reuse.
 
 ## Quick start with OpenAI Codex
 
@@ -88,7 +94,7 @@ codex plugin marketplace add ahfaruq/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
-Codemium `0.6.2` bundles lifecycle hooks for deterministic Project Brain persistence. Codex does not auto-trust plugin command hooks, so after installing or updating open `/hooks`, review the Codemium hooks, and trust the current definitions. Then start a fresh Codex session.
+Codemium bundles `UserPromptSubmit` and `Stop` lifecycle hooks for deterministic Project Brain persistence. Codex does not auto-trust plugin command hooks, so after installing or updating, open `/hooks`, review the Codemium hooks, and trust the current definitions when required. Then start a fresh Codex session if plugin/skill inventory is cached.
 
 Mention the plugin naturally:
 
@@ -99,11 +105,9 @@ Mention the plugin naturally:
 @Codemium safely change this authentication flow and verify the impact
 ```
 
-**`@Codemium` is the primary Codex plugin UX.** Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to memorize internal skill names or depth syntax.
+**`@Codemium` is the primary Codex plugin UX.** Codemium automatically classifies the task and selects the smallest safe engineering depth. Structural risk may escalate depth but never weakens the safety floor.
 
-**Project Brain is zero-setup for normal use.** With the Codex lifecycle hooks trusted, a repository-bound Codemium turn initializes or reuses `.codemium/` when workspace-state writes are allowed, opens a persistence gate, and cannot normally finish while that gate is still pending. Durable source-backed knowledge is captured/reused, or the task explicitly records that nothing durable was learned. A source-code-only instruction such as “do not modify code” still allows Project Brain bookkeeping, while an explicit prohibition on all workspace/file changes is respected.
-
-Codemium does not retroactively convert prior chat history into Project Brain entries. Durable knowledge begins accumulating from tasks that run with the persistence lifecycle active.
+**Project Brain is zero-setup for normal use.** With lifecycle hooks trusted, a repository-bound Codemium turn initializes or reuses `.codemium/` when workspace-state writes are allowed, opens a persistence gate, and cannot normally finish while that gate is pending. Durable source-backed knowledge is captured/reused, or the task explicitly records that nothing durable was learned.
 
 Direct Agent Skill invocation remains available for advanced/compatibility use:
 
@@ -122,34 +126,13 @@ $cm critical <task>
 | Claude Code | **Beta** | Claude plugin + Agent Skill + command | `/codemium:cm` |
 | Gemini CLI | **Beta** | Gemini extension + context + command | `/cm` |
 | Cursor | **Beta** | Portable Agent Skill | `/cm` / skill picker |
-| OpenCode | **Beta** | Portable Agent Skill | `/cm` when slash exposure is supported, otherwise skill tool/auto-selection |
+| OpenCode | **Beta** | Portable Agent Skill | `/cm` when exposed, otherwise skill tool/auto-selection |
 
-See [`INSTALL.md`](INSTALL.md) for installation and hook trust, [`HOSTS.md`](HOSTS.md) for the adapter contract, [`PRD.md`](PRD.md) for product requirements, and [`CHANGELOG.md`](CHANGELOG.md) for release history.
-
-## One core, native adapters
-
-```text
-                         CODEMIUM
-                            │
-          ┌─────────────────┼─────────────────┐
-          │                 │                 │
-     Project Brain     Engineering Core   Shared State
-          │                 │                 │
-          └─────────────────┼─────────────────┘
-                            │
-        ┌───────────┬───────┼────────┬────────────┐
-        │           │       │        │            │
-      Codex       Claude  Gemini   Cursor      OpenCode
-        │           │       │        │            │
-  @Codemium  /codemium:cm  /cm      /cm        cm skill
-    + hooks
-```
-
-Invocation syntax, extension format, lifecycle controls, model controls, and tool surfaces are host-specific. The engineering invariants are not.
+See [`INSTALL.md`](INSTALL.md) for installation and hook trust, [`HOSTS.md`](HOSTS.md) for the adapter contract, [`PRD.md`](PRD.md) and [`PRD-v0.7.md`](PRD-v0.7.md) for requirements, and [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 ## Core behavior
 
-Codemium classifies work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY and then chooses the smallest safe engineering depth:
+Codemium classifies work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY and chooses the smallest safe engineering depth:
 
 | Depth | Meaning |
 | --- | --- |
@@ -158,203 +141,161 @@ Codemium classifies work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SE
 | DEEP | complex, cross-boundary, intermittent, concurrency/performance work |
 | CRITICAL | auth/security, payments, migrations, production data, destructive or breaking changes |
 
-Safety may **escalate** depth but never downgrade below the safe minimum.
-
 Codemium then applies:
 
-- **Project Brain** — automatically initialized durable decisions, constraints, interfaces, patterns, and known bugs with end-of-task capture/reuse;
-- **Repository Intelligence** — lightweight file/symbol/import/test discovery;
-- **Working Set Engine** — only context relevant to the current task;
-- **Scope Guard** — no unrelated edits or opportunistic cleanup;
-- **Impact & Test Intelligence** — verification follows behavior and blast radius;
-- **Read/Search Reuse** — unchanged deterministic work is not paid for twice;
-- **Stop Engine** — stop once the requested result and persistence obligations are sufficiently proven;
-- **Model Capability Layer** — engineering depth is portable while vendor reasoning knobs remain host-owned.
+- **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs/risks with evidence freshness;
+- **Structural Intelligence** — relational repository graph with source provenance and parser capability reporting;
+- **Evidence Bridge** — Project Brain entries can carry source hashes/symbol references so source changes can invalidate trust;
+- **Working Set Engine** — lexical seeds plus bounded structural traversal select the relevant project slice;
+- **Scope Guard** — every changed surface should be attributable to DIRECT, DEPENDENCY, CLEANUP, or TEST work;
+- **Impact & Test Intelligence** — reverse dependencies and structural test relationships inform verification depth;
+- **Read/Search Reuse** — unchanged deterministic work is reused when validity is provable;
+- **Stop Engine** — stop once requested behavior, verification, scope, freshness, and persistence obligations are proven;
+- **Model Capability Layer** — engineering depth stays portable while vendor reasoning knobs remain host-owned.
 
-For the Codex adapter, the Stop Engine's Project Brain obligation is backed by host lifecycle hooks rather than prompt wording alone.
+For the Codex adapter, Project Brain completion is backed by lifecycle hooks rather than prompt wording alone.
 
-## Engineering doctrine
+# Structural Intelligence — v0.7
 
-After the real requirement is understood:
+v0.7 upgrades the old lightweight repository inventory into **Structural Graph v2**.
 
-1. Is the behavior actually required?
-2. Does the project already solve it?
-3. Does the standard library solve it?
-4. Does the native framework/platform solve it?
-5. Does an existing dependency solve it?
-6. Can a local simple implementation solve it?
-7. Only then add a new abstraction or dependency.
+## Graph entities
 
-The goal is **minimum justified engineering**, not minimum LOC. Minimal production code never means minimal testing.
-
----
-
-# OpenAI Codex
-
-Codex is currently the stable/reference adapter.
-
-## Install
-
-```sh
-codex plugin marketplace add ahfaruq/codemium --ref main
-codex plugin add codemium@codemium
-```
-
-After install/update, open `/hooks`, review the Codemium `UserPromptSubmit` and `Stop` hooks, and trust the current definitions. Start a fresh Codex task after installation if the runtime has cached its plugin or skill inventory.
-
-If the plugin hooks are untrusted or hooks are disabled, Codemium's skill instructions may still load but deterministic persistence enforcement does not run. Do not treat that state as guaranteed Project Brain persistence.
-
-## Use
-
-Primary plugin invocation:
+Minimum graph node types:
 
 ```text
-@Codemium fix the profile save bug
-@Codemium review this repository before making any changes
-@Codemium deeply investigate a race condition
-@Codemium safely change authorization behavior and verify the impact
+FILE / TEST
+MODULE
+SYMBOL
 ```
 
-Codemium infers task type and engineering depth automatically. Natural language such as “quickly”, “deeply investigate”, or “safely review this critical flow” can express intent, but the safety floor always wins.
+Symbol subtypes include supported functions, methods, classes/interfaces, and related language constructs when the parser can identify them deterministically.
 
-Normal `@Codemium` tasks establish/reuse Project Brain automatically. The `UserPromptSubmit` hook opens a per-turn persistence gate, while the `Stop` hook continues the turn if that gate remains pending. Before normal completion, the task must capture/reuse durable source-backed knowledge or classify that it learned none. You do not need to run `$cm-init` before ordinary use.
+## Relationships
 
-### Advanced direct skills
-
-Codex also supports direct Agent Skill invocation:
+The structural graph can represent:
 
 ```text
-$cm
-$cm fast
-$cm deep
-$cm critical
+DEFINES
+CONTAINS
+IMPORTS
+CALLS
+REFERENCES
+INHERITS
+IMPLEMENTS
+TESTS
+DEPENDS_ON
 ```
 
-Focused direct skills:
+Every relationship carries provenance:
+
+- **DIRECT** — observed directly by deterministic parsing;
+- **RESOLVED** — deterministically resolved from source structure/names;
+- **HEURISTIC** — deterministic fallback evidence that must not be presented as direct truth.
+
+Parser coverage is explicit. Python uses standard-library AST extraction; other supported languages currently degrade to deterministic fallback parsing when deeper structural parsing is unavailable.
+
+No LLM is required to construct the structural graph.
+
+## Incremental refresh
+
+`.codemium/repository/manifest.json` tracks content identity, parser identity/version, and graph schema validity.
+
+On later builds:
 
 ```text
-$cm-fix
-$cm-test
-$cm-review
-$cm-audit
-$cm-health
+UNCHANGED → reuse prior extraction
+NEW       → parse
+MODIFIED  → invalidate and reparse changed source
+DELETED   → prune owned graph entities/relationships
 ```
 
-`$cm-init` remains available as a manual maintenance/diagnostic path, but it is not required before normal `@Codemium` work.
+The graph is derived/regenerable state and is ignored by Git by default.
 
-These direct skills are useful for advanced/compatibility workflows; the public product-level entry point is `@Codemium`.
+## Query engine
 
-### Codex reasoning mapping
+Diagnostic/query primitives include:
 
-Codemium's portable reasoning classes map to current Codex effort preferences when supported:
+```sh
+python plugins/codemium/engine/graph_query.py --root . find-symbol "AuthService"
+python plugins/codemium/engine/graph_query.py --root . callers "refresh_session"
+python plugins/codemium/engine/graph_query.py --root . callees "refresh_session"
+python plugins/codemium/engine/graph_query.py --root . dependencies "AuthService"
+python plugins/codemium/engine/graph_query.py --root . dependents "TokenRepository"
+python plugins/codemium/engine/graph_query.py --root . tests-for "refresh_session"
+python plugins/codemium/engine/graph_query.py --root . path "AuthController" "TokenRepository"
+```
 
-| Depth | Portable class | Codex preference |
-| --- | --- | --- |
-| FAST | economy | `low` |
-| NORMAL | balanced | `medium` |
-| DEEP | strong | `high` |
-| CRITICAL | frontier | `xhigh` |
+These are engine surfaces, not a replacement public UX for `@Codemium`.
 
-Codemium never silently rewrites the global Codex model/reasoning selector. A host-effort change is only reported when the runtime confirms it.
+## Source remains authoritative
 
----
-
-# Claude Code
-
-Claude Code uses the repository itself as the plugin root so the adapter has access to the same shipped core.
-
-## Install
-
-Inside Claude Code:
+Codemium deliberately does **not** force agents to trust the graph instead of source.
 
 ```text
-/plugin marketplace add ahfaruq/codemium
-/plugin install codemium@codemium
+Structural graph → where to inspect / what may be affected
+Source code       → implementation truth
+Tests/runtime     → behavioral proof
+Project Brain     → durable engineering knowledge, freshness-qualified
 ```
 
-## Use
+If graph state is missing, stale, corrupt, or incomplete, Codemium degrades to normal repository tools rather than fabricating relationships.
 
-Claude may auto-select the `cm` Agent Skill when relevant, or invoke explicitly:
+# Project Brain Evidence Bridge
+
+Project Brain entries may carry structured evidence:
+
+```json
+{
+  "kind": "constraint",
+  "text": "Token rotation requires a grace period.",
+  "evidence": [
+    {
+      "path": "src/auth/token_service.py",
+      "symbol": "TokenService.rotate",
+      "graph_node_id": "symbol:src/auth/token_service.py#TokenService.rotate:method",
+      "content_hash": "...",
+      "line_start": 84,
+      "line_end": 116
+    }
+  ]
+}
+```
+
+Legacy Project Brain entries with the old `source` field remain readable.
+
+## Freshness states
+
+- **FRESH** — supporting content hashes still match source;
+- **NEEDS_REVALIDATION** — supporting source changed or disappeared;
+- **SUPERSEDED** — retained history replaced by later verified knowledge;
+- **UNKNOWN** — legacy or insufficient evidence; verify before material reliance.
+
+A source change does not silently delete durable history. Codemium marks trust for revalidation, inspects the smallest relevant source evidence, and can refresh the entry after verification.
+
+> **Remember aggressively, trust conditionally.**
+
+# Working Set, impact, and testing
+
+The v0.7 retrieval order is:
 
 ```text
-/codemium:cm fix the profile save bug
-/codemium:cm fast adjust the card spacing
-/codemium:cm deep investigate a race condition
-/codemium:cm critical change authorization behavior
+active task contract
+→ relevant freshness-qualified Project Brain facts
+→ task seed symbols/files
+→ bounded structural neighbors
+→ relevant interfaces/dependencies/tests
+→ exact source regions
+→ deeper evidence only for a named unresolved question
 ```
 
-Claude model/thinking controls remain Claude-owned unless the host documents and confirms a per-task control.
+Working Set expansion is bounded by task depth and node/file budgets. Structural distance helps relevance; it never authorizes unrelated cleanup.
 
----
+Change Impact traverses reverse structural dependencies when available and retains a deterministic fallback for degraded graph state. Test Intelligence prefers structural `TESTS` relationships and labels naming/import fallback matches as HEURISTIC.
 
-# Gemini CLI
+# Shared `.codemium/` state
 
-Codemium is packaged as a native Gemini CLI extension with `gemini-extension.json`, a deliberately lean `GEMINI.md` bootstrap, the shared `cm` Agent Skill, and `/cm`.
-
-## Install
-
-From a terminal:
-
-```sh
-gemini extensions install https://github.com/ahfaruq/codemium --ref main
-```
-
-Restart Gemini CLI after installation or update so extension commands/context refresh.
-
-## Use
-
-```text
-/cm fix the profile save bug
-/cm fast adjust the card spacing
-/cm deep investigate a race condition
-/cm critical change authentication behavior
-```
-
----
-
-# Cursor
-
-Cursor supports Agent Skills. Codemium installs the shared `cm` bundle together with its deterministic engine and references.
-
-## User-wide install
-
-```sh
-python scripts/install_host.py --host cursor
-```
-
-## Project-local install
-
-```sh
-python scripts/install_host.py --host cursor --scope project --project /path/to/project
-```
-
-Then use the `cm` Agent Skill when Cursor discovers it; current Cursor releases expose skills in the slash UI, so `/cm` is the short invocation there. Cursor's current primary CLI entrypoint is `agent`, with `cursor-agent` retained as a compatibility alias.
-
----
-
-# OpenCode
-
-OpenCode natively discovers Agent Skills. Codemium installs into its skill directories and sets `opencode/slash: "true"` metadata.
-
-## User-wide install
-
-```sh
-python scripts/install_host.py --host opencode
-```
-
-## Project-local install
-
-```sh
-python scripts/install_host.py --host opencode --scope project --project /path/to/project
-```
-
-OpenCode can auto-select/load `cm` via its native skill tool. Use `/cm` on versions exposing Agent Skills in the slash catalog.
-
----
-
-# Shared Project Brain
-
-All adapters use the same project state:
+All adapters use the same project namespace:
 
 ```text
 .codemium/
@@ -370,6 +311,7 @@ All adapters use the same project state:
 │   └── bugs.jsonl
 ├── repository/
 │   ├── graph.json
+│   ├── manifest.json
 │   └── tests.json
 ├── tasks/
 │   └── active.json
@@ -380,39 +322,92 @@ All adapters use the same project state:
     └── snapshots/
 ```
 
-A project initialized under one host can be understood by another host because durable state is vendor-neutral. Transient repository maps/runtime/task state is ignored by Git by default; durable sanitized architecture and decision knowledge can remain project-owned.
+Durable sanitized Project Brain knowledge is vendor-neutral. Repository graph/manifest/test maps, active/completed task state, cache, and persistence gates are transient/regenerable and ignored by Git by default.
 
-For normal repository-bound work, initialization is automatic when state writes are allowed. At completion Codemium classifies persistence as **captured**, **reused**, **none**, or **skipped by user constraint**. Durable entries are evidence-backed and deduplicated; chat transcripts, secrets, speculative hypotheses, and temporary runtime observations are not Project Brain knowledge.
-
-Codex additionally keeps transient per-turn gate state under `.codemium/runtime/persistence-gates/`. That state exists only to enforce completion and is not durable project knowledge.
+Codex additionally uses transient per-turn persistence-gate state to enforce Project Brain completion; that state is not durable project knowledge.
 
 ## Deterministic core helpers
 
-Normal users do not need to run these manually. They are available for diagnostics, testing, and host adapters:
+Normal users do not need to run these manually. They are useful for diagnostics, testing, and host adapters:
 
 ```sh
 python plugins/codemium/engine/project_brain.py --root . init
-python plugins/codemium/engine/project_brain.py --root . capture --entries '[{"kind":"bug","text":"Durable source-backed finding","source":"src/example.py:42"}]'
+python plugins/codemium/engine/project_brain.py --root . capture --entries '[{"kind":"bug","text":"Durable finding","source":"src/example.py"}]'
+python plugins/codemium/engine/project_brain.py --root . freshness
+python plugins/codemium/engine/project_brain.py --root . revalidate --kind bug --id B0001
 python plugins/codemium/engine/repo_graph.py build --root .
 python plugins/codemium/engine/test_map.py build --root .
 python plugins/codemium/engine/working_set.py --root . --query "auth refresh" --top 8
+python plugins/codemium/engine/impact.py --root . --git-diff
+python plugins/codemium/engine/health.py --root .
 ```
 
-They are deterministic accelerators and state helpers, not mandatory user ceremony. Use them when they reduce repeated model work or guarantee Project Brain persistence.
+# Host usage
+
+## OpenAI Codex
+
+```sh
+codex plugin marketplace add ahfaruq/codemium --ref main
+codex plugin add codemium@codemium
+```
+
+Use `@Codemium ...`. After install/update, review lifecycle hook trust with `/hooks` when needed.
+
+## Claude Code
+
+```text
+/plugin marketplace add ahfaruq/codemium
+/plugin install codemium@codemium
+```
+
+Use `/codemium:cm ...` or let Claude auto-select the shared `cm` Agent Skill.
+
+## Gemini CLI
+
+```sh
+gemini extensions install https://github.com/ahfaruq/codemium --ref main
+```
+
+Use `/cm ...` after restarting Gemini CLI if extension inventory was cached.
+
+## Cursor
+
+```sh
+python scripts/install_host.py --host cursor
+# or project-local
+python scripts/install_host.py --host cursor --scope project --project /path/to/project
+```
+
+## OpenCode
+
+```sh
+python scripts/install_host.py --host opencode
+# or project-local
+python scripts/install_host.py --host opencode --scope project --project /path/to/project
+```
+
+Portable installs copy the shared Agent Skill plus canonical deterministic engine. See [`INSTALL.md`](INSTALL.md) for full installation/update/uninstall details.
+
+# Engineering doctrine
+
+After the real requirement is understood:
+
+1. Is the behavior actually required?
+2. Does the project already solve it?
+3. Does the standard library solve it?
+4. Does the native framework/platform solve it?
+5. Does an existing dependency solve it?
+6. Can a local simple implementation solve it?
+7. Only then add a new abstraction or dependency.
+
+The goal is **minimum justified engineering**, not minimum LOC. Minimal production code never means minimal testing.
 
 ## Host installer safety
 
 `scripts/install_host.py` manages only its Codemium-owned skill directory. It refuses to overwrite or remove a non-Codemium directory unless `--force` is explicitly supplied.
 
-Dry run:
-
 ```sh
 python scripts/install_host.py --host cursor --dry-run
-```
-
-Uninstall:
-
-```sh
 python scripts/install_host.py --host cursor --uninstall
 python scripts/install_host.py --host opencode --uninstall
 ```
@@ -425,19 +420,11 @@ Validate repository contracts and see which host binaries are locally available:
 python scripts/doctor.py
 ```
 
-Require a host when testing locally:
+When `.codemium/` exists, doctor also reports structural graph and Project Brain freshness health.
 
-```sh
-python scripts/doctor.py --require-host codex
-python scripts/doctor.py --require-host claude-code
-python scripts/doctor.py --require-host gemini-cli
-python scripts/doctor.py --require-host cursor
-python scripts/doctor.py --require-host opencode
-```
+# Verification model
 
-## Verification model
-
-Codemium deliberately separates different kinds of evidence:
+Codemium separates deterministic implementation evidence from AI quality claims.
 
 ### 1. Core CI — every push / pull request
 
@@ -445,7 +432,7 @@ Codemium deliberately separates different kinds of evidence:
 python scripts/verify_core.py
 ```
 
-The core badge at the top of this README represents **Codemium core integrity only**: engine syntax, Project Brain invariants, task/depth behavior, and the core fixture. It does not claim AI quality or full host compatibility.
+The core badge represents **Codemium core integrity only**: engine syntax, Project Brain invariants, Structural Intelligence contracts, incremental/freshness behavior, task/depth behavior, and the host-agnostic fixture. It does not claim AI quality or full host compatibility.
 
 ### 2. Codex lifecycle CI — every push / pull request
 
@@ -453,7 +440,7 @@ The core badge at the top of this README represents **Codemium core integrity on
 python scripts/verify_codex_plugin.py
 ```
 
-This fixture exercises the actual bundled persistence hook contract: activation, Project Brain initialization, Stop continuation, captured/reused/none outcomes, all-workspace write constraints, continuation-gate reuse, and loop protection. It tests deterministic hook mechanics; it is not a substitute for a live Codex host smoke test after hook trust.
+This exercises bundled persistence-hook mechanics. It is not a substitute for a live Codex host smoke test after hook trust.
 
 ### 3. Full host validation — manual / release tags
 
@@ -469,27 +456,37 @@ Windows:
 ./plugins/codemium/scripts/verify.ps1
 ```
 
-GitHub Actions workflow `Codemium Full Host Validation` runs manually (`workflow_dispatch`) or when a `v*` release tag is pushed. It validates host packaging, installers, Linux/Windows behavior, hidden benchmark publication gates, and cross-host contracts.
+GitHub Actions `Codemium Full Host Validation` runs manually or on `v*` release tags.
 
 ### 4. AI benchmark — separate competitive evidence
 
-AI quality/performance is not inferred from CI. Competitive studies compare baseline, caveman, ponytail, and codemium on the same coding tasks and measure quality, safety, tokens, cost, time, and engineering surface.
+AI quality/performance is not inferred from CI. Competitive/efficiency claims remain evidence-gated and require measured representative agent runs.
 
 ## Benchmark policy
 
-Codemium does not publish synthetic performance numbers as product claims. The benchmark engine remains in the repository for measured competitive evaluation, but the public Numbers section stays hidden until a real dataset passes the publication quality/safety gate.
+Codemium does not publish synthetic performance numbers as product claims. The benchmark infrastructure remains in the repository, but synthetic/demo data cannot pass the publication gate.
+
+## v0.7 scope boundaries
+
+Codemium v0.7 is **not** a generic graph product. It intentionally does not add:
+
+- graph visualization as a product surface;
+- GraphRAG or a vector database;
+- embeddings infrastructure;
+- PDF/image/video knowledge-graph ingestion;
+- LLM-generated structural relationships;
+- fuzzy semantic symbol deduplication;
+- hosted/shared graph services.
+
+These exclusions keep Structural Intelligence focused on strengthening Codemium's existing engineering-memory, bounded-context, impact, scope, and verification thesis.
 
 ## Status
 
-`v0.6.2` closes the v0.6.1 persistence-enforcement gap for OpenAI Codex: Project Brain completion is now backed by bundled `UserPromptSubmit` and `Stop` lifecycle hooks rather than prompt instructions alone. The hooks initialize/reuse Project Brain, maintain a per-turn persistence gate, require durable findings to be captured/reused or explicitly classified as none before normal completion, respect explicit all-workspace write prohibitions, and fail visibly with bounded retries instead of looping. Plugin hooks must be reviewed and trusted in Codex before they run. Claude Code, Gemini CLI, Cursor, and OpenCode continue to share the vendor-neutral `.codemium/` core through their native adapters.
+`v0.7.0` introduces **Structural Intelligence & Evidence Bridge**: a local deterministic relational repository graph, delta-first refresh, bounded graph queries, graph-assisted Working Sets, structural impact/test intelligence, structured Project Brain evidence, and source-change freshness/revalidation. The graph guides navigation but never replaces source authority. Codex remains the stable/reference adapter; Claude Code, Gemini CLI, Cursor, and OpenCode share the same vendor-neutral core through their native adapters.
 
 ## Support Codemium
 
-Codemium is developed and maintained as an open-source project.
-
-If Codemium helps your workflow or your team, consider supporting its continued development through GitHub Sponsors.
-
-Your sponsorship helps fund compatibility testing, documentation, benchmarks, new AI coding agent integrations, and long-term maintenance.
+Codemium is developed and maintained as an open-source project. If it helps your workflow or team, consider supporting continued compatibility testing, documentation, benchmarks, host integrations, and maintenance through GitHub Sponsors.
 
 ❤️ [Sponsor Codemium](https://github.com/sponsors/ahfaruq)
 
