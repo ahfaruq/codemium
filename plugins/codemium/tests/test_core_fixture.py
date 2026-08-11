@@ -83,6 +83,12 @@ def main() -> None:
         health = json.loads(run(sys.executable, ENGINE / "health.py", "--root", root)); assert health["repository_graph"]["schema_version"] == 2; assert health["repository_graph"]["fresh_to_worktree"] is False; assert health["project_brain_freshness"]["NEEDS_REVALIDATION"] == 2
         modified_build = json.loads(run(sys.executable, ENGINE / "repo_graph.py", "build", "--root", root)); assert modified_build["incremental"]["modified"] == 1; assert modified_build["incremental"]["parsed"] == 1
         revalidated = json.loads(run(sys.executable, ENGINE / "project_brain.py", "--root", root, "revalidate", "--kind", "constraint", "--id", "C0001")); assert revalidated["freshness"] == "FRESH"
+        health_after_build = json.loads(run(sys.executable, ENGINE / "health.py", "--root", root)); assert health_after_build["repository_graph"]["fresh_to_worktree"] is True
+
+        # A newly created indexable source file must invalidate graph freshness even though it has no manifest row yet.
+        new_source = root / "src/auth/new_helper.py"; new_source.write_text("def new_helper():\n    return True\n", encoding="utf-8")
+        health_new_file = json.loads(run(sys.executable, ENGINE / "health.py", "--root", root)); assert health_new_file["repository_graph"]["fresh_to_worktree"] is False; assert "src/auth/new_helper.py" in health_new_file["repository_graph"]["changed_since_graph"]
+        new_source.unlink()
 
         (root / "src/ui.js").unlink(); deleted_build = json.loads(run(sys.executable, ENGINE / "repo_graph.py", "build", "--root", root)); assert deleted_build["incremental"]["deleted"] == 1
         graph_after_delete = json.loads((state / "repository/graph.json").read_text(encoding="utf-8")); assert not any(n.get("path") == "src/ui.js" for n in graph_after_delete["nodes"])
