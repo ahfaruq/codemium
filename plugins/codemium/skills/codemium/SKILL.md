@@ -1,6 +1,6 @@
 ---
 name: cm
-description: "Primary Codemium skill for OpenAI Codex: auto-detect coding task and engineering depth, reuse persistent project intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
+description: "Primary Codemium skill for OpenAI Codex: auto-detect coding task and engineering depth, reuse persistent project intelligence, use evidence-backed structural intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
 ---
 
 # Codemium
@@ -55,6 +55,41 @@ Persistent project intelligence is a default Codemium behavior, not a separate s
 
 When the deterministic helper is available, prefer `engine/project_brain.py ... capture --entries <json-or-file>` for batched durable capture. Normal helper operations auto-initialize Project Brain silently when needed.
 
+### Evidence freshness
+
+Project Brain is durable, but it is not blindly trusted forever.
+
+- Prefer structured evidence that records the repository-relative path, symbol/node when available, content hash, and source location.
+- Treat **FRESH** knowledge as reusable evidence-backed project intelligence.
+- Treat **NEEDS_REVALIDATION** knowledge as historical context only until the changed supporting source has been inspected and the fact revalidated.
+- Treat **SUPERSEDED** knowledge as history, not current truth.
+- Treat **UNKNOWN** freshness as legacy/insufficient-evidence knowledge that may guide navigation but must be verified before a material decision.
+- Use `project_brain.py ... freshness` when freshness matters and `project_brain.py ... revalidate` after verifying changed evidence.
+- Never delete durable history merely because supporting source changed; invalidate confidence and revalidate the smallest necessary evidence instead.
+
+**Remember aggressively, trust conditionally.**
+
+## Structural Intelligence contract
+
+`.codemium/repository/graph.json` is a **derived, regenerable structural index**, not a second source of truth and not a replacement for Project Brain.
+
+- Build or refresh it with `repo_graph.py build` when missing/stale and the task is non-trivial.
+- Prefer structural relationships (`DEFINES`, `IMPORTS`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, `DEPENDS_ON`) to broad blind repository search once task seeds are known.
+- Honor relationship provenance: **DIRECT** > **RESOLVED** > **HEURISTIC**. Never present a HEURISTIC relationship as direct source evidence.
+- Honor parser capability reporting. Python may provide AST-backed relationships; fallback parsers provide partial deterministic coverage and must not be treated as equivalent.
+- Use `graph_query.py` for bounded callers/callees/dependents/dependencies/tests/path/navigation questions when that is cheaper and clearer than raw search.
+- Use the graph to decide **where to inspect**. Read the relevant source before making material code/behavior claims or edits.
+- If structural intelligence is missing, stale, corrupt, or incomplete for a language, degrade to normal repository tools rather than fabricating relationships.
+
+The authority order is:
+
+```text
+Structural graph → navigation and impact hypotheses
+Source code       → implementation truth
+Tests/runtime     → behavioral proof
+Project Brain     → durable engineering knowledge, freshness-qualified
+```
+
 ## Reasoning profile
 
 Engineering depth is portable Codemium behavior. Codex reasoning effort is a host-specific preference layered on top.
@@ -85,19 +120,19 @@ Use `engine/reasoning_profile.py` for deterministic profile/alignment output. Re
 ## Task lifecycle
 
 1. Establish Project Brain state first: reuse it if present; otherwise auto-initialize it when allowed.
-2. Compile a short task contract: type, observed/expected behavior, objective, likely domain, acceptance, risk, change policy, depth, and reasoning class.
-3. Read existing `.codemium` durable knowledge only when it can affect this task. Do not replay it all.
-4. Build/refresh repository graph only when stale or missing and the task is non-trivial.
-5. Generate a bounded Working Set. Open the most relevant symbols/files first.
+2. Compile a short task contract: type, observed/expected behavior, objective, likely domain, acceptance, risk, change policy, depth, and reasoning class. If a structural graph exists, let structural blast-radius signals escalate—but never lower—the safe depth.
+3. Read existing `.codemium` durable knowledge only when it can affect this task. Check freshness before relying on it materially.
+4. Build/refresh repository graph only when stale or missing and the task is non-trivial. Incremental refresh should reuse unchanged file extraction.
+5. Generate a bounded **graph-assisted** Working Set. Open the most relevant symbols/files first; the graph narrows navigation but source remains authoritative.
 6. Expand context only when material uncertainty identifies a specific missing fact.
 7. Investigate root cause/design before editing.
 8. Apply the engineering ladder in `references/engineering-doctrine.md`.
 9. Make the smallest **justified** change, not the shortest diff.
-10. Inspect actual git diff; classify every changed surface as DIRECT, DEPENDENCY, caused CLEANUP, or TEST.
-11. Run impact/test mapping and verify according to risk/depth.
-12. Distill and capture only durable new project knowledge; never store a transcript or secrets.
+10. Inspect actual git diff; classify every changed surface as DIRECT, DEPENDENCY, caused CLEANUP, or TEST. Use structural Working Set evidence to explain dependency/test surfaces where available.
+11. Run structural impact/test mapping and verify according to risk/depth. Inspect source/tests for any high-impact or heuristic-only relationship that affects the decision.
+12. Revalidate relevant stale Project Brain facts, then distill and capture only durable new project knowledge; never store a transcript or secrets.
 13. Complete/clear transient task state when applicable.
-14. Stop once acceptance, verification, scope, persistence, and material uncertainty gates pass.
+14. Stop once acceptance, verification, scope, persistence, freshness, and material uncertainty gates pass.
 
 The lifecycle above does **not** run while `CODEMIUM MEMORY RETRIEVAL MODE` is active.
 
@@ -117,9 +152,10 @@ This gate applies to read-only investigations and reviews too; source code may r
 Prefer this order:
 
 - active task contract;
-- relevant decisions/constraints/interfaces/patterns/known bugs;
-- repository map and symbols;
-- exact candidate code regions;
+- relevant **freshness-qualified** decisions/constraints/interfaces/patterns/known bugs;
+- repository graph/map and task seed symbols;
+- bounded structural neighbors and dependency/test surfaces;
+- exact candidate source regions;
 - relevant tests/runtime evidence;
 - deeper history only if needed.
 
@@ -137,7 +173,7 @@ Do not read references up front. Use them only when the corresponding decision a
 
 ## Deterministic helpers
 
-Use scripts in `engine/` when useful for Project Brain initialization/capture, repository mapping, working-set ranking, impact/test mapping, reasoning-profile alignment, cache checks, health, or telemetry. Tools establish facts; model reasoning handles root cause, tradeoffs, risk, and acceptance.
+Use scripts in `engine/` when useful for Project Brain initialization/capture/freshness, repository graph refresh/query, graph-assisted working-set ranking, impact/test mapping, reasoning-profile alignment, cache checks, health, or telemetry. Tools establish facts; model reasoning handles root cause, tradeoffs, risk, and acceptance.
 
 ## Anti-overengineering ladder
 
@@ -153,4 +189,4 @@ A short diff can still be wrong-scoped. Do not modernize, rename, format, refact
 
 ## Completion
 
-Continue only if you can name an unresolved material risk or persistence obligation the next operation will reduce. Otherwise stop and report: result/root cause, changed, verified, durable knowledge captured/reused/none, residual risk.
+Continue only if you can name an unresolved material risk or persistence obligation the next operation will reduce. Otherwise stop and report: result/root cause, changed, verified, durable knowledge captured/reused/none, freshness/revalidation performed when relevant, residual risk.
