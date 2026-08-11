@@ -402,3 +402,14 @@ v0.6 is complete when:
 - README/HOSTS/INSTALL/PRD agree on host status and invocation;
 - CI verifies versions/layout, automatic Project Brain persistence, portable installer behavior, engine fixtures, and hidden benchmark publication gate;
 - repository doctor reports a clean layout.
+
+## Next major release — v0.7 Structural Intelligence & Evidence Bridge
+
+The implementation source of truth for the next major release is [`PRD-v0.7.md`](PRD-v0.7.md).
+
+When implementing v0.7:
+
+- treat `PRD-v0.7.md` as the normative extension to this PRD;
+- preserve every existing product, safety, host, and Project Brain invariant unless the v0.7 PRD explicitly extends it;
+- implement the release by the phased gates defined in the v0.7 PRD rather than as an unbounded repository rewrite;
+- do not add graph visualization, GraphRAG, media ingestion, embeddings, or other explicitly listed v0.7 non-goals merely because adjacent products provide them.
