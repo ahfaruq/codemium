@@ -8,8 +8,8 @@
     {
       "name": "codemium",
       "displayName": "Codemium",
-      "description": "Persistent project intelligence, bounded context, scoped changes, and risk-aware verification for Claude Code.",
-      "version": "0.6.6",
+      "description": "Persistent project intelligence, evidence-backed structural intelligence, bounded context, scoped changes, and risk-aware verification for Claude Code.",
+      "version": "0.7.0",
       "author": {
         "name": "Codemium"
       },
