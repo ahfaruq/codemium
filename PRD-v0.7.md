@@ -2,8 +2,8 @@
 
 ## Structural Intelligence & Evidence Bridge
 
-**Status:** Proposed implementation target  
-**Target release:** v0.7.0  
+**Status:** Implemented and CI-validated  
+**Release:** v0.7.0  
 **Baseline:** Codemium v0.6.x  
 **Theme:** Upgrade repository inventory into evidence-backed structural engineering intelligence without turning Codemium into a generic knowledge-graph product.
 
@@ -72,45 +72,25 @@ All existing Codemium product invariants remain in force unless this document ex
 
 ## 3. Problem
 
-Codemium v0.6 already contains Repository Intelligence, Working Set generation, impact analysis, test mapping, deterministic caching, and Project Brain. However, the repository model is intentionally lightweight.
+Codemium v0.6 already contained Repository Intelligence, Working Set generation, impact analysis, test mapping, deterministic caching, and Project Brain. However, the repository model was intentionally lightweight.
 
-The current class of repository map can identify files, symbols, imports, and test-like files, but it cannot reliably model enough structural relationships to answer questions such as:
+A file/symbol/import inventory could not reliably model enough structure to answer questions such as:
 
 ```text
 A calls B.
 B implements C.
 D references A.
-Test X directly exercises B.
-Changing B reaches E through C.
-Project Brain fact P was established from symbol A.
-Symbol A changed after P was captured.
+Test X exercises A.
+Changing B can affect E through C.
+Project Brain fact P was learned from symbol A.
+Symbol A changed after fact P was captured.
 ```
 
-That produces downstream limitations.
-
-### 3.1 Working Set precision
-
-Candidate files can be selected because names or symbols match the task wording instead of because the files participate in the affected behavior.
-
-### 3.2 Impact precision
-
-Indirect callers, public interfaces, workers, events, and transitive dependencies can be missed when impact analysis depends primarily on filename/import heuristics.
-
-### 3.3 Test selection
-
-Source-to-test mapping can over-rely on naming and directory conventions instead of direct structural evidence.
-
-### 3.4 Project Brain freshness
-
-An ACTIVE Project Brain entry can remain reusable even after the source evidence that established it has changed.
-
-### 3.5 Repeated discovery
-
-Agents may still need broad search and file reading to discover relationships a deterministic structural index could already provide.
+That limited Working Set precision, impact recall, test discovery, and the ability to know whether old durable knowledge was still safe to reuse.
 
 ---
 
-## 4. North-star outcome
+## 4. v0.7 north-star outcome
 
 For repeated work on an evolving repository:
 
@@ -132,225 +112,124 @@ Verification adequacy           >= baseline
 Scope integrity                 >= baseline
 ```
 
-Efficiency gains do not count if correctness, safety, architecture consistency, or verification quality decreases.
+Efficiency gains do not count if correctness, source authority, safety, or verification quality decreases.
 
 ---
 
 ## 5. Dual Intelligence Model
 
-Codemium v0.7 formalizes two different kinds of project intelligence.
-
 ### 5.1 Structural Intelligence
 
-Mechanically derived from the repository.
+Derived mechanically from the repository and stored under `.codemium/repository/`.
 
-Examples:
-
-- files and modules;
-- symbols;
-- imports and dependencies;
-- calls and references;
-- inheritance and implementation relationships;
-- source-to-test relationships;
-- public interface relationships;
-- changed/deleted source identity.
-
-Properties:
+Characteristics:
 
 - deterministic wherever practical;
-- local by default;
+- local and LLM-free by default;
 - regenerable;
 - source-backed;
 - freshness-aware;
-- relatively cheap;
-- not durable interpretation.
-
-Structural state lives under:
-
-```text
-.codemium/repository/
-```
+- cheaper than repeated broad source discovery.
 
 ### 5.2 Engineering Intelligence
 
-Learned through engineering work and stored in Project Brain.
+Stored in Project Brain.
 
-Examples:
+Characteristics:
 
-- decisions;
-- constraints;
-- architecture boundaries;
-- interface behavior;
-- established patterns;
-- root causes;
-- known bugs;
-- material engineering risks.
+- learned through engineering work;
+- durable;
+- concise;
+- evidence-backed;
+- reusable across tasks;
+- may contain engineering facts that syntax alone cannot derive.
 
-Examples of facts that belong in Project Brain, not the Structural Graph:
-
-```text
-The mobile client requires a five-second token-rotation grace period.
-
-The queue consumer is intentionally single-threaded because ordering is contractual.
-
-The logout regression occurs when two refresh requests race.
-
-Do not remove compatibility behavior until API v2 is retired.
-```
+Examples include compatibility constraints, prior root causes, contractual interface behavior, deliberate architectural decisions, and material known risks.
 
 ### 5.3 Evidence Bridge
 
-Project Brain entries may reference Structural Graph entities and source fingerprints.
-
-The bridge must let Codemium answer:
+Project Brain entries may reference Structural Graph entities and source fingerprints so Codemium can answer:
 
 ```text
 What source established this fact?
 Does that source still exist?
-Has the supporting implementation changed?
+Has the implementation changed?
 Is this knowledge still safe to reuse?
 ```
-
-The bridge connects structural truth to learned engineering truth without collapsing them into one store.
 
 ---
 
 ## 6. Repository Structural Graph v2
 
-`repository/graph.json` becomes a relational repository model rather than only a file inventory.
+`repository/graph.json` is a true relational repository model while retaining backwards-compatible file inventory data where useful.
 
-### 6.1 Minimum node types
+### 6.1 Node types
+
+Required graph node classes:
 
 ```text
 FILE
+TEST
 MODULE
 SYMBOL
-TEST
 ```
 
-Supported symbol subtypes should include where parser capability permits:
+Symbol subtype coverage depends on parser capability and may include functions, methods, classes, interfaces/types, enums, constants, tables, routes, or future deterministically supported entities.
 
-```text
-FUNCTION
-METHOD
-CLASS
-INTERFACE
-TYPE
-ENUM
-CONSTANT
-TABLE
-ROUTE
-```
+### 6.2 Relationships
 
-Additional node types may be introduced only when they have deterministic semantics and a concrete Codemium consumer.
-
-### 6.2 Minimum relationship vocabulary
+Governed relationship vocabulary:
 
 ```text
 DEFINES
+CONTAINS
 IMPORTS
 CALLS
 REFERENCES
 INHERITS
 IMPLEMENTS
 TESTS
-CONTAINS
 DEPENDS_ON
 ```
 
-Relationship labels are governed schema values, not arbitrary free-form LLM prose.
-
 ### 6.3 Stable identity
 
-Node identity must not depend solely on line numbers.
-
-Preferred symbol identity:
-
-```text
-repository-relative path
-+
-qualified symbol name
-+
-symbol kind
-```
-
-Line ranges, source hashes, and parser metadata are evidence attributes rather than primary identity.
+Symbol identity must not depend solely on line number. v0.7 uses repository-relative path plus qualified symbol identity/kind so line movement does not automatically create unrelated entities.
 
 ### 6.4 Relationship provenance
 
-Every edge must expose how Codemium knows it exists.
+Every relationship exposes how Codemium knows it:
 
-Required provenance classes:
+- **DIRECT** — observed directly by deterministic parsing;
+- **RESOLVED** — derived deterministically by symbol/import resolution;
+- **HEURISTIC** — deterministic fallback evidence with lower trust.
 
-```text
-DIRECT
-RESOLVED
-HEURISTIC
-```
-
-**DIRECT** — observed directly by a deterministic parser.
-
-**RESOLVED** — derived deterministically from imports, symbol tables, or reference resolution.
-
-**HEURISTIC** — likely relationship inferred through deterministic naming/project conventions.
-
-HEURISTIC relationships must never silently receive the same trust as DIRECT relationships.
-
-No LLM-generated structural edge is required for v0.7.
+HEURISTIC relationships must never be presented as DIRECT source evidence.
 
 ---
 
 ## 7. Parser capability model
 
-Codemium must not imply equal analysis depth for every language.
+Codemium must not pretend all languages receive identical structural coverage.
 
-Each parsed file must expose parser identity and capabilities.
+Each file records parser identity and capability coverage.
 
-Example:
+v0.7 ships:
 
-```json
-{
-  "path": "src/auth/service.ts",
-  "parser": "tree-sitter-typescript",
-  "capabilities": [
-    "symbols",
-    "imports",
-    "calls",
-    "references"
-  ]
-}
-```
+- `python-ast` — Python standard-library AST extraction for symbols/imports/calls/references/inheritance;
+- `fallback-regex` — deterministic partial coverage for supported languages when deeper parsing is unavailable.
 
-Fallback example:
+The fallback is degraded capability, not fake parity.
 
-```json
-{
-  "path": "legacy/example.xyz",
-  "parser": "fallback-regex",
-  "capabilities": [
-    "symbols",
-    "imports"
-  ]
-}
-```
-
-Consumers must distinguish full structural evidence from partial parser coverage.
-
-### 7.1 Distribution constraint
-
-Structural Intelligence must not introduce a mandatory manual installation ceremony for normal Codemium use.
-
-Implementation may use Tree-sitter, language-native parsers, bundled deterministic parsers, or safe fallback scanning.
-
-If enhanced parsing is unavailable, Codemium must degrade honestly rather than claim relationships it cannot prove.
+No LLM or remote API is required to construct Structural Intelligence.
 
 ---
 
-## 8. Incremental structural updates
+## 8. Incremental Structural Intelligence
 
-Structural graph maintenance must become delta-first.
+Repository graph maintenance is delta-first.
 
-Maintain a manifest containing at least:
+`repository/manifest.json` records at least:
 
 ```text
 path
@@ -360,7 +239,7 @@ parser version
 graph schema version
 ```
 
-On refresh, classify files as:
+Files are classified as:
 
 ```text
 UNCHANGED
@@ -369,40 +248,19 @@ MODIFIED
 DELETED
 ```
 
-Only NEW and MODIFIED files should require structural re-extraction when parser/schema validity remains unchanged.
+Behavior:
 
-### 8.1 Modified files
-
-For a modified source file:
-
-1. invalidate entities and edges owned by the previous file state;
-2. parse the new state;
-3. rebuild affected relationships;
-4. resolve cross-file relationships affected by the delta;
-5. preserve unrelated graph state.
-
-### 8.2 Deleted files
-
-For a deleted file:
-
-1. remove owned nodes;
-2. remove invalid edges;
-3. remove invalid source-to-test mappings;
-4. mark Project Brain evidence pointing to removed source as requiring revalidation.
-
-### 8.3 Atomicity
-
-The manifest and graph must only replace the previous usable state after successful processing.
-
-A failed refresh must not corrupt the last valid structural graph.
+- UNCHANGED files reuse prior deterministic extraction;
+- NEW/MODIFIED files are parsed;
+- entities/edges owned by deleted or prior modified source cannot remain silently valid;
+- deleted-source entities are pruned;
+- manifest state is written after a successful graph build so a failed refresh does not advertise invalid freshness.
 
 ---
 
-## 9. Structural query engine
+## 9. Graph query engine
 
-Add an internal graph query surface.
-
-Minimum operations:
+Codemium exposes bounded internal/diagnostic structural queries:
 
 ```text
 find-symbol
@@ -416,129 +274,61 @@ path
 impact
 ```
 
-Conceptual examples:
-
-```text
-Who calls refreshToken?
-What tests exercise AuthService?
-What depends on SessionRepository?
-What structural path connects CheckoutController to PaymentGateway?
-```
-
-These are engine capabilities first. They do not replace `@Codemium` as the primary product UX.
-
-A diagnostic CLI may expose them for development, fixtures, and troubleshooting.
+These operations strengthen the Codemium engine. They do not replace `@Codemium` as the product UX.
 
 ---
 
 ## 10. Working Set Engine v2
 
-Working Set selection becomes **graph-assisted**, not graph-exclusive.
+Working Sets are graph-assisted, not graph-exclusive.
 
 Preferred retrieval order:
 
 ```text
 1. Active Task Contract
-2. Relevant Project Brain knowledge
+2. Relevant freshness-qualified Project Brain knowledge
 3. Task seed symbols/files
 4. Structural neighbors
 5. Relevant interfaces/dependencies
 6. Relevant tests
 7. Exact source regions
-8. Additional graph expansion only when uncertainty remains
+8. Additional evidence only for named uncertainty
 ```
 
-Task terms remain useful for seed discovery. After seeds are identified, relationship traversal becomes a primary relevance signal.
+Task terms remain useful for seed discovery. Once seeds exist, bounded structural traversal becomes a primary relevance signal.
 
-Example:
-
-```text
-Task:
-Fix refresh-token race condition
-
-Seed:
-refreshToken
-
-Graph expansion:
-refreshToken
-→ SessionService
-→ TokenRepository
-→ AuthController
-→ refresh-token tests
-
-Project Brain:
-known auth constraint
-known mobile compatibility decision
-known previous refresh bug
-```
-
-The resulting Working Set should be smaller and more behaviorally relevant than broad repository search.
+Graph expansion remains bounded by task depth, maximum nodes/files, and relationship relevance. Structural distance alone never authorizes unrelated work.
 
 ---
 
-## 11. Context budgeting
+## 11. Source remains authoritative
 
-Graph traversal must remain bounded.
-
-Default traversal guidance:
+Structural Intelligence narrows navigation and impact hypotheses. It never replaces relevant source reads for material implementation claims or edits.
 
 ```text
-FAST       depth 0-1
-NORMAL     depth 1
-DEEP       depth 1-2
-CRITICAL   risk-driven, normally <= 2
+Graph         → where to inspect / what may be affected
+Source        → implementation truth
+Tests/runtime → behavioral proof
+Project Brain → durable engineering knowledge, freshness-qualified
 ```
 
-Depth is not the only limit.
-
-Working Set construction should also enforce:
-
-- maximum files;
-- maximum graph nodes;
-- maximum Project Brain entries;
-- relevance threshold;
-- relationship priority;
-- source-region budget where practical.
-
-Graph expansion beyond the normal budget requires a named unresolved question or risk.
+If the graph is absent, stale, corrupt, or incomplete for a language, Codemium degrades to normal repository tools rather than fabricating structure.
 
 ---
 
-## 12. Source remains authoritative
+## 12. Project Brain evidence model
 
-Structural Intelligence is a navigation and reasoning aid.
-
-It is not a replacement for reading relevant source.
-
-For a code change:
-
-```text
-Graph says where to inspect.
-Source says what is actually true.
-Tests/runtime evidence say whether the result works.
-```
-
-Codemium must not block all raw source reads merely to force graph usage.
-
-It should instead avoid unnecessary raw reads when the graph already resolves navigation or dependency questions.
-
----
-
-## 13. Project Brain evidence model
-
-New Project Brain captures should support structured evidence.
-
-Example:
+New durable Project Brain entries can carry structured evidence:
 
 ```json
 {
   "kind": "constraint",
-  "text": "Token rotation requires a five-second grace period.",
+  "text": "Token rotation requires a grace period.",
   "evidence": [
     {
-      "path": "src/auth/token_service.ts",
+      "path": "src/auth/token_service.py",
       "symbol": "TokenService.rotate",
-      "graph_node_id": "symbol:src/auth/token_service.ts#TokenService.rotate",
+      "graph_node_id": "symbol:src/auth/token_service.py#TokenService.rotate:method",
       "content_hash": "...",
       "line_start": 84,
       "line_end": 116
@@ -547,19 +337,15 @@ Example:
 }
 ```
 
-Existing legacy `source` values remain readable for backwards compatibility.
-
-New entries should prefer structured evidence when available.
-
-Evidence must not contain secrets or raw sensitive runtime payloads.
+Legacy `source` fields remain readable for v0.6 compatibility and may be normalized into structured evidence when a safe repository-relative file can be identified.
 
 ---
 
-## 14. Project Brain freshness
+## 13. Project Brain Freshness
 
-Durable knowledge must not be treated as permanently trustworthy merely because its registry status is ACTIVE.
+Durable knowledge is no longer treated as eternally valid simply because the registry entry remains ACTIVE.
 
-Introduce freshness states:
+Freshness states:
 
 ```text
 FRESH
@@ -568,344 +354,169 @@ SUPERSEDED
 UNKNOWN
 ```
 
-### FRESH
+- **FRESH** — supporting evidence still matches source identity.
+- **NEEDS_REVALIDATION** — one or more supporting sources changed/disappeared. The entry remains historical context but must not be blindly trusted.
+- **SUPERSEDED** — later verified knowledge replaces it while preserving history.
+- **UNKNOWN** — legacy or insufficient evidence prevents deterministic freshness evaluation.
 
-Supporting source identity remains valid.
+Source changes invalidate confidence, not history.
 
-### NEEDS_REVALIDATION
+### Revalidation
 
-One or more supporting source fingerprints or structural entities changed.
+For relevant `NEEDS_REVALIDATION` or `UNKNOWN` knowledge:
 
-The knowledge may still be correct but must not be blindly trusted for a material decision.
-
-### SUPERSEDED
-
-A later verified Project Brain entry explicitly replaces it.
-
-### UNKNOWN
-
-Legacy entry or insufficient evidence prevents deterministic freshness evaluation.
-
-Changing source must not automatically delete Project Brain history.
-
-It invalidates confidence, not history.
-
----
-
-## 15. Knowledge revalidation
-
-When relevant Project Brain knowledge is `NEEDS_REVALIDATION`:
-
-1. include it as historical context;
-2. identify changed supporting evidence;
-3. inspect the smallest necessary source region;
-4. determine whether the fact remains valid;
-5. refresh evidence if still valid;
-6. supersede or amend it if materially changed.
-
-The intended doctrine is:
+1. retain the historical entry;
+2. inspect the smallest necessary supporting source;
+3. determine whether the fact remains valid;
+4. refresh evidence if valid;
+5. supersede it if materially changed.
 
 > **Remember aggressively, trust conditionally.**
 
 ---
 
-## 16. Change Impact Engine v2
+## 14. Change Impact Engine v2
 
-Impact analysis moves from primarily filename/import heuristics to provenance-aware graph traversal.
+Impact analysis uses structural traversal before fallback heuristics.
 
-Given changed files or symbols, classify impact as:
+Given changed files/symbols, Codemium identifies direct/transitive dependents, relationship evidence, distance, related tests, and risk signals.
 
-```text
-DIRECT
-TRANSITIVE
-INTERFACE
-TEST
-```
+Blast radius may consider:
 
-Example:
+- direct dependent count;
+- transitive dependency depth;
+- high-risk domains/trust boundaries;
+- public/interface/database/background-worker surfaces where observable;
+- Project Brain constraints/known risks;
+- mapped tests.
 
-```text
-Changed:
-TokenRepository.rotate()
-
-Direct:
-AuthService.refresh()
-
-Transitive:
-AuthController.refreshEndpoint()
-
-Interface:
-RefreshToken API behavior
-
-Tests:
-auth-refresh.integration.test.ts
-mobile-token-compat.test.ts
-```
-
-Impact output must expose the evidence path that caused a dependent to be selected.
+Blast radius remains a risk classification, not fake mathematical certainty.
 
 ---
 
-## 17. Blast radius
+## 15. Test Intelligence v2
 
-Blast radius must not be based primarily on changed-file count or high-risk keywords.
+Test mapping preference:
 
-Signals should include:
+```text
+1. structural TESTS relationships
+2. resolved source/symbol relationships
+3. deterministic project conventions
+4. naming/import fallback marked HEURISTIC
+```
 
-- number of direct dependents;
-- transitive dependency reach;
-- public interface involvement;
-- authentication/authorization or other trust-boundary involvement;
-- database/schema involvement;
-- worker/event/queue involvement;
-- Project Brain constraints;
-- relevant known bugs;
-- test coverage and test relationships.
-
-Blast radius remains an explainable risk classification, not fake numerical certainty.
-
-Graph-derived risk may escalate the minimum safe task depth. It must never lower an already justified safety floor.
+Every relationship must expose provenance rather than presenting fallback naming as direct test coverage.
 
 ---
 
-## 18. Test Intelligence v2
+## 16. Scope Guard and task depth integration
 
-Source-to-test relationships should increasingly come from structural evidence.
+Structural Working Set evidence can explain why a changed file is DIRECT, DEPENDENCY, or TEST scope. It cannot justify opportunistic cleanup.
 
-Priority order:
-
-```text
-1. direct imports/references
-2. observed symbol relationships
-3. project test configuration
-4. naming/location conventions
-5. fallback heuristic
-```
-
-Every mapping should expose provenance.
-
-Example:
-
-```json
-{
-  "source": "src/auth/token_service.ts",
-  "test": "tests/auth/token_service.test.ts",
-  "confidence": "DIRECT"
-}
-```
-
-Existing heuristic mapping remains available as fallback.
+Structural risk can raise safe engineering depth, for example when a seemingly small task reaches an authentication/payment boundary or has broad dependency fan-in. Structural signals never lower an existing safety floor.
 
 ---
 
-## 19. Scope Guard integration
+## 17. Health and doctor
 
-Structural Intelligence may strengthen Scope Guard explanations.
-
-For each changed file, Codemium should preferably be able to attribute the change to:
-
-```text
-DIRECT
-DEPENDENCY
-TEST
-CLEANUP
-```
-
-with a structural or task reason.
-
-Example:
-
-```text
-src/auth/controller.ts
-DIRECT — requested behavior
-
-src/auth/token_service.ts
-DEPENDENCY — AuthController.refresh calls TokenService.rotate
-
-tests/auth/refresh.test.ts
-TEST — structurally related verification
-```
-
-Structural distance alone never authorizes opportunistic cleanup.
-
----
-
-## 20. Task-depth integration
-
-Structural evidence may raise the minimum safe engineering depth.
-
-Examples:
-
-```text
-Task appears local,
-but affected path crosses authorization boundary
-→ CRITICAL floor may apply.
-
-Task changes one helper,
-but helper has many callers across multiple subsystems
-→ DEEP may apply.
-```
-
-Graph signals may escalate safety. They must never weaken it.
-
----
-
-## 21. Health and doctor diagnostics
-
-Codemium health diagnostics must report Structural Intelligence status.
-
-Minimum diagnostics:
+Health/doctor diagnostics expose at least:
 
 ```text
 graph schema version
-graph freshness
-file coverage
-language coverage
-parser capability
+graph freshness vs repository/worktree
+file/parser coverage
+parser capabilities
 DIRECT / RESOLVED / HEURISTIC edge counts
-unresolved imports/references
-Project Brain entries needing revalidation
+unresolved relationships
+incremental refresh summary
+Project Brain freshness counts
 ```
 
-Doctor must not report structural intelligence as healthy when the graph is stale, corrupted, or materially degraded without stating the limitation.
+Doctor must not claim Structural Intelligence is healthy when graph state is missing/degraded/stale.
 
 ---
 
-## 22. Failure and degradation policy
+## 18. Failure and degradation policy
 
 Structural Intelligence is an enhancement layer, not a single point of failure.
 
-If the graph is missing, corrupt, stale beyond safe use, or unable to parse a language, Codemium must:
+If the graph is missing, corrupt, cannot parse a language deeply, or cannot be refreshed safely, Codemium must:
 
-1. report degraded capability;
+1. report degraded capability when diagnostics are requested;
 2. fall back to existing repository discovery;
-3. preserve correctness and safety;
-4. never fabricate structural relationships;
-5. continue normal engineering work when safely possible.
+3. preserve correctness/source authority;
+4. never fabricate a graph relationship.
 
 ---
 
-## 23. Storage policy
-
-Maintain conceptual separation:
+## 19. Storage policy
 
 ```text
 .codemium/
 ├── PROJECT.md
 ├── architecture/
 ├── registry/             durable Project Brain
-│
 ├── repository/           derived structural state
 │   ├── graph.json
 │   ├── manifest.json
 │   └── tests.json
-│
-├── tasks/
-└── runtime/
+├── tasks/                transient task state
+└── runtime/              transient cache/gate/telemetry
 ```
 
-`repository/` remains regenerable state.
-
-It must not become the canonical durable knowledge store.
-
-Project Brain remains the portable engineering memory.
+`repository/` remains regenerable structural state. It is not the canonical durable knowledge store.
 
 ---
 
-## 24. Backwards compatibility
+## 20. Backwards compatibility
 
-v0.7 must preserve existing v0.6 Project Brain data.
+v0.7 preserves v0.6 Project Brain data.
 
-Legacy entries using `source` remain readable.
-
-New readers support both:
-
-```text
-source
-evidence[]
-```
-
-Because repository structural data is derived, graph schema v1 does not require a complex durable migration.
-
-When incompatible:
-
-```text
-discard derived graph
-rebuild graph v2
-```
-
-Never rewrite durable Project Brain merely to migrate a regenerable graph.
+- legacy registry entries remain readable;
+- legacy `source` metadata remains valid input;
+- structured `evidence[]` is additive;
+- incompatible graph schemas may be discarded/rebuilt because structural state is derived;
+- durable Project Brain must never be destructively rewritten merely to migrate a regenerable graph.
 
 ---
 
-## 25. Performance requirements
+## 21. Performance policy
 
-Repository structural operations remain local and deterministic by default.
+Structural graph operations are local and deterministic by default.
 
-Requirements:
-
-- no LLM call is required to build the Structural Graph;
-- unchanged files are not unnecessarily reparsed;
-- after initialization, refresh cost should roughly follow changed repository surface rather than total repository size;
-- graph queries must be bounded;
-- task startup must not introduce uncontrolled full-repository work;
-- failed refreshes preserve the previous valid graph;
-- derived artifacts remain inspectable and reproducible.
+- unchanged files should not be reparsed unnecessarily;
+- no LLM call is required to build the structural graph;
+- update cost should follow changed repository surface after initialization where practical;
+- graph queries and Working Set expansion remain bounded;
+- failed refresh must not silently advertise an invalid successful manifest.
 
 Exact performance claims require benchmark evidence.
 
 ---
 
-## 26. Benchmark requirements
+## 22. Benchmark requirements
 
-v0.7 must add controlled fixtures and benchmark scenarios.
+v0.7 fixtures/benchmarks should measure or verify:
 
-### 26.1 Repeated task discovery
+- repeated task discovery behavior;
+- Working Set retrieval of known relevant source/tests;
+- structural impact recall on known dependency chains;
+- evidence freshness after supporting-source change;
+- incremental no-op rebuild behavior;
+- safe degraded fallback behavior.
 
-Compare with and without Structural Intelligence:
-
-```text
-files inspected
-search operations
-context bytes or equivalent context footprint
-relevant file recall
-task correctness
-```
-
-### 26.2 Working Set precision
-
-Known relevant files and tests should appear within the bounded Working Set without unnecessary repository expansion.
-
-### 26.3 Impact recall
-
-Fixtures with known dependency chains must produce expected direct and transitive impact.
-
-### 26.4 Freshness
-
-Changing supporting source must move relevant Project Brain knowledge to `NEEDS_REVALIDATION`.
-
-### 26.5 Incremental rebuild
-
-A second graph build without source changes should perform zero unnecessary source parsing.
-
-### 26.6 Degraded mode
-
-Removing enhanced parser capability must preserve safe fallback behavior.
-
-No public efficiency percentage should be published until real agent runs satisfy Codemium's existing benchmark publication policy.
+No public efficiency percentage is publishable merely because synthetic fixtures pass. Codemium's existing evidence-gated benchmark policy remains authoritative.
 
 ---
 
-## 27. Functional requirements
+## 23. Functional requirements
 
-Existing FR-001 through FR-019 from `PRD.md` remain applicable.
-
-Add:
+Existing FR-001 through FR-019 remain applicable.
 
 - **FR-020** — build an evidence-backed relational repository graph.
 - **FR-021** — expose parser capability and relationship provenance.
 - **FR-022** — update Structural Intelligence incrementally from content identity.
-- **FR-023** — prune or replace invalid structural entities when source changes or is deleted.
+- **FR-023** — prune invalid structural entities when source is changed or deleted.
 - **FR-024** — query callers, dependencies, paths, tests, and related structural entities.
 - **FR-025** — use structural relationships to improve bounded Working Set selection.
 - **FR-026** — use structural relationships for Change Impact analysis.
@@ -921,189 +532,131 @@ Add:
 
 ---
 
-## 28. Explicit non-goals for v0.7
+## 24. Non-goals for v0.7
 
-v0.7 will not become a general-purpose knowledge-graph product.
+v0.7 is not a general-purpose knowledge graph platform.
 
-Do not implement as part of this release unless required by a later approved PRD revision:
+Explicit non-goals:
 
-- graph visualization product/UI;
-- PDF knowledge graph;
-- image/video/audio ingestion;
-- vector database or embeddings infrastructure;
+- graph visualization product;
+- PDF/image/video/audio knowledge-graph ingestion;
+- vector database;
+- embedding infrastructure;
+- generic GraphRAG product;
 - LLM-generated structural relationships;
 - fuzzy semantic symbol deduplication;
-- generic GraphRAG product;
 - shared hosted graph server;
-- multi-repository enterprise graph;
-- replacing Project Brain with the Structural Graph;
+- replacing Project Brain with a graph;
 - blocking all direct source inspection;
-- automatic architecture rewriting;
 - autonomous unrelated cleanup.
 
-These exclusions are intentional product-boundary decisions, not missing acceptance criteria.
+---
+
+## 25. Implementation mapping
+
+v0.7 implementation extends the canonical core rather than creating a parallel subsystem.
+
+Primary modules:
+
+```text
+plugins/codemium/engine/repo_graph.py
+    Structural Graph v2, parser capability, provenance, manifest/incremental refresh
+
+plugins/codemium/engine/graph_query.py
+    bounded structural query and traversal primitives
+
+plugins/codemium/engine/working_set.py
+    graph-assisted bounded Working Sets
+
+plugins/codemium/engine/impact.py
+    structural reverse impact and verification recommendation
+
+plugins/codemium/engine/test_map.py
+    provenance-aware structural/fallback test mapping
+
+plugins/codemium/engine/project_brain.py
+    structured evidence, freshness, revalidation, v0.6 compatibility
+
+plugins/codemium/engine/task_compiler.py
+    structural-risk depth escalation
+
+plugins/codemium/engine/scope_guard.py
+    structural scope explanations
+
+plugins/codemium/engine/health.py
+scripts/doctor.py
+    Structural Intelligence + Project Brain freshness diagnostics
+```
+
+Agent contracts under Codex and the shared portable `cm` skill explicitly preserve source authority and freshness-qualified memory reuse.
 
 ---
 
-## 29. Future candidates — v0.8+
+## 26. Verification implementation
 
-After v0.7 Structural Intelligence is proven, evaluate separately:
+v0.7 core fixtures exercise:
 
-### Architectural communities
+- Python AST extraction;
+- deterministic fallback parser reporting;
+- Structural Graph v2 nodes/edges/provenance;
+- zero unnecessary parsing on an unchanged second build;
+- modified-file incremental parsing;
+- deleted-source pruning;
+- callers/path/query primitives;
+- graph-assisted Working Set selection;
+- structural test mapping;
+- reverse dependency impact;
+- Project Brain structured capture/deduplication;
+- source-change `NEEDS_REVALIDATION` behavior;
+- deterministic revalidation back to `FRESH`;
+- graph worktree freshness diagnostics;
+- legacy automatic Project Brain initialization/capture behavior.
 
-Detect naturally connected subsystems and important hubs for large repositories.
-
-### Deterministic file/module synopsis
-
-Provide bounded local summaries that help agents decide whether a source read is necessary.
-
-### PR impact intelligence
-
-Show which structural regions, interfaces, tests, and Project Brain constraints a pull request touches.
-
-### Cross-PR conflict intelligence
-
-Detect independent PRs affecting the same structural subsystem or interface boundary.
-
-### Architecture drift
-
-Compare observed repository structure against Project Brain architecture boundaries.
-
-### Team-shared derived intelligence
-
-Optionally share structural artifacts once reproducibility, schema compatibility, and merge behavior are proven.
-
-None of these candidates may block v0.7.
+Repository PR CI validates the core fixture and Codex lifecycle contract independently. Full Linux/Windows host validation remains the release/manual verifier surface.
 
 ---
 
-## 30. Implementation phases
+## 27. Release acceptance criteria
 
-### Phase 1 — Structural Foundation
-
-Deliver:
-
-- graph schema v2;
-- stable node IDs;
-- relationship provenance;
-- parser capability model;
-- incremental manifest;
-- atomic refresh;
-- changed/deleted-file invalidation.
-
-Gate:
-
-Repository graph fixtures pass deterministically and fallback parsing remains safe.
-
-### Phase 2 — Query and Working Set
-
-Deliver:
-
-- graph query primitives;
-- seed resolution;
-- bounded traversal;
-- Working Set v2;
-- fallback behavior.
-
-Gate:
-
-Known task fixtures retrieve expected files without uncontrolled context expansion.
-
-### Phase 3 — Impact and Test Intelligence
-
-Deliver:
-
-- reverse dependency traversal;
-- provenance-aware graph impact;
-- improved test mapping;
-- verification recommendations.
-
-Gate:
-
-Known dependency fixtures produce correct affected surfaces and relevant tests.
-
-### Phase 4 — Evidence Bridge
-
-Deliver:
-
-- structured Project Brain evidence;
-- evidence fingerprints;
-- freshness states;
-- revalidation workflow;
-- legacy compatibility.
-
-Gate:
-
-Source changes deterministically invalidate confidence in relevant reusable knowledge without deleting history.
-
-### Phase 5 — Integration and Release Hardening
-
-Deliver:
-
-- Scope Guard integration;
-- depth-escalation signals;
-- doctor/health coverage;
-- cross-host packaging validation;
-- degraded mode tests;
-- benchmark fixtures;
-- documentation alignment.
-
-Gate:
-
-All supported hosts preserve existing Codemium UX and safety invariants.
-
----
-
-## 31. Release acceptance criteria
-
-Codemium v0.7 is complete only when all of the following are true:
+Codemium v0.7 is complete when:
 
 1. `repository/graph.json` models real repository relationships rather than only file inventory.
-2. Every graph relationship exposes provenance.
-3. Parser coverage and capability are reported honestly.
+2. Every graph relationship identifies its evidence/provenance class.
+3. Parser capability is visible and partial coverage is not disguised as full coverage.
 4. Unchanged files are not unnecessarily reprocessed.
-5. Deleted or modified source cannot leave silently valid obsolete graph entities.
-6. Working Set generation demonstrably consumes graph relationships.
+5. Deleted or modified source cannot leave silently valid obsolete structural entities.
+6. Working Set generation consumes graph relationships.
 7. Change Impact can traverse reverse dependencies.
-8. Test selection uses structural evidence before heuristic naming when evidence exists.
+8. Test selection uses structural evidence before heuristic naming when available.
 9. New Project Brain entries can carry structured source evidence.
-10. Changed evidence causes relevant Project Brain knowledge to require revalidation.
+10. Changed supporting evidence causes relevant Project Brain knowledge to require revalidation.
 11. Historical Project Brain knowledge is preserved rather than silently deleted.
-12. Source remains the final authority for engineering decisions.
-13. Graph failures degrade to existing Codemium discovery instead of blocking safe work.
-14. No LLM is required to construct the Structural Graph.
-15. Normal users do not need a new initialization ceremony.
-16. `@Codemium` remains the primary Codex UX.
-17. Claude Code, Gemini CLI, Cursor, and OpenCode preserve shared engineering semantics.
-18. Doctor reports parser coverage, graph freshness, and stale knowledge correctly.
-19. CI includes deterministic structural, incremental, impact, freshness, compatibility, and fallback fixtures.
-20. README, PRD, INSTALL, HOSTS, and CHANGELOG must be aligned before v0.7 is declared released.
-21. Public performance claims remain evidence-gated.
+12. Revalidation can refresh a still-valid durable fact.
+13. Source remains the final authority for engineering decisions.
+14. Graph failures/partial coverage degrade to normal repository discovery instead of blocking safe work.
+15. No LLM is required to construct Structural Intelligence.
+16. Normal users do not need a new initialization ceremony.
+17. `@Codemium` remains the primary Codex UX.
+18. Claude Code, Gemini CLI, Cursor, and OpenCode preserve the same engineering semantics through the shared core/skill contract.
+19. Doctor/health report structural coverage/freshness and stale Project Brain knowledge correctly.
+20. CI includes deterministic structural, incremental, impact, freshness, compatibility, and fallback fixtures.
+21. README, PRD, INSTALL, HOSTS, CHANGELOG, VERSION, and adapter manifests agree on v0.7 behavior/version.
+22. Public performance claims remain evidence-gated.
+23. Explicit v0.7 non-goals remain out of scope.
 
 ---
 
-## 32. Implementation discipline for Codex
+## 28. Implemented release state
 
-When implementing this PRD, Codex must:
+v0.7.0 satisfies the architectural intent of this PRD through a local deterministic Structural Graph, graph-assisted task/impact/test intelligence, and a Project Brain Evidence Bridge.
 
-1. inspect the existing engine before designing replacements;
-2. preserve existing behavior unless the PRD requires a change;
-3. extend the canonical engine rather than creating a parallel architecture;
-4. prefer deterministic local analysis over model calls;
-5. reuse current `.codemium/` storage semantics where compatible;
-6. keep derived repository state separate from durable Project Brain state;
-7. make schema changes explicit and versioned;
-8. preserve safe fallback behavior;
-9. add tests before claiming a phase complete;
-10. update docs only when implementation behavior is actually true;
-11. avoid Graphify-specific product features that are explicit v0.7 non-goals;
-12. keep changes phase-scoped and stop when the current phase gates are proven.
+The implementation deliberately chooses a pragmatic parser-capability floor for the first release: Python receives AST-backed structural extraction while other currently supported languages retain deterministic partial fallback coverage. The capability is surfaced honestly rather than hidden behind a universal-parser claim.
 
-Codex should treat this PRD as requirements, not as permission to rewrite the repository wholesale.
+Repository CI validates the host-agnostic core and the Codex lifecycle contract. No benchmark or token-efficiency claim is implied by those CI results.
 
 ---
 
-## 33. Strategic outcome
+## 29. Strategic outcome
 
 Before v0.7:
 
@@ -1114,15 +667,15 @@ Codemium remembers what the agent learned.
 After v0.7:
 
 ```text
-Codemium understands enough repository structure
-to know where knowledge belongs,
-what a change can affect,
-what should be loaded,
-what should be tested,
-and when old knowledge can no longer be trusted.
+Codemium also understands enough repository structure
+ to know where knowledge belongs,
+ what a change can affect,
+ what should be loaded,
+ what should be tested,
+ and when old knowledge can no longer be trusted.
 ```
 
-The intended long-term moat is the combination of:
+The long-term moat is the combination of:
 
 ```text
 Structural Intelligence
@@ -1140,4 +693,4 @@ Scope Discipline
 Risk-Aware Verification
 ```
 
-That combination, rather than a generic knowledge graph, remains the defining Codemium architecture.
+That combination remains the defining Codemium architecture.
