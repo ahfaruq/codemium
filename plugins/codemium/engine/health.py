@@ -8,21 +8,36 @@ from pathlib import Path
 
 from common import git, read_json, read_jsonl, sha256_bytes, state_root
 from project_brain import freshness_summary
+from repo_graph import discover_files
 
 
 def manifest_worktree_fresh(root: Path, manifest: dict) -> tuple[bool, list[str]]:
     files = manifest.get("files", {}) if isinstance(manifest.get("files"), dict) else {}
-    changed = []
+    changed: set[str] = set()
+    manifest_paths = set(files)
+
+    # Existing manifest entries catch modified and deleted files.
     for rel, meta in files.items():
         p = root / rel
         try:
             current = sha256_bytes(p.read_bytes())
         except OSError:
-            changed.append(rel)
+            changed.add(rel)
             continue
         if current != meta.get("sha256"):
-            changed.append(rel)
-    return not changed, changed[:50]
+            changed.add(rel)
+
+    # The manifest alone cannot reveal source files created after the last build.
+    # Reuse repo_graph discovery semantics so health and graph freshness agree on
+    # what constitutes an indexable repository file.
+    try:
+        current_paths = set(discover_files(root))
+    except OSError:
+        current_paths = manifest_paths
+    changed.update(current_paths - manifest_paths)
+
+    rows = sorted(changed)
+    return not rows, rows[:50]
 
 
 def main() -> None:
