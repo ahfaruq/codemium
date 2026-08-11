@@ -2,6 +2,23 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.7.0 — Structural Intelligence & Evidence Bridge
+
+- Upgraded Repository Intelligence from a lightweight file/symbol/import inventory to **Structural Graph v2** with FILE/TEST, MODULE, and SYMBOL entities plus `DEFINES`, `CONTAINS`, `IMPORTS`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, and aggregate `DEPENDS_ON` relationships.
+- Added explicit relationship provenance: **DIRECT**, **RESOLVED**, and **HEURISTIC**, so fallback or resolved relationships are never silently presented as direct source facts.
+- Added deterministic Python AST extraction using the standard library and an honest `fallback-regex` parser for supported languages where deeper structural parsing is unavailable; parser capability/coverage is exposed in graph health.
+- Added content-hash manifest state and delta-first graph refresh. Unchanged files reuse prior extraction, changed files are reparsed, deleted source is pruned, and the manifest is written only after graph construction succeeds.
+- Added `graph_query.py` with bounded symbol discovery, neighbors, callers/callees, dependencies/dependents, tests, paths, and impact traversal.
+- Upgraded the Working Set Engine to combine lexical task seeds with bounded structural traversal and to persist evidence explaining why each file entered the task working set.
+- Upgraded Change Impact to structural reverse-dependency traversal with explicit evidence paths, transitive distance, related tests, and risk signals rather than relying primarily on import-name heuristics.
+- Upgraded Test Intelligence to prefer structural `TESTS` evidence and retain deterministic naming/import heuristics only as a fallback with `HEURISTIC` provenance.
+- Added structured Project Brain evidence with source paths, symbols/node IDs when available, content hashes, and source locations while retaining compatibility with legacy `source` fields.
+- Added Project Brain freshness states: **FRESH**, **NEEDS_REVALIDATION**, **SUPERSEDED**, and **UNKNOWN**, plus a deterministic `revalidate` workflow. Source changes invalidate trust rather than deleting durable history.
+- Added structural-risk depth escalation, structural Scope Guard explanations, and health/doctor reporting for graph schema/freshness, parser coverage, provenance counts, unresolved relationships, and Project Brain freshness.
+- Updated Codex and portable Agent Skill contracts so agents use structural intelligence for navigation/impact while keeping source code authoritative and tests/runtime evidence responsible for behavioral proof.
+- Added host-agnostic v0.7 fixtures covering AST/fallback parsing, incremental no-op rebuilds, changed/deleted source invalidation, graph queries, graph-assisted Working Sets, impact/test mapping, Project Brain freshness/revalidation, health degradation, and backwards-compatible Project Brain persistence.
+- Kept v0.7 deliberately focused: no graph visualization product, GraphRAG/vector database, embeddings infrastructure, media ingestion, LLM-generated structural edges, fuzzy semantic symbol deduplication, or hosted/shared graph service.
+
 ## 0.6.6 — Cross-worktree memory consolidation
 
 - Extended canonical Project Brain migration from only the current linked worktree to **all live Git worktrees** sharing the repository's common Git directory.
