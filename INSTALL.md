@@ -8,6 +8,8 @@ Codemium uses one shared engineering core with host-native installation surfaces
 - Python 3.11+ for Codemium's deterministic engine, doctor, verification, portable Cursor/OpenCode installer, and the Codex Project Brain lifecycle hook.
 - The target coding-agent host installed and authenticated according to that host's own setup.
 
+Codemium v0.7 does **not** require a vector database, embeddings service, graph database, or LLM/API key to build its Structural Intelligence index. Python source receives standard-library AST extraction; other supported languages degrade to deterministic fallback coverage when deeper parsing is not available.
+
 ## OpenAI Codex — Stable
 
 Install Codemium from GitHub:
@@ -21,7 +23,7 @@ Start a fresh Codex task/session after installation if the runtime has cached it
 
 ### Trust the Project Brain lifecycle hooks
 
-Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks. They are the deterministic enforcement layer that initializes Project Brain for a Codemium turn and prevents the turn from finishing while its Project Brain persistence gate is still pending.
+Codemium bundles `UserPromptSubmit` and `Stop` lifecycle hooks. They are the deterministic enforcement layer that initializes Project Brain for a Codemium turn and prevents the turn from finishing while its Project Brain persistence gate is still pending. The hook contract was introduced in `0.6.2` and remains part of v0.7.
 
 Codex intentionally does **not** auto-trust plugin command hooks. After installing or updating Codemium, open:
 
@@ -29,7 +31,7 @@ Codex intentionally does **not** auto-trust plugin command hooks. After installi
 /hooks
 ```
 
-Review the hooks coming from the Codemium plugin and trust the current definitions. Codex records trust against the exact hook definition, so a later Codemium release that changes a hook can require review again.
+Review the hooks coming from the Codemium plugin and trust the current definitions when needed. Codex records trust against the exact hook definition, so any future release that changes a hook can require review again.
 
 If the hooks are still untrusted or hooks are disabled in Codex, the plugin's skills/prompts may still load, but deterministic Project Brain completion enforcement will not run. In that state Codemium must not be treated as having guaranteed persistence.
 
@@ -44,7 +46,7 @@ Mention the installed plugin naturally:
 @Codemium safely change this authentication flow and verify the impact
 ```
 
-Codemium automatically classifies the task and selects the smallest safe engineering depth. Users do not need to learn internal skill names, specify `normal`, or initialize Project Brain manually before ordinary use.
+Codemium automatically classifies the task and selects the smallest safe engineering depth. Structural blast-radius signals can escalate depth but never lower the safety floor. Users do not need to learn internal skill names, specify `normal`, initialize Project Brain manually, or manually initialize the structural graph before ordinary use.
 
 On a repository-bound Codemium task, the lifecycle hook initializes or reuses `.codemium/` when workspace-state writes are allowed and opens a per-turn persistence gate. Before the turn is allowed to finish, durable source-backed project knowledge must be captured/reused or the task must explicitly classify that it learned nothing durable. A read-only **source-code** request can still update `.codemium/`; an explicit prohibition on **all** file/workspace changes disables that bookkeeping for the task.
 
@@ -63,6 +65,21 @@ Then start a fresh Codex session and ask:
 ```
 
 The second turn should be able to reuse the durable registry entry created by the first turn. Codemium does not retroactively convert earlier chat history into Project Brain entries.
+
+### Verify Structural Intelligence
+
+For diagnostics from a checkout or installed engine path:
+
+```sh
+python plugins/codemium/engine/repo_graph.py build --root .
+python plugins/codemium/engine/health.py --root .
+python plugins/codemium/engine/graph_query.py --root . find-symbol "AuthService"
+python plugins/codemium/engine/graph_query.py --root . callers "AuthService.refresh"
+```
+
+`health.py` reports graph schema/freshness, parser/capability coverage, relationship provenance, unresolved relationships, and Project Brain freshness.
+
+The graph is a derived navigation/impact index. Source code remains authoritative; tests/runtime evidence remain the behavioral proof layer.
 
 ### Advanced direct skill invocation
 
@@ -264,21 +281,59 @@ python scripts/doctor.py --require-host cursor
 python scripts/doctor.py --require-host opencode
 ```
 
-The doctor recognizes Cursor's modern `agent` entrypoint and the `cursor-agent` compatibility alias.
+The doctor recognizes Cursor's modern `agent` entrypoint and the `cursor-agent` compatibility alias. When `.codemium/` exists in the inspected repository, doctor also reports Structural Intelligence and Project Brain freshness health.
 
 ## Project intelligence lifecycle
 
 Normal Codemium use initializes `.codemium/` automatically on the first repository-bound task when state writes are allowed. At completion Codemium captures only durable, source-backed decisions, constraints, interfaces, patterns, and known bugs/risks that are likely to matter later; equivalent active entries are reused rather than duplicated.
 
-For the OpenAI Codex adapter, `0.6.2` adds a host lifecycle enforcement layer around that contract. Other host adapters continue to use their native skill/command behavior unless that host provides and Codemium implements an equivalent deterministic lifecycle surface.
+### Structural Intelligence lifecycle
 
-Manual deterministic initialization/capture is available for diagnostics or host integration:
+v0.7 adds derived repository state under:
+
+```text
+.codemium/repository/
+├── graph.json
+├── manifest.json
+└── tests.json
+```
+
+The structural graph uses content hashes so a later build reuses extraction for unchanged files, reparses changed/new files, and prunes deleted-source entities. It is transient/regenerable state and remains ignored by Git by default.
+
+Typical diagnostic helpers:
+
+```sh
+python plugins/codemium/engine/repo_graph.py build --root .
+python plugins/codemium/engine/graph_query.py --root . find-symbol "refresh_session"
+python plugins/codemium/engine/graph_query.py --root . path "AuthController" "TokenRepository"
+python plugins/codemium/engine/test_map.py build --root .
+python plugins/codemium/engine/working_set.py --root . --query "auth refresh" --top 8
+python plugins/codemium/engine/impact.py --root . --git-diff
+```
+
+### Evidence freshness lifecycle
+
+New Project Brain captures can store structured evidence. Legacy entries with only `source` remain readable. Check/revalidate freshness with:
+
+```sh
+python plugins/codemium/engine/project_brain.py --root . freshness
+python plugins/codemium/engine/project_brain.py --root . revalidate --kind constraint --id C0001
+```
+
+Freshness semantics:
+
+- `FRESH` — supporting content hash still matches source;
+- `NEEDS_REVALIDATION` — supporting source changed or disappeared;
+- `SUPERSEDED` — history retained but replaced by later verified knowledge;
+- `UNKNOWN` — legacy or insufficient evidence; verify before material reliance.
+
+Source changes do not silently delete durable Project Brain history.
+
+Manual deterministic initialization/capture remains available for diagnostics or host integration:
 
 ```sh
 python plugins/codemium/engine/project_brain.py --root . init
-python plugins/codemium/engine/project_brain.py --root . capture --entries '[{"kind":"bug","text":"Durable source-backed finding","source":"src/example.py:42"}]'
-python plugins/codemium/engine/repo_graph.py build --root .
-python plugins/codemium/engine/test_map.py build --root .
+python plugins/codemium/engine/project_brain.py --root . capture --entries '[{"kind":"bug","text":"Durable source-backed finding","source":"src/example.py"}]'
 ```
 
 Portable Cursor/OpenCode installs include copies of these engine helpers inside the installed `cm` skill directory.
@@ -287,4 +342,4 @@ Project Brain deliberately keeps transient repository maps, runtime state, the a
 
 ## Safety note
 
-Codemium never treats a user-requested lower depth as permission to weaken security, migration, payment, production-data, destructive-operation, or other critical verification requirements. Safety can escalate FAST/NORMAL to DEEP/CRITICAL.
+Codemium never treats a user-requested lower depth as permission to weaken security, migration, payment, production-data, destructive-operation, or other critical verification requirements. Safety can escalate FAST/NORMAL to DEEP/CRITICAL. Structural relationship breadth can also escalate engineering depth, but structural evidence never lowers an existing safety floor.
