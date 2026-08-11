@@ -32,12 +32,22 @@ def main() -> None:
             "from src.auth.session import refresh_session\n\ndef test_refresh_session():\n    assert refresh_session('x') == 'x'\n", encoding="utf-8")
         run("git", "init", "-q", cwd=root); run("git", "config", "user.email", "fixture@example.com", cwd=root); run("git", "config", "user.name", "Fixture", cwd=root); run("git", "add", ".", cwd=root); run("git", "commit", "-qm", "initial", cwd=root)
 
+        # Preserve the v0.6 task/reasoning + automatic initialization contract.
         task = json.loads(run(sys.executable, ENGINE / "task_compiler.py", "--root", root, "--request", "Fix auth refresh bug that logs users out"))
         state = root / ".codemium"
-        assert (state / "PROJECT.md").exists(); assert task["type"] == "FIX"; assert task["depth"] == "CRITICAL"; assert task["reasoning"]["reasoning_class"] == "frontier"
+        assert (state / "PROJECT.md").exists()
+        assert task["type"] == "FIX"
+        assert task["depth"] == "CRITICAL"
+        assert task["reasoning"]["host"] == "generic"
+        assert task["reasoning"]["reasoning_class"] == "frontier"
+        assert task["reasoning"]["preferred_effort"] is None
         ignore = (state / ".gitignore").read_text(encoding="utf-8")
         for item in ["runtime/", "repository/", "tasks/active.json", "tasks/completed/"]: assert item in ignore
+        profile = json.loads((state / "model-profile.json").read_text(encoding="utf-8"))
+        assert profile["generic_reasoning"]["FAST"]["preferred_class"] == "economy"
+        assert profile["generic_reasoning"]["CRITICAL"]["preferred_class"] == "frontier"
 
+        # Preserve v0.6 durable capture/dedup while extending it with structured evidence/freshness.
         knowledge = json.dumps([
             {"kind": "constraint", "text": "Authentication refresh must preserve the current session boundary.", "source": "src/auth/session.py", "risk": "high"},
             {"kind": "bug", "text": "Missing refresh tokens can log users out unexpectedly.", "source": "src/auth/session.py", "risk": "high"},
@@ -45,6 +55,11 @@ def main() -> None:
         first_capture = json.loads(run(sys.executable, ENGINE / "project_brain.py", "--root", root, "capture", "--entries", knowledge))
         assert first_capture["counts"] == {"added": 2, "reused": 0}; assert first_capture["added"][0]["evidence"][0]["content_hash"]; assert first_capture["added"][0]["freshness"] == "FRESH"
         second_capture = json.loads(run(sys.executable, ENGINE / "project_brain.py", "--root", root, "capture", "--entries", knowledge)); assert second_capture["counts"] == {"added": 0, "reused": 2}
+        status = json.loads(run(sys.executable, ENGINE / "project_brain.py", "--root", root, "status"))
+        assert status["initialized"] is True
+        assert status["registries"]["constraint"] == 1
+        assert status["registries"]["bug"] == 1
+        assert status["freshness"]["counts"]["FRESH"] == 2
 
         first_build = json.loads(run(sys.executable, ENGINE / "repo_graph.py", "build", "--root", root))
         graph = json.loads((state / "repository/graph.json").read_text(encoding="utf-8"))
@@ -72,14 +87,16 @@ def main() -> None:
         (root / "src/ui.js").unlink(); deleted_build = json.loads(run(sys.executable, ENGINE / "repo_graph.py", "build", "--root", root)); assert deleted_build["incremental"]["deleted"] == 1
         graph_after_delete = json.loads((state / "repository/graph.json").read_text(encoding="utf-8")); assert not any(n.get("path") == "src/ui.js" for n in graph_after_delete["nodes"])
 
+        # Preserve v0.6 deterministic cache behavior.
         miss = json.loads(run(sys.executable, ENGINE / "cache.py", "--root", root, "check", "--kind", "search", "--key", "refresh_session callers")); assert miss["hit"] is False
         run(sys.executable, ENGINE / "cache.py", "--root", root, "record", "--kind", "search", "--key", "refresh_session callers", "--result-ref", "E0001")
         hit = json.loads(run(sys.executable, ENGINE / "cache.py", "--root", root, "check", "--kind", "search", "--key", "refresh_session callers")); assert hit["hit"] is True
 
+        # Capture itself must still silently initialize state in a fresh repository.
         fresh_root = root / "fresh-project"; fresh_root.mkdir()
         fresh_capture = json.loads(run(sys.executable, ENGINE / "project_brain.py", "--root", fresh_root, "capture", "--entries", json.dumps([{"kind": "pattern", "text": "Use repository-owned validation helpers."}]))); assert fresh_capture["counts"] == {"added": 1, "reused": 0}; assert (fresh_root / ".codemium/PROJECT.md").exists()
 
-    print("PASS: Codemium core fixture + v0.7 Structural Intelligence & Evidence Bridge")
+    print("PASS: Codemium core fixture + v0.6 regressions + v0.7 Structural Intelligence & Evidence Bridge")
 
 
 if __name__ == "__main__":
