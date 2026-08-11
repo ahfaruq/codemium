@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Fast, host-agnostic Codemium core verification.
-
-This check intentionally does not validate host packaging/installers. It answers only:
-"Is the shared Codemium engineering core structurally healthy?"
-"""
+"""Fast, host-agnostic Codemium core verification."""
 from __future__ import annotations
 
 import json
@@ -17,18 +13,8 @@ ENGINE = ROOT / "plugins/codemium/engine"
 TESTS = ROOT / "plugins/codemium/tests"
 
 REQUIRED_ENGINE = [
-    "common.py",
-    "project_brain.py",
-    "repo_graph.py",
-    "working_set.py",
-    "impact.py",
-    "scope_guard.py",
-    "test_map.py",
-    "cache.py",
-    "telemetry.py",
-    "health.py",
-    "reasoning_profile.py",
-    "task_compiler.py",
+    "common.py", "project_brain.py", "repo_graph.py", "graph_query.py", "working_set.py", "impact.py",
+    "scope_guard.py", "test_map.py", "cache.py", "telemetry.py", "health.py", "reasoning_profile.py", "task_compiler.py",
 ]
 
 
@@ -38,74 +24,40 @@ def fail(message: str) -> None:
 
 def main() -> None:
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    if not version:
-        fail("VERSION is empty")
-
+    if not version: fail("VERSION is empty")
     for name in REQUIRED_ENGINE:
         path = ENGINE / name
-        if not path.exists():
-            fail(f"missing engine/{name}")
+        if not path.exists(): fail(f"missing engine/{name}")
         py_compile.compile(str(path), doraise=True)
-
     fixture = TESTS / "test_core_fixture.py"
-    if not fixture.exists():
-        fail("missing host-agnostic core fixture")
+    if not fixture.exists(): fail("missing host-agnostic core fixture")
     py_compile.compile(str(fixture), doraise=True)
 
-    # Project Brain schema/persistence is a core contract, not a host-adapter contract.
     brain = (ENGINE / "project_brain.py").read_text(encoding="utf-8")
-    for phrase in [
-        "GENERIC_REASONING",
-        "TRANSIENT_IGNORE",
-        "tasks/active.json",
-        "host_profiles",
-        "def capture(",
-        "find_active_duplicate",
-        "init(root, emit=False)",
-    ]:
-        if phrase not in brain:
-            fail(f"Project Brain contract missing: {phrase}")
-
+    for phrase in ["GENERIC_REASONING", "TRANSIENT_IGNORE", "tasks/active.json", "host_profiles", "def capture(", "find_active_duplicate", "init(root, emit=False)", "def entry_freshness(", "NEEDS_REVALIDATION", "def revalidate("]:
+        if phrase not in brain: fail(f"Project Brain contract missing: {phrase}")
+    graph = (ENGINE / "repo_graph.py").read_text(encoding="utf-8")
+    for phrase in ["GRAPH_SCHEMA_VERSION = 2", "python-ast", "fallback-regex", "DIRECT", "RESOLVED", "HEURISTIC", "manifest.json", "DEPENDS_ON", "TESTS"]:
+        if phrase not in graph: fail(f"Structural Intelligence contract missing: {phrase}")
+    query = (ENGINE / "graph_query.py").read_text(encoding="utf-8")
+    for phrase in ["def shortest_path(", "def bounded_expand(", "def dependents_for_files(", "callers", "tests-for"]:
+        if phrase not in query: fail(f"graph query contract missing: {phrase}")
     compiler = (ENGINE / "task_compiler.py").read_text(encoding="utf-8")
     for depth in ["FAST", "NORMAL", "DEEP", "CRITICAL"]:
-        if depth not in compiler:
-            fail(f"task compiler depth missing: {depth}")
-    if "init_project_brain(root, emit=False)" not in compiler:
-        fail("normal task compilation must auto-initialize Project Brain")
+        if depth not in compiler: fail(f"task compiler depth missing: {depth}")
+    if "init_project_brain(root, emit=False)" not in compiler: fail("normal task compilation must auto-initialize Project Brain")
+    if "apply_structural_escalation" not in compiler: fail("task compiler must consume structural risk")
 
     codex_skill = (ROOT / "plugins/codemium/skills/codemium/SKILL.md").read_text(encoding="utf-8")
-    for phrase in [
-        "Project Brain persistence contract",
-        "Do **not** require the user to run `$cm-init` first",
-        "Persistence gate",
-        "captured",
-        "skipped by user constraint",
-    ]:
-        if phrase not in codex_skill:
-            fail(f"Codex persistence behavior missing: {phrase}")
+    for phrase in ["Project Brain persistence contract", "Do **not** require the user to run `$cm-init` first", "Persistence gate", "captured", "skipped by user constraint"]:
+        if phrase not in codex_skill: fail(f"Codex persistence behavior missing: {phrase}")
 
-    result = subprocess.run(
-        [sys.executable, str(fixture)],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-    )
+    result = subprocess.run([sys.executable, str(fixture)], cwd=ROOT, text=True, capture_output=True)
     if result.returncode != 0:
-        sys.stdout.write(result.stdout)
-        sys.stderr.write(result.stderr)
-        fail("core fixture failed")
-
+        sys.stdout.write(result.stdout); sys.stderr.write(result.stderr); fail("core fixture failed")
     print(json.dumps({
-        "status": "pass",
-        "version": version,
-        "scope": "codemium-core",
-        "checked": [
-            "engine syntax",
-            "Project Brain invariants",
-            "automatic Project Brain initialization/capture",
-            "generic task/depth contract",
-            "host-agnostic core fixture",
-        ],
+        "status": "pass", "version": version, "scope": "codemium-core",
+        "checked": ["engine syntax", "Project Brain persistence/evidence/freshness", "Structural Graph v2 + provenance", "incremental graph refresh", "graph query/working set/impact/test mapping", "automatic Project Brain initialization/capture", "generic task/depth contract", "host-agnostic v0.7 core fixture"],
     }, indent=2))
     print("PASS: Codemium core integrity")
 

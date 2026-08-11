@@ -2,33 +2,63 @@
 
 ## Product definition
 
-Codemium is a **host-agnostic persistent coding-intelligence layer** for AI coding agents. It makes an agent behave increasingly like an engineer who has worked on the same repository for months: durable project knowledge is reused, only the relevant project slice is activated for each task, changes stay scoped, testing follows risk, and unchanged understanding is not repeatedly paid for.
+Codemium is a **host-agnostic persistent coding-intelligence layer** for AI coding agents. It makes an agent behave increasingly like an engineer who has worked on the same repository for months: durable project knowledge is reused when still valid, repository structure is mapped deterministically, only the relevant project slice is activated for each task, changes stay scoped, testing follows risk, and unchanged understanding is not repeatedly paid for.
 
 Codemium is not a wrapper around one vendor, model family, or prompt syntax. OpenAI Codex is the reference adapter; Claude Code, Gemini CLI, Cursor, OpenCode, and future hosts consume the same engineering contract through host-native surfaces.
+
+The normative v0.7 extension is [`PRD-v0.7.md`](PRD-v0.7.md).
 
 ## North-star outcome
 
 As project complexity grows:
 
 ```text
-Durable project knowledge   ↑↑↑
-Project understanding       ↑↑
-Correctness                 >= baseline
-Architecture consistency    >= baseline
+Durable project knowledge        ↑↑↑
+Structural project understanding ↑↑↑
+Project understanding            ↑↑
+Correctness                      >= baseline
+Architecture consistency         >= baseline
 
-Active task context         bounded
-Repeated discovery          ↓↓↓
-Unrelated changes           → 0
-Token/context waste         ↓↓↓
+Active task context              bounded
+Repeated discovery               ↓↓↓
+Stale knowledge reuse            ↓↓↓
+Unrelated changes                → 0
+Token/context waste              ↓↓↓
 ```
 
-Resource efficiency only counts as a win after correctness, security, testing adequacy, architecture consistency, and scope integrity meet the quality floor.
+Resource efficiency only counts as a win after correctness, security, testing adequacy, architecture consistency, source authority, and scope integrity meet the quality floor.
 
 ## Positioning
 
 > **The senior engineer who already knows your codebase.**
 
 Codemium optimizes **minimum justified engineering**, not minimum LOC.
+
+## Dual intelligence model
+
+Codemium keeps two different kinds of project intelligence connected but intentionally separate:
+
+```text
+                         CODEMIUM CORE
+                              │
+            ┌─────────────────┴─────────────────┐
+            │                                   │
+   Structural Intelligence                 Project Brain
+     derived/regenerable             durable engineering memory
+            │                                   │
+            └────────── Evidence Bridge ─────────┘
+                              │
+                              ▼
+                         Working Set
+                              │
+                     Impact / Verification
+```
+
+**Structural Intelligence** describes what the repository currently contains: files, modules, symbols, calls, imports, references, inheritance, dependencies, and test relationships where deterministic parser capability permits.
+
+**Project Brain** stores concise durable engineering knowledge: decisions, constraints, interfaces, patterns, known bugs/root causes, and material risks learned through verified engineering work.
+
+The repository remains the source of implementation truth. Tests/runtime evidence remain the source of behavioral proof. The graph guides navigation and impact; Project Brain carries freshness-qualified durable knowledge.
 
 ## Host architecture
 
@@ -37,7 +67,7 @@ Codemium optimizes **minimum justified engineering**, not minimum LOC.
                               │
           ┌───────────────────┼───────────────────┐
           │                   │                   │
-     Project Brain     Repository/Task Core   Shared Policy
+     Project Brain     Structural/Task Core   Shared Policy
           │                   │                   │
           └───────────────────┼───────────────────┘
                               │
@@ -48,7 +78,7 @@ Codemium optimizes **minimum justified engineering**, not minimum LOC.
   @Codemium  /codemium:cm    /cm       /cm      cm skill
 ```
 
-A host adapter may change invocation syntax, plugin/extension layout, model controls, and tool plumbing. It must not fork Codemium's durable project-state semantics or weaken its engineering/safety invariants.
+A host adapter may change invocation syntax, plugin/extension layout, model controls, and tool plumbing. It must not fork Codemium's durable project-state semantics, structural provenance semantics, freshness semantics, or safety invariants.
 
 ## Supported-host policy
 
@@ -79,7 +109,7 @@ Typical Codex usage should be natural language:
 @Codemium safely change this authentication flow and verify the impact
 ```
 
-Codemium automatically classifies the task and selects the smallest safe depth. Users should not need to learn internal task/depth syntax for ordinary use, and they should not need to initialize Project Brain manually before their first normal repository task.
+Codemium automatically classifies the task and selects the smallest safe depth. Users should not need to learn internal task/depth syntax for ordinary use, initialize Project Brain manually, or manually build the repository graph before normal tasks. Structural risk may escalate but never lower the safety floor.
 
 Advanced direct skill invocation remains available:
 
@@ -97,8 +127,6 @@ Other hosts retain their native surfaces:
 - Gemini CLI: `/cm ...`.
 - Cursor: `/cm` where the Agent Skill slash UI is available.
 - OpenCode: native skill loading; slash exposure when supported.
-
-Plain `cm` semantics mean automatic task classification and automatic depth. NORMAL is intentionally not required as a typed modifier.
 
 ## Task axis
 
@@ -118,14 +146,12 @@ Task type changes engineering policy, not just wording.
 
 - **FAST** — narrow, obvious, localized, low-risk work.
 - **NORMAL** — ordinary project-aware engineering.
-- **DEEP** — complex, intermittent, concurrent, distributed, performance-sensitive, cross-boundary, or materially uncertain work.
+- **DEEP** — complex, intermittent, concurrent, distributed, performance-sensitive, cross-boundary, broad-dependency, or materially uncertain work.
 - **CRITICAL** — trust-boundary/security, authentication/authorization, payments, migrations, secrets, production data, destructive operations, deployment/infrastructure, or breaking public interfaces.
 
-A user override may increase depth but cannot lower the minimum safe depth.
+A user override may increase depth but cannot lower the minimum safe depth. Structural blast-radius evidence may raise the minimum safe depth.
 
 ## Portable reasoning classes
-
-Reasoning is separated into a vendor-neutral class:
 
 | Depth | Preferred class | Minimum class |
 | --- | --- | --- |
@@ -134,11 +160,9 @@ Reasoning is separated into a vendor-neutral class:
 | DEEP | strong | balanced |
 | CRITICAL | frontier | strong |
 
-Host adapters may map these classes only when the host exposes documented, safe, confirmable controls.
+Host adapters may map these classes only when the host exposes documented, safe, confirmable controls. The Codex adapter currently maps economy/balanced/strong/frontier to `low`/`medium`/`high`/`xhigh` when supported. Other adapters must not invent equivalent vendor controls.
 
-The Codex adapter currently maps economy/balanced/strong/frontier to `low`/`medium`/`high`/`xhigh` when supported. Other adapters must not invent equivalent vendor controls.
-
-## Project Brain
+# Project Brain
 
 Codemium durable state lives in:
 
@@ -146,7 +170,7 @@ Codemium durable state lives in:
 .codemium/
 ```
 
-It may contain:
+Durable Project Brain content may include:
 
 - Project Charter;
 - architecture boundaries;
@@ -154,14 +178,13 @@ It may contain:
 - Constraint Registry;
 - Interface Registry;
 - Pattern Registry;
-- Known Bug Registry;
-- repository/test intelligence;
-- active task contract;
-- deterministic cache/telemetry.
+- Known Bug Registry.
+
+Derived repository/test intelligence, active task contracts, and runtime/cache/gate state use the same namespace but remain transient/regenerable rather than durable engineering memory.
 
 Project Brain is not a conversation transcript and must not store secrets.
 
-### Automatic lifecycle
+## Automatic lifecycle
 
 Project Brain is a default runtime capability, not an opt-in setup ceremony.
 
@@ -171,7 +194,7 @@ Project Brain is a default runtime capability, not an opt-in setup ceremony.
 - Read-only investigations and reviews may improve Project Brain while leaving source code untouched.
 - At completion, source-backed facts that are durable enough to matter to future work must be captured or reused rather than left only in conversation context.
 
-### Durable capture policy
+## Durable capture policy
 
 Capture only concise, future-useful, evidence-backed:
 
@@ -185,42 +208,111 @@ Do not capture secrets, personal data, raw logs, temporary production snapshots,
 
 Before completion, persistence must be classified as one of: **captured**, **reused**, **none**, or **skipped by user constraint**.
 
-## Repository Intelligence
+## Evidence and freshness
 
-Build deterministic or low-cost maps before broad narrative reading:
+New durable entries should prefer structured evidence when available:
 
-- files;
-- symbols;
-- imports/dependencies;
-- likely callers/references where available;
-- source-to-test relationships;
-- changed files/symbols;
-- repository state identity.
+```text
+repository-relative path
+symbol / graph node ID when available
+content hash
+source line range when available
+```
 
-The model should consume selected evidence, not crawl the repository blindly.
+Legacy `source` fields remain readable.
 
-## Working Set Engine
+Freshness states:
 
-Each task gets a bounded Working Set containing only facts/code likely to affect the decision.
+- **FRESH** — supporting source identity remains valid;
+- **NEEDS_REVALIDATION** — supporting source changed/disappeared; historical context only until verified;
+- **SUPERSEDED** — later verified knowledge replaces the entry while history is retained;
+- **UNKNOWN** — legacy/insufficient evidence; verify before material reliance.
 
-Preferred retrieval order:
+Source change invalidates confidence, not history. Codemium must revalidate the smallest necessary evidence before relying materially on stale/unknown durable knowledge.
+
+# Structural Intelligence
+
+Repository Structural Intelligence is derived and regenerable under `.codemium/repository/`.
+
+Structural Graph v2 models at least:
+
+```text
+FILE / TEST
+MODULE
+SYMBOL
+```
+
+with governed relationships:
+
+```text
+DEFINES
+CONTAINS
+IMPORTS
+CALLS
+REFERENCES
+INHERITS
+IMPLEMENTS
+TESTS
+DEPENDS_ON
+```
+
+Relationship provenance is mandatory:
+
+- **DIRECT** — observed directly by a deterministic parser;
+- **RESOLVED** — deterministically resolved from source structure/names;
+- **HEURISTIC** — deterministic fallback evidence with lower trust.
+
+Parser capability must be explicit. Python receives standard-library AST extraction in v0.7. Other supported languages may use deterministic fallback parsing and must not claim capabilities they do not provide.
+
+No LLM is required to construct the Structural Graph.
+
+## Incremental structural lifecycle
+
+A manifest records source content identity, parser identity/version, and graph schema validity. Later builds classify files as unchanged/new/modified/deleted.
+
+- unchanged files reuse prior extraction;
+- new/modified files are parsed;
+- deleted-source entities are pruned;
+- previous valid graph state must not be silently corrupted by a failed refresh.
+
+## Structural query surface
+
+Internal/diagnostic operations include symbol discovery, neighbors, callers, callees, dependencies, dependents, test relationships, shortest paths, and impact traversal. These engine operations support `@Codemium`; they do not replace the public product UX.
+
+## Source authority
+
+Structural Intelligence is a navigation/reasoning aid, not implementation truth.
+
+```text
+Graph         → where to inspect and what may be affected
+Source        → what implementation is actually true
+Tests/runtime → whether behavior works
+Project Brain → what verified engineering work learned, freshness-qualified
+```
+
+When structural state is unavailable or incomplete, Codemium degrades safely to normal repository tools and must never fabricate a relationship.
+
+# Working Set Engine
+
+Each task receives a bounded Working Set. Preferred retrieval order:
 
 1. active task contract;
-2. relevant durable project facts;
-3. repository map/symbols;
-4. exact candidate code regions;
-5. relevant tests/runtime evidence;
-6. deeper history only for a named unresolved question.
+2. relevant freshness-qualified durable Project Brain facts;
+3. task seed symbols/files;
+4. bounded structural neighbors;
+5. relevant interfaces/dependencies/tests;
+6. exact candidate source regions;
+7. deeper evidence only for a named unresolved question.
 
-Context expansion is progressive and evidence-triggered.
+Context expansion is progressive and evidence-triggered. Graph depth/file/node budgets vary by engineering depth but remain bounded.
 
-## Read-once / delta-first behavior
+# Read-once / delta-first behavior
 
 If an artifact's relevant state identity has not changed, reuse extracted understanding. When it changes, inspect the delta/changed symbols before rereading the whole artifact.
 
-Equivalent deterministic reads, searches, and verification should be reused when validity is provable.
+Equivalent deterministic reads, searches, graph extraction, and verification should be reused when validity is provable.
 
-## Engineering doctrine
+# Engineering doctrine
 
 After understanding the actual requirement:
 
@@ -236,7 +328,7 @@ need?
 
 A shorter diff is not automatically better. The winning change is the smallest change that is correct for the current architecture, interfaces, risk, and required testing.
 
-## Scope Guard
+# Scope Guard
 
 Every changed hunk should be attributable to:
 
@@ -245,38 +337,30 @@ Every changed hunk should be attributable to:
 - CLEANUP — code made obsolete specifically by this change;
 - TEST — evidence for changed behavior.
 
-Default-disallowed opportunistic work:
+Structural Working Set evidence may explain why a dependency/test file is in scope, but structural distance alone never authorizes unrelated work.
 
-- unrelated formatting;
-- adjacent refactoring;
-- style modernization;
-- unrelated renaming/comments;
-- deleting pre-existing dead code;
-- speculative architecture changes.
+Default-disallowed opportunistic work includes unrelated formatting, adjacent refactoring, style modernization, unrelated renaming/comments, pre-existing dead-code deletion, and speculative architecture changes.
 
-Adjacent issues should be reported, not silently fixed.
-
-## Test Intelligence
+# Test Intelligence
 
 Production-code minimalism never implies minimal tests.
 
-Testing depth follows:
+Test selection prefers:
 
-- behavior surface;
-- failure modes;
-- boundaries;
-- security/data risk;
-- blast radius;
-- historical regressions;
-- existing project test patterns.
+1. direct structural test/source relationships;
+2. resolved symbol/source relationships;
+3. project test configuration where available;
+4. naming/location/import heuristics as an explicit HEURISTIC fallback.
 
-Verification ranges from focused syntax/unit checks through subsystem/integration/runtime verification as justified.
+Testing depth follows behavior surface, failure modes, boundaries, security/data risk, blast radius, historical regressions, and existing project patterns.
 
-## Change Impact
+# Change Impact
 
-Before completion, identify affected callers/dependents, interfaces, background workers/events, database/public surfaces, and relevant tests where practical. Blast radius determines verification depth.
+Before completion, identify affected callers/dependents, interfaces, background workers/events, database/public surfaces, and relevant tests where practical.
 
-## Stop Engine
+v0.7 uses reverse structural dependency traversal where graph evidence exists, retains bounded transitive distance, and falls back honestly when structural state is unavailable. Blast radius informs verification depth; it is a risk classification, not fake mathematical certainty.
+
+# Stop Engine
 
 Stop when all required gates pass:
 
@@ -287,13 +371,14 @@ verification sufficient
 scope clean
 architecture/security preserved
 persistence obligation satisfied
+freshness/revalidation obligation satisfied
 material uncertainty resolved
 required review complete
 ```
 
 Additional inspection after these gates requires a named unresolved risk or persistence obligation that the next operation can reduce.
 
-## Host adapter contract
+# Host adapter contract
 
 Every supported adapter must preserve:
 
@@ -302,15 +387,19 @@ Every supported adapter must preserve:
 3. shared `.codemium/` state;
 4. automatic Project Brain initialization when state writes are allowed;
 5. durable knowledge capture/reuse before completion;
-6. bounded context/working sets;
-7. minimum justified engineering;
-8. scope integrity;
-9. risk-aware testing;
-10. deterministic reuse where valid;
-11. explicit stop conditions;
-12. honest host/model-control reporting.
+6. evidence freshness before material knowledge reuse;
+7. Structural Intelligence provenance/capability semantics when helpers are available;
+8. source authority over derived graph state;
+9. bounded graph-assisted context/working sets;
+10. minimum justified engineering;
+11. scope integrity;
+12. risk-aware testing and structural impact where available;
+13. deterministic reuse where valid;
+14. explicit stop conditions;
+15. honest host/model-control reporting;
+16. safe degradation when structural helpers cannot run.
 
-## Distribution architecture
+# Distribution architecture
 
 ### Codex
 
@@ -318,7 +407,7 @@ Codex plugin lives under `plugins/codemium/`, including the canonical determinis
 
 ### Claude Code
 
-The repository root is the Claude plugin root. `.claude-plugin/plugin.json`, `skills/cm/SKILL.md`, and `commands/cm.md` are auto-discovered. This lets the skill reference the canonical engine inside the same installed plugin bundle.
+The repository root is the Claude plugin root. `.claude-plugin/plugin.json`, `skills/cm/SKILL.md`, and `commands/cm.md` are auto-discovered. The same canonical engine remains available inside the installed plugin bundle.
 
 ### Gemini CLI
 
@@ -326,18 +415,20 @@ The repository root contains `gemini-extension.json`, `GEMINI.md`, and `commands
 
 ### Cursor / OpenCode
 
-A portable Agent Skill bundle is installed by `scripts/install_host.py`. The installer copies the portable `SKILL.md`, canonical engine, and references into the host's documented skill directory. It manages only Codemium-owned directories and refuses unrecognized overwrite/removal without explicit `--force`.
+`scripts/install_host.py` copies the portable `SKILL.md`, canonical engine (including structural/evidence helpers), and references into the host's documented skill directory. It manages only Codemium-owned directories and refuses unrecognized overwrite/removal without explicit `--force`.
 
-## Doctor / validation
+# Doctor / validation
 
-`scripts/doctor.py` validates cross-host manifests, version synchronization, native invocation contracts, portable-skill packaging, and engine completeness. It also reports which host binaries are locally available.
+`scripts/doctor.py` validates cross-host manifests, version synchronization, native invocation contracts, portable-skill packaging, and engine completeness. When `.codemium/` exists, health/doctor also reports graph schema/freshness, parser/capability coverage, relationship provenance, unresolved relationships, and Project Brain freshness.
 
-Repository CI runs the deterministic verifier and doctor on every main push/pull request.
+Repository CI runs deterministic core and Codex lifecycle verification on pull requests/main. Full host validation remains manual/release-tag evidence.
 
-## Functional requirements
+# Functional requirements
+
+Existing baseline requirements remain:
 
 - FR-001 — initialize portable Project Brain automatically on first normal repository-bound task when state writes are allowed.
-- FR-002 — build lightweight repository/test intelligence.
+- FR-002 — build deterministic repository/test intelligence.
 - FR-003 — compile task + safe depth contracts.
 - FR-004 — generate bounded Working Sets.
 - FR-005 — expand context only for material uncertainty.
@@ -356,7 +447,26 @@ Repository CI runs the deterministic verifier and doctor on every main push/pull
 - FR-018 — capture or reuse durable source-backed project knowledge before task completion when state writes are allowed.
 - FR-019 — deduplicate equivalent ACTIVE Project Brain entries and never fabricate knowledge to satisfy persistence.
 
-## Quality order
+v0.7 requirements from [`PRD-v0.7.md`](PRD-v0.7.md):
+
+- FR-020 — build an evidence-backed relational repository graph.
+- FR-021 — expose parser capability and relationship provenance.
+- FR-022 — update Structural Intelligence incrementally from content identity.
+- FR-023 — prune invalid structural entities when source is changed or deleted.
+- FR-024 — query callers, dependencies, paths, tests, and related structural entities.
+- FR-025 — use structural relationships to improve bounded Working Set selection.
+- FR-026 — use structural relationships for Change Impact analysis.
+- FR-027 — derive test relationships from structural evidence where possible.
+- FR-028 — allow Project Brain entries to reference structured source evidence.
+- FR-029 — detect when evidence supporting reusable knowledge has changed.
+- FR-030 — require revalidation before stale durable knowledge is trusted for material decisions.
+- FR-031 — preserve source code as authority over derived graph state.
+- FR-032 — degrade safely when enhanced structural analysis is unavailable.
+- FR-033 — surface Structural Intelligence coverage and freshness through health/doctor diagnostics.
+- FR-034 — keep Structural Intelligence local, deterministic, and LLM-free by default.
+- FR-035 — maintain backwards compatibility with v0.6 Project Brain entries.
+
+# Quality order
 
 1. Safety and data integrity
 2. Correctness
@@ -368,13 +478,13 @@ Repository CI runs the deterministic verifier and doctor on every main push/pull
 
 Optimization that lowers a higher-ranked quality dimension is a failure.
 
-## Benchmarking
+# Benchmarking
 
 The benchmark engine remains evidence-gated. Public efficiency claims require measured agent runs under controlled, comparable conditions and must not substitute synthetic/demo numbers for real performance.
 
 Competitive/ablation data is not part of Codemium's public README until measured publication criteria are met.
 
-## Non-goals
+# Non-goals
 
 Codemium is not:
 
@@ -386,30 +496,34 @@ Codemium is not:
 - a vendor-specific project-memory format;
 - a reason to preload an entire repository;
 - permission to edit unrelated code;
-- a conversation-memory transcript disguised as project state.
+- a conversation-memory transcript disguised as project state;
+- a generic graph visualization or GraphRAG product;
+- a reason to add embeddings/vector infrastructure without evidence of need.
 
 ## v0.6 release definition
 
-v0.6 is complete when:
+v0.6 established the multi-host foundation and deterministic Project Brain lifecycle:
 
-- Codex exposes `@Codemium` as the primary installed-plugin invocation while retaining `$cm` as the direct skill path;
-- normal repository-bound tasks auto-initialize Project Brain when permitted;
-- durable source-backed findings are captured/reused before completion rather than remaining only in chat;
-- Claude repository-root plugin includes shared core access;
-- Gemini extension manifests/command validate;
-- Cursor/OpenCode portable Agent Skill installation is safe and documented;
-- shared reasoning classes are vendor-neutral;
-- README/HOSTS/INSTALL/PRD agree on host status and invocation;
-- CI verifies versions/layout, automatic Project Brain persistence, portable installer behavior, engine fixtures, and hidden benchmark publication gate;
-- repository doctor reports a clean layout.
+- `@Codemium` as the primary installed Codex plugin invocation while retaining `$cm` as the direct skill path;
+- automatic Project Brain initialization/capture when permitted;
+- deterministic Codex persistence hooks and lightweight memory retrieval mode;
+- canonical Project Brain state shared across Local and linked worktrees;
+- Claude/Gemini/Cursor/OpenCode shared core packaging;
+- vendor-neutral reasoning classes and evidence-gated benchmark policy.
 
-## Next major release — v0.7 Structural Intelligence & Evidence Bridge
+## v0.7 release definition — Structural Intelligence & Evidence Bridge
 
-The implementation source of truth for the next major release is [`PRD-v0.7.md`](PRD-v0.7.md).
+v0.7 is complete when the implementation and verification satisfy [`PRD-v0.7.md`](PRD-v0.7.md), including:
 
-When implementing v0.7:
-
-- treat `PRD-v0.7.md` as the normative extension to this PRD;
-- preserve every existing product, safety, host, and Project Brain invariant unless the v0.7 PRD explicitly extends it;
-- implement the release by the phased gates defined in the v0.7 PRD rather than as an unbounded repository rewrite;
-- do not add graph visualization, GraphRAG, media ingestion, embeddings, or other explicitly listed v0.7 non-goals merely because adjacent products provide them.
+- real relational Repository Structural Graph v2 instead of only file inventory;
+- explicit relationship provenance and parser capability reporting;
+- delta-first graph refresh with changed/deleted-source invalidation;
+- bounded graph query primitives and graph-assisted Working Sets;
+- structural reverse-dependency impact and provenance-aware test mapping;
+- structured Project Brain evidence, freshness detection, and revalidation;
+- source authority and safe degraded fallback behavior;
+- structural signals integrated into task depth, Scope Guard, health, and doctor;
+- backwards compatibility with v0.6 Project Brain data;
+- synchronized `0.7.0` release metadata and documentation;
+- deterministic core/Codex CI plus release-grade full verifier contracts;
+- no graph visualization, GraphRAG, media ingestion, embeddings, hosted graph server, or other explicitly excluded v0.7 scope expansion.
