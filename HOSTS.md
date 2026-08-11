@@ -19,15 +19,19 @@ Codemium is **host-agnostic at the product/core level**. Each coding agent gets 
 A host adapter may change syntax and host-specific configuration, but it must preserve these Codemium invariants:
 
 1. Task classification: BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, SECURITY.
-2. Engineering depth: FAST, NORMAL, DEEP, CRITICAL with a safety floor.
-3. Persistent `.codemium/` project knowledge where the host can access the workspace.
-4. Bounded working sets and targeted context expansion.
-5. Smallest justified engineering change; no unrelated cleanup.
-6. Testing and verification based on behavior/risk, never LOC minimalism.
-7. Reuse unchanged deterministic evidence when validity can be proven.
-8. Explicit completion/stop conditions.
-9. Host model/reasoning controls remain host-owned unless a safe per-task mechanism is documented and confirmed.
-10. The adapter must not fork project memory into a vendor-specific durable state format.
+2. Engineering depth: FAST, NORMAL, DEEP, CRITICAL with a safety floor; structural risk may escalate but never lower it.
+3. Persistent `.codemium/` Project Brain knowledge where the host can access the workspace.
+4. Project Brain knowledge is freshness-qualified when structured evidence is available; stale/unknown knowledge is verified before material reliance.
+5. Derived Structural Intelligence remains regenerable and subordinate to source code, tests, and runtime evidence.
+6. Relationship provenance and parser capability are preserved; HEURISTIC evidence must never be presented as DIRECT.
+7. Bounded graph-assisted working sets and targeted context expansion.
+8. Smallest justified engineering change; no unrelated cleanup.
+9. Testing and verification based on behavior/risk/blast radius, never LOC minimalism.
+10. Reuse unchanged deterministic evidence when validity can be proven.
+11. Explicit completion/stop conditions.
+12. Host model/reasoning controls remain host-owned unless a safe per-task mechanism is documented and confirmed.
+13. The adapter must not fork Project Brain or Structural Intelligence into a vendor-specific durable state format.
+14. If structural helpers cannot run, the adapter degrades to normal repository tools instead of inventing graph relationships.
 
 ## Invocation is host-native
 
@@ -49,7 +53,54 @@ All adapters use the same project-state namespace:
 .codemium/
 ```
 
+Durable engineering memory and derived structural state intentionally have different semantics:
+
+```text
+.codemium/
+├── registry/       # durable Project Brain knowledge
+├── architecture/   # durable sanitized project knowledge
+├── repository/     # derived/regenerable graph + manifest + test mapping
+├── tasks/          # transient task state
+└── runtime/        # transient runtime/cache/gate state
+```
+
 A project initialized under one supported host should remain understandable to another adapter. Host-specific transient state must not pollute durable project decisions, constraints, interfaces, patterns, or bug history.
+
+## Structural Intelligence contract
+
+v0.7 adds a shared Structural Graph v2 under `.codemium/repository/graph.json`.
+
+Minimum portable concepts:
+
+- node types: FILE/TEST, MODULE, SYMBOL;
+- relationships: `DEFINES`, `CONTAINS`, `IMPORTS`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, `DEPENDS_ON`;
+- provenance: `DIRECT`, `RESOLVED`, `HEURISTIC`;
+- per-file parser identity and capability coverage;
+- content-hash manifest for incremental refresh and deletion invalidation.
+
+Python receives standard-library AST extraction in the canonical core. Other supported languages may use deterministic fallback parsing when deeper parser support is unavailable. A host must not claim capabilities that its installed engine does not report.
+
+The graph is used for bounded navigation, Working Sets, impact, and test candidates. **Source code remains implementation truth; tests/runtime remain behavioral proof.**
+
+## Project Brain evidence/freshness contract
+
+Project Brain may attach structured evidence to durable entries:
+
+```text
+path
+symbol / graph node when available
+content hash
+line range when available
+```
+
+Freshness states are portable across hosts:
+
+- `FRESH`
+- `NEEDS_REVALIDATION`
+- `SUPERSEDED`
+- `UNKNOWN`
+
+A source change invalidates trust, not history. Relevant stale/unknown knowledge must be verified before it is materially relied upon; successful verification can refresh its evidence through the deterministic revalidation helper.
 
 ## Shared deterministic engine
 
@@ -66,7 +117,20 @@ Distribution strategy:
 - Gemini CLI: repository root is installed as the extension, so the core remains part of the extension bundle.
 - Cursor/OpenCode: `scripts/install_host.py` copies the portable Agent Skill plus the canonical engine/references into the host's skill directory.
 
-The engine is an optimization layer. An adapter must still preserve Codemium doctrine if a host cannot or should not execute a helper script for a specific task.
+The engine is an optimization/evidence layer. An adapter must still preserve Codemium doctrine if a host cannot or should not execute a helper script for a specific task.
+
+Core v0.7 helper surfaces include:
+
+```text
+project_brain.py   durable capture, freshness, revalidation
+repo_graph.py      incremental Structural Graph v2
+ graph_query.py    bounded structural queries
+working_set.py     graph-assisted task context
+impact.py          structural reverse-impact traversal
+test_map.py        provenance-aware source/test mapping
+scope_guard.py     scope explanations
+health.py          graph + Project Brain health
+```
 
 ## Reasoning portability
 
@@ -109,7 +173,7 @@ A Beta adapter is promoted to Stable only after all of the following are true:
 - repository CI validates the adapter bundle;
 - installation succeeds in the actual host;
 - primary invocation resolves to Codemium correctly;
-- a fixture project demonstrates Project Brain reuse, bounded context behavior, scoped editing, and verification;
+- a fixture project demonstrates Project Brain reuse/freshness, bounded structural navigation, scoped editing, and verification;
 - update/uninstall behavior is documented and tested;
 - no host-specific behavior silently weakens the Codemium safety floor.
 
