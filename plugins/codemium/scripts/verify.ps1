@@ -1,19 +1,17 @@
 $ErrorActionPreference = "Stop"
 if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
-  # The benchmark publication-gate test intentionally executes one command
-  # that must return non-zero. We inspect $LASTEXITCODE ourselves below.
   $PSNativeCommandUseErrorActionPreference = $false
 }
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.6.6") { throw "Expected Codemium 0.6.6" }
+if ($Version -ne "0.7.0") { throw "Expected Codemium 0.7.0" }
 
 function Assert-Contains([string]$Text, [string]$Needle, [string]$Message) {
   if (-not $Text.Contains($Needle)) { throw $Message }
 }
 
-# Codex
+# Codex adapter and lifecycle.
 @(".agents\plugins\marketplace.json","plugins\codemium\.codex-plugin\plugin.json") | ForEach-Object {
   Get-Content (Join-Path $Root $_) -Raw | ConvertFrom-Json | Out-Null
 }
@@ -22,12 +20,15 @@ if ($Codex.name -ne "codemium" -or $Codex.version -ne $Version) { throw "Codex a
 if ($Codex.interface.displayName -ne "Codemium") { throw "Codex displayName mismatch" }
 if ($Codex.hooks -ne './hooks/hooks.json') { throw "Codex manifest missing lifecycle hooks" }
 $DefaultPrompt = ($Codex.interface.defaultPrompt -join ' ')
-Assert-Contains $Codex.interface.longDescription '@Codemium' 'Codex manifest does not document @Codemium invocation'
-Assert-Contains $DefaultPrompt 'automatically initialize or reuse .codemium Project Brain' 'Codex manifest missing automatic Project Brain persistence'
-Assert-Contains $DefaultPrompt 'canonical project root shared across the Local checkout and linked worktrees' 'Codex manifest missing canonical Project Brain root'
-Assert-Contains $DefaultPrompt 'Consolidate durable legacy Project Brain knowledge discovered in any linked worktree' 'Codex manifest missing cross-worktree consolidation'
-Assert-Contains $DefaultPrompt 'bundled UserPromptSubmit and Stop lifecycle hooks' 'Codex manifest missing deterministic persistence gate'
-Assert-Contains $DefaultPrompt 'CODEMIUM MEMORY RETRIEVAL MODE' 'Codex manifest missing lightweight memory-mode policy'
+foreach ($Phrase in @(
+  '@Codemium', 'automatically initialize or reuse .codemium Project Brain',
+  'canonical project root shared across the Local checkout and linked worktrees',
+  'Consolidate durable legacy Project Brain knowledge discovered in any linked worktree',
+  'bundled UserPromptSubmit and Stop lifecycle hooks', 'CODEMIUM MEMORY RETRIEVAL MODE',
+  'freshness-qualified', 'derived/regenerable structural index', 'DIRECT, RESOLVED, and HEURISTIC provenance'
+)) {
+  Assert-Contains ($Codex.interface.longDescription + ' ' + $DefaultPrompt) $Phrase "Codex manifest missing $Phrase"
+}
 $Hooks = Get-Content (Join-Path $Root "plugins\codemium\hooks\hooks.json") -Raw | ConvertFrom-Json
 foreach ($Event in @('UserPromptSubmit','Stop')) {
   $Groups = @($Hooks.hooks.$Event)
@@ -47,9 +48,10 @@ foreach ($Phrase in @('CODEMIUM MEMORY RETRIEVAL MODE','rank_entries','Use minim
 }
 $MainSkill = Get-Content (Join-Path $Root "plugins\codemium\skills\codemium\SKILL.md") -Raw
 foreach ($Phrase in @(
-  'name: cm', '# Codemium', '@Codemium', '$cm fast', 'preferred `low`', 'preferred `xhigh`',
-  'Lightweight Project Brain memory mode', 'Project Brain persistence contract', 'Persistence gate',
-  'smallest **justified** change', 'Minimal production code **does not imply minimal tests**'
+  'name: cm','# Codemium','@Codemium','$cm fast','preferred `low`','preferred `xhigh`',
+  'Lightweight Project Brain memory mode','Project Brain persistence contract','Persistence gate',
+  'Evidence freshness','Structural Intelligence contract','NEEDS_REVALIDATION','DIRECT','RESOLVED','HEURISTIC',
+  'smallest **justified** change','Minimal production code **does not imply minimal tests**'
 )) {
   Assert-Contains $MainSkill $Phrase "Codex skill missing $Phrase"
 }
@@ -62,13 +64,13 @@ foreach ($Spec in @(
   Assert-Contains $Text $Spec.Heading "Focused Codex skill mismatch: $($Spec.Path)"
 }
 
-# Shared Agent Skill for Claude/Gemini/Cursor/OpenCode.
+# Shared portable skill.
 $Shared = Get-Content (Join-Path $Root "skills\cm\SKILL.md") -Raw
-foreach ($Phrase in @('name: cm', 'portable Agent Skill', 'opencode/slash: "true"', 'Vendor model/thinking controls remain host-owned', 'Project Brain persistence is automatic')) {
+foreach ($Phrase in @('name: cm','portable Agent Skill','opencode/slash: "true"','Vendor model/thinking controls remain host-owned','Project Brain persistence is automatic','Evidence freshness','Structural Intelligence','NEEDS_REVALIDATION')) {
   Assert-Contains $Shared $Phrase "Shared cm skill missing $Phrase"
 }
 
-# Claude Code repository-root plugin.
+# Claude/Gemini manifests.
 $ClaudeMarket = Get-Content (Join-Path $Root ".claude-plugin\marketplace.json") -Raw | ConvertFrom-Json
 $ClaudePlugin = Get-Content (Join-Path $Root ".claude-plugin\plugin.json") -Raw | ConvertFrom-Json
 if ($ClaudeMarket.name -ne "codemium" -or $ClaudePlugin.version -ne $Version) { throw "Claude version mismatch" }
@@ -79,7 +81,6 @@ Assert-Contains $ClaudeCommand '$ARGUMENTS' 'Claude command does not forward $AR
 Assert-Contains $ClaudeCommand '${CLAUDE_PLUGIN_ROOT}/plugins/codemium/engine/' 'Claude command does not reference the canonical engine'
 if (Test-Path (Join-Path $Root "adapters\claude-code\.claude-plugin\plugin.json")) { throw "Duplicated old Claude adapter still exists" }
 
-# Gemini CLI.
 $Gemini = Get-Content (Join-Path $Root "gemini-extension.json") -Raw | ConvertFrom-Json
 if ($Gemini.name -ne "codemium" -or $Gemini.version -ne $Version -or $Gemini.contextFileName -ne "GEMINI.md") { throw "Gemini adapter mismatch" }
 $GeminiContext = Get-Content (Join-Path $Root "GEMINI.md") -Raw
@@ -87,33 +88,64 @@ $GeminiCommand = Get-Content (Join-Path $Root "commands\cm.toml") -Raw
 Assert-Contains $GeminiContext 'host-agnostic coding-intelligence layer' 'Gemini context contract missing'
 Assert-Contains $GeminiCommand '{{args}}' 'Gemini /cm must forward {{args}}'
 
-# Docs and portable installer.
-foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","scripts\verify_codex_plugin.py","INSTALL.md","HOSTS.md","PRD.md","CHANGELOG.md")) {
+# Shared v0.7 core contracts.
+$Engine = Join-Path $Root "plugins\codemium\engine"
+foreach ($Name in @('project_brain.py','repo_graph.py','graph_query.py','working_set.py','impact.py','scope_guard.py','test_map.py','health.py','task_compiler.py')) {
+  if (-not (Test-Path (Join-Path $Engine $Name))) { throw "Missing engine/$Name" }
+}
+$RepoGraph = Get-Content (Join-Path $Engine "repo_graph.py") -Raw
+foreach ($Phrase in @('GRAPH_SCHEMA_VERSION = 2','python-ast','fallback-regex','DIRECT','RESOLVED','HEURISTIC','manifest.json','DEPENDS_ON','TESTS')) {
+  Assert-Contains $RepoGraph $Phrase "Structural Graph contract missing $Phrase"
+}
+$Brain = Get-Content (Join-Path $Engine "project_brain.py") -Raw
+foreach ($Phrase in @('FRESH','NEEDS_REVALIDATION','SUPERSEDED','UNKNOWN','def entry_freshness(','def revalidate(','evidence')) {
+  Assert-Contains $Brain $Phrase "Evidence freshness contract missing $Phrase"
+}
+$GraphQuery = Get-Content (Join-Path $Engine "graph_query.py") -Raw
+foreach ($Phrase in @('find-symbol','callers','callees','dependents','dependencies','tests-for','def shortest_path(','def bounded_expand(')) {
+  Assert-Contains $GraphQuery $Phrase "Graph query contract missing $Phrase"
+}
+Assert-Contains (Get-Content (Join-Path $Engine "working_set.py") -Raw) 'graph_assisted' 'Working Set v2 contract missing'
+Assert-Contains (Get-Content (Join-Path $Engine "impact.py") -Raw) 'impact_mode' 'Impact v2 contract missing'
+Assert-Contains (Get-Content (Join-Path $Engine "test_map.py") -Raw) 'provenance_counts' 'Test Intelligence v2 contract missing'
+Assert-Contains (Get-Content (Join-Path $Engine "health.py") -Raw) 'fresh_to_worktree' 'Health freshness contract missing'
+Assert-Contains (Get-Content (Join-Path $Engine "task_compiler.py") -Raw) 'apply_structural_escalation' 'Structural depth escalation missing'
+
+# Docs.
+foreach ($Path in @("scripts\install_host.py","scripts\doctor.py","scripts\verify_codex_plugin.py","INSTALL.md","HOSTS.md","PRD.md","PRD-v0.7.md","CHANGELOG.md")) {
   if (-not (Test-Path (Join-Path $Root $Path))) { throw "Missing $Path" }
 }
 $Readme = Get-Content (Join-Path $Root "README.md") -Raw
 foreach ($Phrase in @(
-  'Persistent coding intelligence for AI coding agents', 'OpenAI Codex | **Stable**',
-  'Claude Code | **Beta**', 'Gemini CLI | **Beta**', 'Cursor | **Beta**',
-  'OpenCode | **Beta**', '@Codemium', 'Project Brain is zero-setup for normal use', 'INSTALL.md', 'HOSTS.md'
+  'Persistent coding intelligence for AI coding agents','OpenAI Codex | **Stable**','Claude Code | **Beta**',
+  'Gemini CLI | **Beta**','Cursor | **Beta**','OpenCode | **Beta**','@Codemium',
+  'Project Brain is zero-setup for normal use','Structural Intelligence — v0.7','Evidence Bridge',
+  'NEEDS_REVALIDATION','Source remains authoritative','INSTALL.md','HOSTS.md'
 )) {
   Assert-Contains $Readme $Phrase "README missing $Phrase"
 }
-foreach ($Forbidden in @('Codex-first plugin', '## Numbers', 'benchmarks/demo-numbers.svg', 'Ponytail-style')) {
+foreach ($Forbidden in @('Codex-first plugin','## Numbers','benchmarks/demo-numbers.svg','Ponytail-style')) {
   if ($Readme.Contains($Forbidden)) { throw "Public positioning regression: $Forbidden" }
 }
-
 $Hosts = Get-Content (Join-Path $Root "HOSTS.md") -Raw
-Assert-Contains $Hosts '@Codemium' 'HOSTS.md missing @Codemium invocation'
+foreach ($Phrase in @('host-agnostic at the product/core level','OpenCode | Beta','@Codemium','Structural Intelligence contract','Project Brain evidence/freshness contract')) {
+  Assert-Contains $Hosts $Phrase "HOSTS.md missing $Phrase"
+}
 $Prd = Get-Content (Join-Path $Root "PRD.md") -Raw
 Assert-Contains $Prd '@Codemium' 'PRD.md missing @Codemium invocation'
 Assert-Contains $Prd 'Automatic lifecycle' 'PRD.md missing Project Brain automatic lifecycle'
 Assert-Contains $Prd 'Durable capture policy' 'PRD.md missing durable capture policy'
+Assert-Contains $Prd 'PRD-v0.7.md' 'PRD.md missing v0.7 extension'
+$Prd07 = Get-Content (Join-Path $Root "PRD-v0.7.md") -Raw
+foreach ($Phrase in @('Structural Intelligence & Evidence Bridge','Repository Structural Graph v2','Project Brain Freshness','FR-035')) {
+  Assert-Contains $Prd07 $Phrase "PRD-v0.7 missing $Phrase"
+}
 $Install = Get-Content (Join-Path $Root "INSTALL.md") -Raw
-Assert-Contains $Install '/hooks' 'INSTALL.md missing hook trust instructions'
-Assert-Contains $Install 'Codemium `0.6.2` bundles `UserPromptSubmit` and `Stop` lifecycle hooks' 'INSTALL.md missing v0.6.2 lifecycle documentation'
+foreach ($Phrase in @('/hooks','Structural Intelligence lifecycle','Evidence freshness lifecycle','0.7')) {
+  Assert-Contains $Install $Phrase "INSTALL.md missing $Phrase"
+}
 $ChangeLog = Get-Content (Join-Path $Root "CHANGELOG.md") -Raw
-Assert-Contains $ChangeLog '## 0.6.6 — Cross-worktree memory consolidation' 'CHANGELOG missing v0.6.6'
+Assert-Contains $ChangeLog '## 0.7.0 — Structural Intelligence & Evidence Bridge' 'CHANGELOG missing v0.7.0'
 
 # Python syntax + core/Codex verifier + doctor + fixture.
 $py = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\hooks"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
@@ -136,7 +168,9 @@ New-Item -ItemType Directory -Path $TempDir | Out-Null
 try {
   python (Join-Path $Root "scripts\install_host.py") --host cursor --scope project --project $TempDir | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Cursor install command failed" }
-  if (-not (Test-Path (Join-Path $TempDir ".cursor\skills\cm\engine\project_brain.py"))) { throw "Cursor portable install failed" }
+  foreach ($Path in @('.cursor\skills\cm\engine\project_brain.py','.cursor\skills\cm\engine\graph_query.py','.cursor\skills\cm\.codemium-installed.json')) {
+    if (-not (Test-Path (Join-Path $TempDir $Path))) { throw "Cursor portable install missing $Path" }
+  }
   $CursorSkill = Get-Content (Join-Path $TempDir ".cursor\skills\cm\SKILL.md") -Raw
   Assert-Contains $CursorSkill 'portable Agent Skill' 'Cursor skill source drift'
   python (Join-Path $Root "scripts\install_host.py") --host cursor --scope project --project $TempDir --uninstall | Out-Null
@@ -144,6 +178,7 @@ try {
 
   python (Join-Path $Root "scripts\install_host.py") --host opencode --scope project --project $TempDir | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "OpenCode install command failed" }
+  if (-not (Test-Path (Join-Path $TempDir ".opencode\skills\cm\engine\graph_query.py"))) { throw "OpenCode graph_query install failed" }
   $OpenCodeSkill = Get-Content (Join-Path $TempDir ".opencode\skills\cm\SKILL.md") -Raw
   Assert-Contains $OpenCodeSkill 'opencode/slash: "true"' 'OpenCode portable install failed'
   python (Join-Path $Root "scripts\install_host.py") --host opencode --scope project --project $TempDir --uninstall | Out-Null
@@ -151,12 +186,9 @@ try {
 
   python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $Root "benchmarks\example-runs-v2.json") --svg (Join-Path $TempDir "demo.svg") --markdown (Join-Path $TempDir "demo.md") | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Synthetic benchmark render failed" }
-  $Rendered = Get-Content (Join-Path $TempDir "demo.svg") -Raw
-  Assert-Contains $Rendered 'SYNTHETIC / DEMO DATA' 'Synthetic watermark missing'
-
+  Assert-Contains (Get-Content (Join-Path $TempDir "demo.svg") -Raw) 'SYNTHETIC / DEMO DATA' 'Synthetic watermark missing'
   python (Join-Path $Root "benchmarks\render_numbers.py") (Join-Path $Root "benchmarks\example-runs-v2.json") --publish --svg (Join-Path $TempDir "publish.svg") --markdown (Join-Path $TempDir "publish.md") *> $null
-  $PublishExit = $LASTEXITCODE
-  if ($PublishExit -eq 0) { throw "Synthetic benchmark passed publication gate" }
+  if ($LASTEXITCODE -eq 0) { throw "Synthetic benchmark passed publication gate" }
 } finally {
   Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
 }
