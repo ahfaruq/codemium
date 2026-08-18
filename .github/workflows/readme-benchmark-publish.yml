@@ -1,16 +1,13 @@
 name: Publish README benchmark
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
 
 permissions:
   contents: write
 
 jobs:
   patch-readme:
-    if: ${{ !contains(github.event.head_commit.message, '[skip-readme-benchmark]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,5 +51,5 @@ In the current four-arm benchmark scenario, Codemium has the smallest resource f
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md .github/workflows/readme-benchmark-publish.yml
-          git commit -m 'docs: publish benchmark visual in README [skip-readme-benchmark]'
+          git commit -m 'docs: publish benchmark visual in README'
           git push origin HEAD:main
