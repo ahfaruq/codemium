@@ -1,6 +1,6 @@
 ---
 name: cm
-description: "Primary Codemium skill for OpenAI Codex: auto-detect coding task and engineering depth, reuse persistent project intelligence, use evidence-backed structural intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
+description: "Primary Codemium skill for OpenAI Codex: auto-detect coding task and engineering depth, reuse persistent project intelligence, use evidence-backed Polyglot Intelligence, select bounded context, make the smallest justified change, verify by risk, and stop when proven."
 ---
 
 # Codemium
@@ -69,17 +69,21 @@ Project Brain is durable, but it is not blindly trusted forever.
 
 **Remember aggressively, trust conditionally.**
 
-## Structural Intelligence contract
+## Structural Intelligence contract — v0.8 Polyglot Intelligence
 
-`.codemium/repository/graph.json` is a **derived, regenerable structural index**, not a second source of truth and not a replacement for Project Brain.
+`.codemium/repository/graph.json` is a **derived, regenerable Structural Graph v3**, not a second source of truth and not a replacement for Project Brain.
 
 - Build or refresh it with `repo_graph.py build` when missing/stale and the task is non-trivial.
-- Prefer structural relationships (`DEFINES`, `IMPORTS`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, `DEPENDS_ON`) to broad blind repository search once task seeds are known.
+- Prefer structural relationships (`DEFINES`, `IMPORTS`, `IMPORTS_SYMBOL`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, `DEPENDS_ON`) to broad blind repository search once task seeds are known.
 - Honor relationship provenance: **DIRECT** > **RESOLVED** > **HEURISTIC**. Never present a HEURISTIC relationship as direct source evidence.
-- Honor parser capability reporting. Python may provide AST-backed relationships; fallback parsers provide partial deterministic coverage and must not be treated as equivalent.
+- Honor parser capability reporting. Python can provide AST-backed relationships; JavaScript/JSX, TypeScript, and TSX can provide Tree-sitter-backed deep relationships when the optional Polyglot runtime is installed; deterministic fallback parsers provide partial coverage and must not be treated as equivalent.
+- Use `IMPORTS_SYMBOL` and `cross_language` evidence when deterministic repository import binding crosses JS/TS/TSX language boundaries.
 - Use `graph_query.py` for bounded callers/callees/dependents/dependencies/tests/path/navigation questions when that is cheaper and clearer than raw search.
+- For Git-diff work, prefer **symbol-aware impact** when changed line ranges map to graph symbols. Use whole-file seeds only when symbol evidence is unavailable.
+- Treat impact score/confidence/provenance/distance and cross-language evidence as prioritization signals, not implementation truth.
+- Use Test Intelligence v3 to prioritize structurally mapped tests. P0/P1/P2 priority and unit/integration/e2e classification guide verification order; actual test/runtime evidence determines sufficiency.
 - Use the graph to decide **where to inspect**. Read the relevant source before making material code/behavior claims or edits.
-- If structural intelligence is missing, stale, corrupt, or incomplete for a language, degrade to normal repository tools rather than fabricating relationships.
+- If Polyglot Intelligence is missing, stale, corrupt, unavailable for a parser, or incomplete for a language, degrade to normal repository tools rather than fabricating relationships.
 
 The authority order is:
 
@@ -120,16 +124,16 @@ Use `engine/reasoning_profile.py` for deterministic profile/alignment output. Re
 ## Task lifecycle
 
 1. Establish Project Brain state first: reuse it if present; otherwise auto-initialize it when allowed.
-2. Compile a short task contract: type, observed/expected behavior, objective, likely domain, acceptance, risk, change policy, depth, and reasoning class. If a structural graph exists, let structural blast-radius signals escalate—but never lower—the safe depth.
+2. Compile a short task contract: type, observed/expected behavior, objective, likely domain, acceptance, risk, change policy, depth, and reasoning class. Structural and cross-language blast-radius signals may escalate—but never lower—the safe depth.
 3. Read existing `.codemium` durable knowledge only when it can affect this task. Check freshness before relying on it materially.
-4. Build/refresh repository graph only when stale or missing and the task is non-trivial. Incremental refresh should reuse unchanged file extraction.
-5. Generate a bounded **graph-assisted** Working Set. Open the most relevant symbols/files first; the graph narrows navigation but source remains authoritative.
+4. Build/refresh repository Graph v3 only when stale or missing and the task is non-trivial. Incremental refresh should reuse unchanged compatible extraction; parser/schema changes invalidate incompatible cache.
+5. Generate a bounded **graph-assisted** Working Set. Open the most relevant symbols/files first; imported-symbol and cross-language neighbors may enter when structurally justified. The graph narrows navigation but source remains authoritative.
 6. Expand context only when material uncertainty identifies a specific missing fact.
 7. Investigate root cause/design before editing.
 8. Apply the engineering ladder in `references/engineering-doctrine.md`.
 9. Make the smallest **justified** change, not the shortest diff.
 10. Inspect actual git diff; classify every changed surface as DIRECT, DEPENDENCY, caused CLEANUP, or TEST. Use structural Working Set evidence to explain dependency/test surfaces where available.
-11. Run structural impact/test mapping and verify according to risk/depth. Inspect source/tests for any high-impact or heuristic-only relationship that affects the decision.
+11. Run symbol-aware structural impact/test mapping. Inspect high-score/cross-language dependents and execute the strongest relevant P0/P1 tests first, expanding verification according to risk/depth. Inspect source/tests for any heuristic-only relationship that materially affects the decision.
 12. Revalidate relevant stale Project Brain facts, then distill and capture only durable new project knowledge; never store a transcript or secrets.
 13. Complete/clear transient task state when applicable.
 14. Stop once acceptance, verification, scope, persistence, freshness, and material uncertainty gates pass.
@@ -153,10 +157,10 @@ Prefer this order:
 
 - active task contract;
 - relevant **freshness-qualified** decisions/constraints/interfaces/patterns/known bugs;
-- repository graph/map and task seed symbols;
-- bounded structural neighbors and dependency/test surfaces;
+- task seed symbols/files;
+- bounded structural and cross-language neighbors;
 - exact candidate source regions;
-- relevant tests/runtime evidence;
+- prioritized relevant tests/runtime evidence;
 - deeper history only if needed.
 
 Do not read references up front. Use them only when the corresponding decision arises:
@@ -173,7 +177,7 @@ Do not read references up front. Use them only when the corresponding decision a
 
 ## Deterministic helpers
 
-Use scripts in `engine/` when useful for Project Brain initialization/capture/freshness, repository graph refresh/query, graph-assisted working-set ranking, impact/test mapping, reasoning-profile alignment, cache checks, health, or telemetry. Tools establish facts; model reasoning handles root cause, tradeoffs, risk, and acceptance.
+Use scripts in `engine/` when useful for Project Brain initialization/capture/freshness, parser-aware repository graph refresh/query, graph-assisted Working Set ranking, symbol-aware impact/test mapping, reasoning-profile alignment, cache checks, health, or telemetry. Tools establish facts; model reasoning handles root cause, tradeoffs, risk, and acceptance.
 
 ## Anti-overengineering ladder
 
