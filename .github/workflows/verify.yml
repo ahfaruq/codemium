@@ -19,5 +19,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify Codemium core
+      - name: Verify dependency-light Codemium core
         run: python scripts/verify_core.py
+      - name: Install Polyglot Intelligence runtime
+        run: python -m pip install -r requirements-polyglot.txt
+      - name: Verify Tree-sitter Polyglot Intelligence
+        run: python scripts/verify_polyglot.py
