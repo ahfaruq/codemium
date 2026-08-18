@@ -4,6 +4,8 @@ Codemium treats performance claims as engineering evidence, not marketing copy.
 
 The benchmark is explicitly competitive: **Codemium is compared against baseline, caveman, and Ponytail on the same work.** Ponytail is a comparison target, not a parent framework or positioning reference for Codemium.
 
+> **Public benchmark program:** see [`PUBLIC_BENCHMARK.md`](PUBLIC_BENCHMARK.md) for the canonical public measurement status and publication protocol. Measured datasets belong in [`results/`](results/).
+
 ## Primary benchmark arms
 
 A public competitive study must include:
@@ -147,4 +149,6 @@ The renderer is stdlib-only. System colors are intentionally stable in the prima
 
 ## Current public status
 
-No real Codemium-vs-caveman-vs-Ponytail performance dataset is committed yet. `demo-numbers.svg` is deliberately synthetic and exists only to demonstrate the competitive dashboard and publication pipeline.
+The public measurement program is now documented in [`PUBLIC_BENCHMARK.md`](PUBLIC_BENCHMARK.md). As of 2026-08-18, no complete measured Codemium-vs-baseline-vs-caveman-vs-Ponytail performance dataset is committed, so no competitive token/cost/time/LOC savings are claimed yet.
+
+`demo-numbers.svg` and the example datasets remain deliberately synthetic and exist only to demonstrate the dashboard and publication pipeline.
