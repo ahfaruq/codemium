@@ -1,6 +1,6 @@
 {
   "name": "codemium",
-  "version": "0.7.0",
-  "description": "Persistent coding intelligence for AI coding projects with freshness-qualified project memory, evidence-backed structural intelligence, bounded context, scoped changes, and risk-aware verification.",
+  "version": "0.8.0",
+  "description": "Persistent coding intelligence for AI coding projects with Polyglot Intelligence, Tree-sitter JavaScript/TypeScript/TSX parsing, cross-language structural graphs, durable project memory, bounded context, and risk-aware verification.",
   "contextFileName": "GEMINI.md"
 }
