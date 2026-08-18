@@ -1,0 +1,6 @@
+# Codemium v0.8 Polyglot Intelligence deep-parser runtime.
+# Core Codemium remains dependency-light and degrades to deterministic fallback parsing
+# when these optional packages are unavailable.
+tree-sitter==0.26.0
+tree-sitter-javascript==0.25.0
+tree-sitter-typescript==0.23.2
