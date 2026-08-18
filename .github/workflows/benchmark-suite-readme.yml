@@ -2,11 +2,6 @@ name: Publish v0.8 Benchmark Suite README
 
 on:
   push:
-    branches:
-      - benchmark/v0.8-suite
-    paths:
-      - '.github/workflows/benchmark-suite-readme.yml'
-  pull_request:
     branches: [main]
     paths:
       - '.github/workflows/benchmark-suite-readme.yml'
@@ -20,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: benchmark/v0.8-suite
+          ref: main
           fetch-depth: 0
 
       - name: Replace README benchmark section
@@ -105,4 +100,4 @@ See [`benchmarks/V08_BENCHMARK_SUITE.md`](benchmarks/V08_BENCHMARK_SUITE.md) for
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md .github/workflows/benchmark-suite-readme.yml
           git commit -m 'docs: publish v0.8 benchmark suite'
-          git push origin HEAD:benchmark/v0.8-suite
+          git push origin HEAD:main
