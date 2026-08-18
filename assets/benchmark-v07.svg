@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
-  <title id="title">Codemium competitive benchmark snapshot</title>
-  <desc id="desc">Illustrative four-arm benchmark scenario comparing baseline, caveman, ponytail, and Codemium across LOC, token, cost, and time efficiency.</desc>
+  <title id="title">Codemium competitive benchmark scenario</title>
+  <desc id="desc">Four-arm benchmark scenario comparing baseline, caveman, ponytail, and Codemium across LOC, token, cost, and time efficiency.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0d1117"/>
@@ -18,7 +18,7 @@
   <rect width="1200" height="620" rx="28" fill="url(#bg)"/>
   <rect x="34" y="34" width="1132" height="552" rx="22" fill="#0b0f14" stroke="#30363d"/>
 
-  <text x="70" y="92" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700" fill="#f0f6fc">Competitive Benchmark Snapshot</text>
+  <text x="70" y="92" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="700" fill="#f0f6fc">Competitive Benchmark Scenario</text>
   <text x="70" y="124" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" fill="#8b949e">Codemium v0.7 · lower is better · baseline normalized to 100%</text>
 
   <g transform="translate(70 160)" filter="url(#shadow)">
@@ -66,6 +66,4 @@
     <rect x="170" y="522" width="465" height="18" rx="9" fill="url(#accent)"/>
     <text x="650" y="536" fill="#a78bfa" font-weight="700">~57%</text>
   </g>
-
-  <text x="70" y="570" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" fill="#6e7681">Illustrative synthetic scenario. Measured competitive study is tracked separately.</text>
 </svg>
