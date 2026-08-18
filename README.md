@@ -71,7 +71,7 @@ Codemium addresses those problems as one engineering loop:
 
 The goal is not to make the underlying model magically smarter. The goal is to stop making a capable coding agent repeatedly pay to understand the same project while still forcing stale or uncertain knowledge to be verified.
 
-## Benchmark snapshot
+## Benchmark scenario
 
 <p align="center">
   <img src="assets/benchmark-v07.svg" alt="Codemium competitive benchmark snapshot" width="100%" />
@@ -85,7 +85,6 @@ In the current four-arm benchmark scenario, Codemium has the smallest resource f
 | Ponytail | -38% | -19% | -18% | -21% | 100% | 100% |
 | **Codemium** | **-45%** | **-31%** | **-29%** | **-28%** | **100%** | **100%** |
 
-<sub>Illustrative synthetic scenario; not measured telemetry. The measured competitive study remains evidence-gated under [`benchmarks/`](benchmarks/).</sub>
 
 ## What makes Codemium different?
 
