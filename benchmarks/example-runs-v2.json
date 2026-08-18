@@ -1,115 +1,23 @@
 {
   "meta": {
     "kind": "synthetic",
-    "study_type": "competitive",
-    "title": "Codemium competitive benchmark dashboard demo",
-    "repository": "demo-repo",
-    "agent": "same coding agent",
-    "model": "same model + reasoning configuration",
+    "study_type": "competitive_assumption_model",
+    "title": "Codemium v0.7 assumed competitive efficiency scenario",
+    "repository": "synthetic-scenario",
+    "agent": "assumed same coding agent",
+    "model": "assumed same model + reasoning configuration",
     "runs_per_arm": 2,
-    "required_arms": [
-      "baseline",
-      "caveman",
-      "ponytail",
-      "codemium"
-    ]
+    "disclaimer": "Synthetic assumption model only. Not measured Codemium product performance.",
+    "required_arms": ["baseline", "caveman", "ponytail", "codemium"]
   },
   "runs": [
-    {
-      "task_id": "t1",
-      "system": "baseline",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 100000,
-      "reasoning_tokens": 20000,
-      "output_tokens": 5000,
-      "cost_usd": 0.1,
-      "loc_changed": 100,
-      "seconds": 600
-    },
-    {
-      "task_id": "t2",
-      "system": "baseline",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 96000,
-      "reasoning_tokens": 19000,
-      "output_tokens": 4800,
-      "cost_usd": 0.096,
-      "loc_changed": 96,
-      "seconds": 590
-    },
-    {
-      "task_id": "t1",
-      "system": "caveman",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 105000,
-      "reasoning_tokens": 21000,
-      "output_tokens": 4700,
-      "cost_usd": 0.103,
-      "loc_changed": 82,
-      "seconds": 610
-    },
-    {
-      "task_id": "t2",
-      "system": "caveman",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 101000,
-      "reasoning_tokens": 20000,
-      "output_tokens": 4500,
-      "cost_usd": 0.1,
-      "loc_changed": 78,
-      "seconds": 600
-    },
-    {
-      "task_id": "t1",
-      "system": "ponytail",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 80000,
-      "reasoning_tokens": 18000,
-      "output_tokens": 3700,
-      "cost_usd": 0.082,
-      "loc_changed": 62,
-      "seconds": 475
-    },
-    {
-      "task_id": "t2",
-      "system": "ponytail",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 76000,
-      "reasoning_tokens": 17000,
-      "output_tokens": 3500,
-      "cost_usd": 0.078,
-      "loc_changed": 60,
-      "seconds": 465
-    },
-    {
-      "task_id": "t1",
-      "system": "codemium",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 69000,
-      "reasoning_tokens": 15000,
-      "output_tokens": 3300,
-      "cost_usd": 0.071,
-      "loc_changed": 56,
-      "seconds": 435
-    },
-    {
-      "task_id": "t2",
-      "system": "codemium",
-      "quality_pass": true,
-      "safety_pass": true,
-      "input_tokens": 65000,
-      "reasoning_tokens": 14000,
-      "output_tokens": 3100,
-      "cost_usd": 0.068,
-      "loc_changed": 52,
-      "seconds": 420
-    }
+    {"task_id":"t1","system":"baseline","quality_pass":true,"safety_pass":true,"input_tokens":100000,"reasoning_tokens":20000,"output_tokens":5000,"cost_usd":0.1,"loc_changed":100,"seconds":600},
+    {"task_id":"t2","system":"baseline","quality_pass":true,"safety_pass":true,"input_tokens":96000,"reasoning_tokens":19000,"output_tokens":4800,"cost_usd":0.096,"loc_changed":96,"seconds":590},
+    {"task_id":"t1","system":"caveman","quality_pass":true,"safety_pass":true,"input_tokens":105000,"reasoning_tokens":21000,"output_tokens":4700,"cost_usd":0.103,"loc_changed":82,"seconds":610},
+    {"task_id":"t2","system":"caveman","quality_pass":true,"safety_pass":true,"input_tokens":101000,"reasoning_tokens":20000,"output_tokens":4500,"cost_usd":0.1,"loc_changed":78,"seconds":600},
+    {"task_id":"t1","system":"ponytail","quality_pass":true,"safety_pass":true,"input_tokens":80000,"reasoning_tokens":18000,"output_tokens":3700,"cost_usd":0.082,"loc_changed":62,"seconds":475},
+    {"task_id":"t2","system":"ponytail","quality_pass":true,"safety_pass":true,"input_tokens":76000,"reasoning_tokens":17000,"output_tokens":3500,"cost_usd":0.078,"loc_changed":60,"seconds":465},
+    {"task_id":"t1","system":"codemium","quality_pass":true,"safety_pass":true,"input_tokens":69000,"reasoning_tokens":15000,"output_tokens":3300,"cost_usd":0.071,"loc_changed":56,"seconds":435},
+    {"task_id":"t2","system":"codemium","quality_pass":true,"safety_pass":true,"input_tokens":65000,"reasoning_tokens":14000,"output_tokens":3100,"cost_usd":0.068,"loc_changed":52,"seconds":420}
   ]
 }

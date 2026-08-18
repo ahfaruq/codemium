@@ -4,7 +4,9 @@ Codemium treats performance claims as engineering evidence, not marketing copy.
 
 The benchmark is explicitly competitive: **Codemium is compared against baseline, caveman, and Ponytail on the same work.** Ponytail is a comparison target, not a parent framework or positioning reference for Codemium.
 
-> **Public benchmark program:** see [`PUBLIC_BENCHMARK.md`](PUBLIC_BENCHMARK.md) for the canonical public measurement status and publication protocol. Measured datasets belong in [`results/`](results/).
+> **Assumed benchmark:** [`ASSUMED_NUMBERS.md`](ASSUMED_NUMBERS.md) publishes the current synthetic scenario model. It is explicitly **not measured product performance**.
+>
+> **Measured benchmark program:** [`PUBLIC_BENCHMARK.md`](PUBLIC_BENCHMARK.md) defines the evidence gate for future real runs. Measured datasets belong in [`results/`](results/).
 
 ## Primary benchmark arms
 
@@ -35,7 +37,7 @@ Where practical, quality/safety scoring should be blind to the arm identity.
 
 ## Publication rule
 
-A public **Numbers** chart may be rendered from any dataset, but `--publish` refuses a competitive dataset unless:
+A public **measured Numbers** chart may be rendered only when:
 
 - `meta.kind` is exactly `measured`;
 - the `baseline`, `caveman`, `ponytail`, and `codemium` arms all exist;
@@ -44,9 +46,7 @@ A public **Numbers** chart may be rendered from any dataset, but `--publish` ref
 - measured token values come from host telemetry;
 - measured cost comes from billing/run telemetry rather than fabricated or stale pricing estimates.
 
-Synthetic data is allowed only for renderer/demo testing and must remain visibly labeled:
-
-> **SYNTHETIC / DEMO DATA — NOT CODEMIUM PRODUCT PERFORMANCE**
+Synthetic data may be published only when it remains visibly labeled as synthetic/assumed and is never represented as measured product performance.
 
 ## Core public metrics
 
@@ -121,7 +121,7 @@ Each `task_id` must appear in every primary arm for publication.
 
 ## Render
 
-Demo:
+Synthetic/assumed scenario:
 
 ```sh
 python benchmarks/render_numbers.py \
@@ -149,6 +149,6 @@ The renderer is stdlib-only. System colors are intentionally stable in the prima
 
 ## Current public status
 
-The public measurement program is now documented in [`PUBLIC_BENCHMARK.md`](PUBLIC_BENCHMARK.md). As of 2026-08-18, no complete measured Codemium-vs-baseline-vs-caveman-vs-Ponytail performance dataset is committed, so no competitive token/cost/time/LOC savings are claimed yet.
+As of 2026-08-18, the repository publishes an **explicitly synthetic assumption model** in [`ASSUMED_NUMBERS.md`](ASSUMED_NUMBERS.md): Codemium is modeled at approximately **-45% LOC, -31% tokens, -29% cost, and -28% time vs baseline**, with the same assumed quality/safety floor.
 
-`demo-numbers.svg` and the example datasets remain deliberately synthetic and exist only to demonstrate the dashboard and publication pipeline.
+No complete measured Codemium-vs-baseline-vs-caveman-vs-Ponytail dataset is committed yet, so those percentages are **not measured product-performance claims**.
