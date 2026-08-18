@@ -1,12 +1,13 @@
 {
   "meta": {
     "kind": "synthetic",
-    "study_type": "competitive",
-    "title": "Codemium competitive benchmark dashboard demo",
-    "repository": "demo-repo",
-    "agent": "same coding agent",
-    "model": "same model + reasoning configuration",
+    "study_type": "competitive_assumption_model",
+    "title": "Codemium v0.7 assumed competitive efficiency scenario",
+    "repository": "synthetic-scenario",
+    "agent": "assumed same coding agent",
+    "model": "assumed same model + reasoning configuration",
     "runs_per_arm": 2,
+    "disclaimer": "Synthetic assumption model only. Not measured Codemium product performance.",
     "required_arms": [
       "baseline",
       "caveman",
