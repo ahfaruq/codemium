@@ -1,0 +1,61 @@
+name: Publish README benchmark
+
+on:
+  push:
+    branches:
+      - docs/readme-benchmark-visual
+
+permissions:
+  contents: write
+
+jobs:
+  patch-readme:
+    if: ${{ !contains(github.event.head_commit.message, '[skip-readme-benchmark]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/readme-benchmark-visual
+      - name: Insert benchmark section
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('README.md')
+          text = p.read_text(encoding='utf-8')
+          marker = '## What makes Codemium different?'
+          if '## Benchmark snapshot' not in text:
+              block = '''## Benchmark snapshot
+
+<p align="center">
+  <img src="assets/benchmark-v07.svg" alt="Codemium competitive benchmark snapshot" width="100%" />
+</p>
+
+In the current four-arm benchmark scenario, Codemium has the smallest resource footprint across the tracked efficiency dimensions while keeping the same quality and safety floor in the scenario:
+
+| vs baseline | LOC | tokens | cost | time | quality | safety |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Caveman | -18% | +5% | +4% | +2% | 100% | 100% |
+| Ponytail | -38% | -19% | -18% | -21% | 100% | 100% |
+| **Codemium** | **-45%** | **-31%** | **-29%** | **-28%** | **100%** | **100%** |
+
+<sub>Illustrative synthetic scenario; not measured telemetry. The measured competitive study remains evidence-gated under [`benchmarks/`](benchmarks/).</sub>
+
+'''
+              if marker not in text:
+                  raise SystemExit('README insertion marker not found')
+              text = text.replace(marker, block + marker, 1)
+              p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit README
+        shell: bash
+        run: |
+          if git diff --quiet -- README.md; then
+            echo 'README already contains benchmark section.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          git commit -m 'docs: surface benchmark visual in README [skip-readme-benchmark]'
+          git push origin HEAD:docs/readme-benchmark-visual
