@@ -1,6 +1,9 @@
 name: Benchmark Preflight
 
 on:
+  push:
+    branches:
+      - 'benchmark/first-measured-run'
   pull_request:
     branches: [main]
     paths:
