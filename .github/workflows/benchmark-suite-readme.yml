@@ -6,6 +6,10 @@ on:
       - benchmark/v0.8-suite
     paths:
       - '.github/workflows/benchmark-suite-readme.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/benchmark-suite-readme.yml'
 
 permissions:
   contents: write
