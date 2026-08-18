@@ -6,7 +6,7 @@ Codemium is a **host-agnostic persistent coding-intelligence layer** for AI codi
 
 Codemium is not a wrapper around one vendor, model family, or prompt syntax. OpenAI Codex is the reference adapter; Claude Code, Gemini CLI, Cursor, OpenCode, and future hosts consume the same engineering contract through host-native surfaces.
 
-The normative v0.7 extension is [`PRD-v0.7.md`](PRD-v0.7.md).
+The normative v0.8 extension is [`PRD-v0.8.md`](PRD-v0.8.md). The v0.7 Structural Intelligence & Evidence Bridge definition remains preserved in [`PRD-v0.7.md`](PRD-v0.7.md) as release history and compatibility context.
 
 ## North-star outcome
 
@@ -54,11 +54,15 @@ Codemium keeps two different kinds of project intelligence connected but intenti
                      Impact / Verification
 ```
 
-**Structural Intelligence** describes what the repository currently contains: files, modules, symbols, calls, imports, references, inheritance, dependencies, and test relationships where deterministic parser capability permits.
+**Structural / Polyglot Intelligence** describes what the repository currently contains: files, modules, symbols, calls, imports, imported-symbol bindings, references, inheritance, dependencies, cross-language relationships, and test relationships where deterministic parser capability permits. v0.8 adds Tree-sitter JavaScript/TypeScript/TSX extraction and Graph v3 while preserving safe fallback parsing.
 
 **Project Brain** stores concise durable engineering knowledge: decisions, constraints, interfaces, patterns, known bugs/root causes, and material risks learned through verified engineering work.
 
 The repository remains the source of implementation truth. Tests/runtime evidence remain the source of behavioral proof. The graph guides navigation and impact; Project Brain carries freshness-qualified durable knowledge.
+
+### v0.8 Polyglot Intelligence extension
+
+The current release architecture is defined normatively in `PRD-v0.8.md`: parser abstraction, optional Tree-sitter deep parsing for JavaScript/TypeScript/TSX, cross-language Graph v3 relationships, symbol-aware impact traversal, and confidence-ranked test intelligence. Deep parser availability never authorizes stronger claims than the observed provenance, and unavailable optional parsers must degrade safely.
 
 ## Host architecture
 

@@ -1,12 +1,12 @@
 {
   "name": "codemium",
-  "version": "0.7.0",
-  "description": "Persistent coding intelligence for Claude Code with freshness-qualified project memory, evidence-backed structural intelligence, bounded context, scoped changes, and risk-aware verification.",
+  "version": "0.8.0",
+  "description": "Persistent coding intelligence for Claude Code with Polyglot Intelligence, Tree-sitter JavaScript/TypeScript/TSX parsing, cross-language structural graphs, freshness-qualified project memory, bounded context, and risk-aware verification.",
   "author": {
     "name": "Codemium"
   },
   "homepage": "https://github.com/ahfaruq/codemium",
   "repository": "https://github.com/ahfaruq/codemium",
   "license": "MIT",
-  "keywords": ["coding-agent", "project-intelligence", "structural-intelligence", "project-memory", "context-engineering", "software-engineering"]
+  "keywords": ["coding-agent", "polyglot-intelligence", "tree-sitter", "structural-intelligence", "project-memory", "context-engineering", "software-engineering"]
 }

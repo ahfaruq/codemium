@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml"><img src="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg" alt="Codemium Core" /></a>
-  <img src="https://img.shields.io/badge/version-v0.7.0-2F81F7" alt="Version v0.7.0" />
+  <img src="https://img.shields.io/badge/version-v0.8.0-2F81F7" alt="Version v0.8.0" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3FB950" alt="MIT License" /></a>
   <a href="https://github.com/sponsors/ahfaruq"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor Codemium" /></a>
 </p>
@@ -143,7 +143,7 @@ $cm critical <task>
 | Cursor | **Beta** | Portable Agent Skill | `/cm` / skill picker |
 | OpenCode | **Beta** | Portable Agent Skill | `/cm` when exposed, otherwise skill tool/auto-selection |
 
-See [`INSTALL.md`](INSTALL.md) for installation and hook trust, [`HOSTS.md`](HOSTS.md) for the adapter contract, [`PRD.md`](PRD.md) and [`PRD-v0.7.md`](PRD-v0.7.md) for requirements, and [`CHANGELOG.md`](CHANGELOG.md) for release history.
+See [`INSTALL.md`](INSTALL.md) for installation and hook trust, [`HOSTS.md`](HOSTS.md) for the adapter contract, [`PRD.md`](PRD.md), [`PRD-v0.8.md`](PRD-v0.8.md), and [`PRD-v0.7.md`](PRD-v0.7.md) for requirements/history, and [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 ## Core behavior
 
@@ -159,7 +159,7 @@ Codemium classifies work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SE
 Codemium then applies:
 
 - **Project Brain** — durable decisions, constraints, interfaces, patterns, and known bugs/risks with evidence freshness;
-- **Structural Intelligence** — relational repository graph with source provenance and parser capability reporting;
+- **Polyglot Intelligence** — parser-aware Structural Graph v3 with Tree-sitter JS/TS/TSX support, cross-language relationships, source provenance, and safe deterministic fallback;
 - **Evidence Bridge** — Project Brain entries can carry source hashes/symbol references so source changes can invalidate trust;
 - **Working Set Engine** — lexical seeds plus bounded structural traversal select the relevant project slice;
 - **Scope Guard** — every changed surface should be attributable to DIRECT, DEPENDENCY, CLEANUP, or TEST work;
@@ -170,9 +170,9 @@ Codemium then applies:
 
 For the Codex adapter, Project Brain completion is backed by lifecycle hooks rather than prompt wording alone.
 
-# Structural Intelligence — v0.7
+# Polyglot Intelligence — v0.8
 
-v0.7 upgrades the old lightweight repository inventory into **Structural Graph v2**.
+v0.8 upgrades Structural Intelligence into **Structural Graph v3**: a parser-abstracted, cross-language repository index with deep JavaScript, TypeScript, and TSX support through Tree-sitter while preserving Python AST extraction and deterministic fallback behavior.
 
 ## Graph entities
 
@@ -194,6 +194,7 @@ The structural graph can represent:
 DEFINES
 CONTAINS
 IMPORTS
+IMPORTS_SYMBOL
 CALLS
 REFERENCES
 INHERITS
@@ -208,9 +209,21 @@ Every relationship carries provenance:
 - **RESOLVED** — deterministically resolved from source structure/names;
 - **HEURISTIC** — deterministic fallback evidence that must not be presented as direct truth.
 
-Parser coverage is explicit. Python uses standard-library AST extraction; other supported languages currently degrade to deterministic fallback parsing when deeper structural parsing is unavailable.
+Parser coverage is explicit. Python uses standard-library AST extraction. JavaScript/JSX, TypeScript, and TSX use Tree-sitter deep parsing when the optional Polyglot runtime is installed. Other supported languages—and JS/TS/TSX when that runtime is unavailable—degrade safely to deterministic fallback parsing.
 
 No LLM is required to construct the structural graph.
+
+## Tree-sitter deep parsing
+
+Install the optional v0.8 Polyglot runtime when you want deep JavaScript/TypeScript/TSX extraction:
+
+```sh
+python -m pip install -r requirements-polyglot.txt
+```
+
+The parser abstraction selects Python AST, Tree-sitter JavaScript/TypeScript/TSX, or the deterministic fallback parser based on language and runtime availability. Tree-sitter extraction identifies functions, arrow functions, classes/methods, TypeScript interfaces/types/enums, imports/exports, CommonJS bindings, calls, and inheritance with source locations.
+
+Relative repository imports can resolve across compatible source extensions, so relationships such as `legacy.js → math.ts`, `view.tsx → service.ts`, and `service.test.ts → service.ts` become first-class cross-language graph evidence. Resolved imported symbols use `IMPORTS_SYMBOL`; cross-language edges are labeled explicitly.
 
 ## Incremental refresh
 
@@ -292,7 +305,7 @@ A source change does not silently delete durable history. Codemium marks trust f
 
 # Working Set, impact, and testing
 
-The v0.7 retrieval order is:
+The v0.8 retrieval order is:
 
 ```text
 active task contract
@@ -306,7 +319,9 @@ active task contract
 
 Working Set expansion is bounded by task depth and node/file budgets. Structural distance helps relevance; it never authorizes unrelated cleanup.
 
-Change Impact traverses reverse structural dependencies when available and retains a deterministic fallback for degraded graph state. Test Intelligence prefers structural `TESTS` relationships and labels naming/import fallback matches as HEURISTIC.
+Change Impact is now **symbol-aware**: Git diff line ranges are mapped to changed symbols when possible, then weighted reverse traversal follows calls, imported symbols, dependencies, references, inheritance, tests, and cross-language edges. Affected surfaces carry score, confidence, provenance, distance, and cross-language evidence.
+
+Test Intelligence v3 ranks structural `TESTS` evidence ahead of naming/import fallback, classifies unit/integration/e2e tests, and produces a prioritized P0/P1/P2 test plan. Heuristic matches remain available but are explicitly lower-confidence.
 
 # Shared `.codemium/` state
 
@@ -435,7 +450,7 @@ Validate repository contracts and see which host binaries are locally available:
 python scripts/doctor.py
 ```
 
-When `.codemium/` exists, doctor also reports structural graph and Project Brain freshness health.
+When `.codemium/` exists, doctor also reports Structural Graph v3 health, parser runtime/coverage, cross-language relationships, and Project Brain freshness.
 
 # Verification model
 
@@ -449,7 +464,18 @@ python scripts/verify_core.py
 
 The core badge represents **Codemium core integrity only**: engine syntax, Project Brain invariants, Structural Intelligence contracts, incremental/freshness behavior, task/depth behavior, and the host-agnostic fixture. It does not claim AI quality or full host compatibility.
 
-### 2. Codex lifecycle CI — every push / pull request
+### 2. Polyglot Intelligence CI — every push / pull request
+
+After the dependency-light core gate passes, CI installs the pinned Tree-sitter runtime and executes the real JS/TS/TSX cross-language fixture:
+
+```sh
+python -m pip install -r requirements-polyglot.txt
+python scripts/verify_polyglot.py
+```
+
+This gate proves JavaScript → TypeScript imported-symbol/call resolution, TSX → TypeScript dependencies, symbol-aware TypeScript impact, and prioritized mapped tests.
+
+### 3. Codex lifecycle CI — every push / pull request
 
 ```sh
 python scripts/verify_codex_plugin.py
@@ -457,7 +483,7 @@ python scripts/verify_codex_plugin.py
 
 This exercises bundled persistence-hook mechanics. It is not a substitute for a live Codex host smoke test after hook trust.
 
-### 3. Full host validation — manual / release tags
+### 4. Full host validation — manual / release tags
 
 Linux/macOS:
 
@@ -473,7 +499,7 @@ Windows:
 
 GitHub Actions `Codemium Full Host Validation` runs manually or on `v*` release tags.
 
-### 4. AI benchmark — separate competitive evidence
+### 5. AI benchmark — separate competitive evidence
 
 AI quality/performance is not inferred from CI. Competitive/efficiency claims remain evidence-gated and require measured representative agent runs.
 
@@ -481,9 +507,9 @@ AI quality/performance is not inferred from CI. Competitive/efficiency claims re
 
 Codemium does not publish synthetic performance numbers as product claims. The benchmark infrastructure remains in the repository, but synthetic/demo data cannot pass the publication gate.
 
-## v0.7 scope boundaries
+## v0.8 scope boundaries
 
-Codemium v0.7 is **not** a generic graph product. It intentionally does not add:
+Codemium v0.8 is **not** a generic graph product or language server. It intentionally does not add:
 
 - graph visualization as a product surface;
 - GraphRAG or a vector database;
@@ -491,13 +517,15 @@ Codemium v0.7 is **not** a generic graph product. It intentionally does not add:
 - PDF/image/video knowledge-graph ingestion;
 - LLM-generated structural relationships;
 - fuzzy semantic symbol deduplication;
-- hosted/shared graph services.
+- hosted/shared graph services;
+- deep Go/Rust/Java parsing in v0.8.0;
+- replacement for TypeScript type-checkers or language servers.
 
 These exclusions keep Structural Intelligence focused on strengthening Codemium's existing engineering-memory, bounded-context, impact, scope, and verification thesis.
 
 ## Status
 
-`v0.7.0` introduces **Structural Intelligence & Evidence Bridge**: a local deterministic relational repository graph, delta-first refresh, bounded graph queries, graph-assisted Working Sets, structural impact/test intelligence, structured Project Brain evidence, and source-change freshness/revalidation. The graph guides navigation but never replaces source authority. Codex remains the stable/reference adapter; Claude Code, Gemini CLI, Cursor, and OpenCode share the same vendor-neutral core through their native adapters.
+`v0.8.0` introduces **Polyglot Intelligence**: parser abstraction, Tree-sitter deep parsing for JavaScript/TypeScript/TSX, Structural Graph v3, deterministic cross-language import/symbol/call resolution, symbol-aware impact intelligence, and prioritized test intelligence. Python AST extraction and Project Brain freshness/persistence remain intact; unavailable deep parsers degrade safely to deterministic fallback. The graph guides navigation and blast-radius analysis but never replaces source authority. Codex remains the stable/reference adapter; Claude Code, Gemini CLI, Cursor, and OpenCode share the same vendor-neutral core through their native adapters.
 
 ## Support Codemium
 
