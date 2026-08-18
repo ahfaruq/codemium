@@ -1,0 +1,104 @@
+name: Publish v0.8 Benchmark Suite README
+
+on:
+  push:
+    branches:
+      - benchmark/v0.8-suite
+    paths:
+      - '.github/workflows/benchmark-suite-readme.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: benchmark/v0.8-suite
+          fetch-depth: 0
+
+      - name: Replace README benchmark section
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('README.md')
+          text = p.read_text(encoding='utf-8')
+          start = text.index('## Benchmark scenario')
+          end = text.index('## What makes Codemium different?')
+          block = '''## Benchmark suite
+
+Codemium v0.8 tracks three different engineering dimensions instead of compressing everything into one number: **competitive efficiency**, **polyglot structural coverage**, and **impact/test intelligence**.
+
+### 1. Competitive efficiency
+
+<p align="center">
+  <img src="assets/benchmark-v08-competitive.svg" alt="Codemium v0.8 competitive efficiency benchmark" width="100%" />
+</p>
+
+The four-arm efficiency scenario compares relative resource use against baseline:
+
+| vs baseline | LOC | tokens | cost | time | quality | safety |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Caveman | -18% | +5% | +4% | +2% | 100% | 100% |
+| Ponytail | -38% | -19% | -18% | -21% | 100% | 100% |
+| **Codemium v0.8** | **-45%** | **-31%** | **-29%** | **-28%** | **100%** | **100%** |
+
+### 2. Polyglot structural coverage
+
+<p align="center">
+  <img src="assets/benchmark-v08-polyglot.svg" alt="Codemium v0.8 polyglot structural coverage benchmark" width="100%" />
+</p>
+
+v0.8 moves JavaScript, JSX, TypeScript, and TSX from fallback-only structural extraction to Tree-sitter deep parsing when the Polyglot runtime is installed, while preserving Python AST extraction.
+
+| Capability | v0.7 | v0.8 |
+| --- | --- | --- |
+| Deep-parsed core extensions (`.py/.js/.jsx/.ts/.tsx`) | **1 / 5** | **5 / 5** |
+| Structural Graph | v2 | **v3** |
+| JavaScript / TypeScript / TSX | fallback | **Tree-sitter** |
+| Imported-symbol edges | — | **`IMPORTS_SYMBOL`** |
+| Cross-language edge evidence | limited | **explicit** |
+
+### 3. Impact & test intelligence
+
+<p align="center">
+  <img src="assets/benchmark-v08-impact-test.svg" alt="Codemium v0.8 impact and test intelligence benchmark" width="100%" />
+</p>
+
+The v0.8 deterministic integration fixture exercises a mixed JS/TS/TSX repository and verifies the complete path from changed symbol to affected code and tests:
+
+| Fixture signal | v0.8 result |
+| --- | ---: |
+| Tree-sitter parsed fixture files | **5 / 5** |
+| Fallback files in Polyglot fixture | **0** |
+| Verified structural dependency/test paths | **3 / 3** |
+| JavaScript → TypeScript imported-symbol/call resolution | **PASS** |
+| Changed-line → changed-symbol impact seed | **PASS** |
+| Cross-language dependent discovery | **PASS** |
+| Related test confidence | **HIGH** |
+| Prioritized test plan | **P0 / P1** |
+
+The fixture includes `legacy.js → math.ts`, `view.tsx → service.ts`, and `service.test.ts → service.ts`, then modifies `add()` in `math.ts` and verifies that Codemium finds the callers, cross-language dependent, related test, and priority test plan.
+
+See [`benchmarks/V08_BENCHMARK_SUITE.md`](benchmarks/V08_BENCHMARK_SUITE.md) for the benchmark definitions and fixture evidence.
+
+
+'''
+          p.write_text(text[:start] + block + text[end:], encoding='utf-8')
+          PY
+
+      - name: Remove one-shot publisher
+        run: git rm .github/workflows/benchmark-suite-readme.yml
+
+      - name: Commit benchmark README
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md .github/workflows/benchmark-suite-readme.yml
+          git commit -m 'docs: publish v0.8 benchmark suite'
+          git push origin HEAD:benchmark/v0.8-suite
