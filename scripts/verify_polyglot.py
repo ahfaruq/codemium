@@ -24,7 +24,7 @@ def main() -> None:
     for path in [ENGINE / "parsers.py", ENGINE / "repo_graph.py", ENGINE / "graph_query.py", ENGINE / "impact.py", ENGINE / "test_map.py", TEST]:
         py_compile.compile(str(path), doraise=True)
     parser_text = (ENGINE / "parsers.py").read_text(encoding="utf-8")
-    for phrase in ["class ParserAdapter", "class TreeSitterJSTSParser", "language_typescript", "language_tsx", "tree-sitter-javascript", "cross_language_bindings"]:
+    for phrase in ["class ParserAdapter", "class TreeSitterJSTSParser", "tree_sitter_javascript", "tree_sitter_typescript", "language_typescript", "language_tsx", "cross_language_bindings"]:
         if phrase not in parser_text: fail(f"polyglot parser contract missing: {phrase}")
     graph_text = (ENGINE / "repo_graph.py").read_text(encoding="utf-8")
     for phrase in ["GRAPH_SCHEMA_VERSION = 3", "IMPORTS_SYMBOL", "cross_language", "bindings_by_path", "tree_sitter_files"]:
