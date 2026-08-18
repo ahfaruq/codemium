@@ -1,0 +1,33 @@
+name: Publish v0.8.0 Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v0.8.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.8.0 >/dev/null 2>&1; then
+            echo 'Release v0.8.0 already exists; nothing to do.'
+            exit 0
+          fi
+          gh release create v0.8.0 \
+            --target ffcbddb8763ffad43c305073e9eb097997885f2a \
+            --title 'Codemium v0.8.0 — Polyglot Intelligence' \
+            --notes-file RELEASE_NOTES-v0.8.0.md \
+            --latest
