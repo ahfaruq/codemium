@@ -1,0 +1,67 @@
+name: Benchmark Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/benchmark-preflight.yml'
+      - 'benchmarks/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  claude-telemetry-preflight:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify benchmark credential is configured
+        shell: bash
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo 'ANTHROPIC_API_KEY is not configured for this repository.'
+            echo 'Measured Claude Code benchmark runs cannot start until the secret is available.'
+            exit 2
+          fi
+          echo 'Benchmark credential is configured.'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Show Claude Code version
+        run: claude --version
+
+      - name: Verify authenticated JSON telemetry
+        shell: bash
+        run: |
+          claude -p 'Reply with exactly BENCHMARK_AUTH_OK and do nothing else.' \
+            --model haiku \
+            --max-turns 1 \
+            --output-format json > /tmp/claude-preflight.json
+          python - <<'PY'
+          import json
+          p='/tmp/claude-preflight.json'
+          d=json.load(open(p, encoding='utf-8'))
+          if d.get('is_error'):
+              raise SystemExit('Claude Code returned an error result')
+          if 'BENCHMARK_AUTH_OK' not in str(d.get('result','')):
+              raise SystemExit('Claude Code did not return the expected marker')
+          if not isinstance(d.get('total_cost_usd'), (int, float)):
+              raise SystemExit('total_cost_usd telemetry missing')
+          if not isinstance(d.get('duration_ms'), (int, float)):
+              raise SystemExit('duration_ms telemetry missing')
+          print('Claude Code authentication and cost/duration telemetry: OK')
+          print('cost telemetry present:', True)
+          print('duration telemetry present:', True)
+          print('turn telemetry present:', isinstance(d.get('num_turns'), (int, float)))
+          PY
