@@ -8,7 +8,15 @@ Codemium uses one shared engineering core with host-native installation surfaces
 - Python 3.11+ for Codemium's deterministic engine, doctor, verification, portable Cursor/OpenCode installer, and the Codex Project Brain lifecycle hook.
 - The target coding-agent host installed and authenticated according to that host's own setup.
 
-Codemium v0.7 does **not** require a vector database, embeddings service, graph database, or LLM/API key to build its Structural Intelligence index. Python source receives standard-library AST extraction; other supported languages degrade to deterministic fallback coverage when deeper parsing is not available.
+Codemium v0.8 does **not** require a vector database, embeddings service, graph database, or LLM/API key to build its Structural Intelligence index. Python source receives standard-library AST extraction and all supported languages retain deterministic fallback coverage.
+
+For deep **Polyglot Intelligence** on JavaScript/JSX, TypeScript, and TSX, install the optional pinned Tree-sitter runtime:
+
+```sh
+python -m pip install -r requirements-polyglot.txt
+```
+
+Without those optional packages Codemium still works; JS/TS/TSX degrade to deterministic fallback parsing and health/doctor report the reduced parser capability explicitly.
 
 ## OpenAI Codex — Stable
 
@@ -23,7 +31,7 @@ Start a fresh Codex task/session after installation if the runtime has cached it
 
 ### Trust the Project Brain lifecycle hooks
 
-Codemium bundles `UserPromptSubmit` and `Stop` lifecycle hooks. They are the deterministic enforcement layer that initializes Project Brain for a Codemium turn and prevents the turn from finishing while its Project Brain persistence gate is still pending. The hook contract was introduced in `0.6.2` and remains part of v0.7.
+Codemium bundles `UserPromptSubmit` and `Stop` lifecycle hooks. They are the deterministic enforcement layer that initializes Project Brain for a Codemium turn and prevents the turn from finishing while its Project Brain persistence gate is still pending. The hook contract was introduced in `0.6.2` and remains part of v0.8.
 
 Codex intentionally does **not** auto-trust plugin command hooks. After installing or updating Codemium, open:
 
@@ -46,7 +54,7 @@ Mention the installed plugin naturally:
 @Codemium safely change this authentication flow and verify the impact
 ```
 
-Codemium automatically classifies the task and selects the smallest safe engineering depth. Structural blast-radius signals can escalate depth but never lower the safety floor. Users do not need to learn internal skill names, specify `normal`, initialize Project Brain manually, or manually initialize the structural graph before ordinary use.
+Codemium automatically classifies the task and selects the smallest safe engineering depth. Symbol-aware and cross-language blast-radius signals can escalate depth but never lower the safety floor. Users do not need to learn internal skill names, specify `normal`, initialize Project Brain manually, or manually initialize the structural graph before ordinary use.
 
 On a repository-bound Codemium task, the lifecycle hook initializes or reuses `.codemium/` when workspace-state writes are allowed and opens a per-turn persistence gate. Before the turn is allowed to finish, durable source-backed project knowledge must be captured/reused or the task must explicitly classify that it learned nothing durable. A read-only **source-code** request can still update `.codemium/`; an explicit prohibition on **all** file/workspace changes disables that bookkeeping for the task.
 
@@ -77,7 +85,7 @@ python plugins/codemium/engine/graph_query.py --root . find-symbol "AuthService"
 python plugins/codemium/engine/graph_query.py --root . callers "AuthService.refresh"
 ```
 
-`health.py` reports graph schema/freshness, parser/capability coverage, relationship provenance, unresolved relationships, and Project Brain freshness.
+`health.py` reports Graph v3 schema/freshness, Tree-sitter runtime availability, parser/language/capability coverage, cross-language relationships, provenance, unresolved relationships, and Project Brain freshness.
 
 The graph is a derived navigation/impact index. Source code remains authoritative; tests/runtime evidence remain the behavioral proof layer.
 

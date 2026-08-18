@@ -2,6 +2,20 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.8.0 — Polyglot Intelligence
+
+- Added a first-class **parser abstraction** so repository extraction is selected by deterministic parser capability instead of being embedded in the graph builder.
+- Added optional pinned **Tree-sitter** runtime packages for JavaScript/JSX, TypeScript, and TSX while keeping the core dependency-light and preserving safe regex fallback when deep parsing is unavailable.
+- Added deep JavaScript/TypeScript/TSX extraction for functions, arrow functions, classes/methods, TypeScript interfaces/types/enums, imports/exports, CommonJS bindings, calls, inheritance, and source locations.
+- Upgraded repository intelligence to **Structural Graph v3** with `IMPORTS_SYMBOL`, language metadata, import bindings, cross-language edge markers, and deterministic resolution across repository-owned relative source imports.
+- Added cross-language graph evidence such as JavaScript callers of TypeScript symbols, TSX consumers of TypeScript modules, and test imports across source boundaries.
+- Upgraded Impact Intelligence to map Git diff hunks to changed symbols before reverse traversal, with weighted relation/provenance/distance scoring, confidence, compact evidence, and explicit cross-language dependents.
+- Upgraded Test Intelligence to schema v3 with structural confidence scores, unit/integration/e2e classification, cross-language test mapping, and P0/P1/P2 prioritized test plans.
+- Extended health and doctor diagnostics with Tree-sitter availability, parser/language coverage, cross-language edge counts/relations, and Graph v3 status.
+- Added a dedicated Polyglot integration fixture proving TypeScript, TSX, JavaScript → TypeScript calls, test mapping, and symbol-aware TypeScript impact; CI tests dependency-light fallback first and installed Tree-sitter second.
+- Preserved Project Brain freshness, canonical-root persistence, Codex lifecycle gates, bounded Working Sets, Scope Guard, cache behavior, source authority, and existing host adapters.
+- Added `PRD-v0.8.md` and updated Linux/Windows release validation for v0.8.0.
+
 ## 0.7.0 — Structural Intelligence & Evidence Bridge
 
 - Upgraded Repository Intelligence from a lightweight file/symbol/import inventory to **Structural Graph v2** with FILE/TEST, MODULE, and SYMBOL entities plus `DEFINES`, `CONTAINS`, `IMPORTS`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, and aggregate `DEPENDS_ON` relationships.
