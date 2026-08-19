@@ -79,7 +79,8 @@ Record at minimum:
 - new public API surfaces;
 - duplicate implementations introduced;
 - unnecessary abstractions introduced;
-- Slop Guard findings by rule/severity/confidence;
+- Slop Guard findings by rule/severity/confidence/provenance;
+- adjudications and their source/task evidence;
 - false-positive findings;
 - necessary complexity incorrectly removed or blocked;
 - Slop Guard wall-clock overhead;
@@ -127,19 +128,51 @@ Protection examples should include legitimate:
 
 A false-positive blocker is considered more harmful than a missed cosmetic finding.
 
-## Deterministic fixture
+## Deterministic engine fixture
 
 `plugins/codemium/tests/test_slop_guard.py` is the release-regression fixture for the engine. It proves:
 
-- task-scope violations are detected;
+- task-scope violations are detected, including safe untracked files;
+- caused cleanup surfaces can be classified explicitly as `CLEANUP`;
 - added debugger/type/comment signals are reported;
 - package dependency deltas are detected;
 - Graph v3 evidence can identify a duplicate implementation and single-use forwarder;
-- strict mode fails on high-confidence blocking findings;
-- protected-complexity removal triggers the Underengineering Counter-Gate;
+- finding provenance distinguishes `introduced`, `worsened`, `pre_existing`, and `unknown` states;
+- pre-existing structural debt does not become a blocker merely because its file was touched;
+- evidence-backed `JUSTIFIED` adjudication can resolve a matched blocker without weakening the global rule;
+- strict mode fails on unresolved high-confidence blocking findings;
+- protected-complexity removal across auth/validation/rate-limit/transaction/locking/idempotency/retry/migration/compatibility/integrity/security signals triggers the Underengineering Counter-Gate;
 - no risk score is fabricated when scoreable source coverage is insufficient.
 
 This fixture validates engine mechanics. It is **not** a substitute for measured multi-arm coding-agent runs.
+
+## Release blocking-semantics calibration
+
+`benchmarks/v09-blocking-calibration.json` is a small labeled release corpus for the decision semantics of the gate. `benchmarks/calibrate_v09_blocking.py` verifies that the implementation preserves the intended outcomes for:
+
+- introduced high-confidence blockers;
+- worsened blockers;
+- pre-existing debt;
+- evidence-backed justified blockers;
+- unknown/ambiguous major findings;
+- lower-confidence blocker candidates;
+- minor non-blocking noise;
+- protected-complexity removal;
+- clean diffs.
+
+Run:
+
+```sh
+python benchmarks/calibrate_v09_blocking.py
+```
+
+This calibration is part of core CI. It is **not a competitive benchmark**, and its pass count must not be presented as an agent-quality, token-efficiency, or performance claim. Its only purpose is to prevent accidental changes in blocker precision/safety policy while v0.9 is released.
+
+## Measured multi-arm benchmark status
+
+The benchmark protocol is ready for measured `baseline` / `codemium_v08` / `codemium_v09_guard` runs, but release-blocking engine calibration and competitive measurement are deliberately separate.
+
+A v0.9 release may state that Anti-Slop Intelligence and its calibrated safety gates exist after release verification passes. It must **not** publish numeric competitive Anti-Slop improvement claims until representative multi-arm runs are performed and the raw evidence is retained.
 
 ## Publication gate
 

@@ -31,7 +31,56 @@ Do not accept or remove code merely because the aggregate risk score is high or 
 
 Classify every changed surface as `DIRECT`, `DEPENDENCY`, `CLEANUP`, or `TEST`. `UNJUSTIFIED` is temporary: either establish concrete task/architecture/safety evidence for it or remove it.
 
-Focus on engineering introduced or worsened by the current task. Do not turn a bounded task into a repository-wide cleanup campaign because unrelated historical slop exists nearby.
+A cleanup path must be caused by the current task. When task state is available, record it in `cleanup_set` or as `working_set_evidence` with `kind: cleanup`; do not call unrelated historical debt `CLEANUP` just to make the scope pass.
+
+Focus on engineering introduced or worsened by the current task. Read finding `provenance` explicitly:
+
+- `introduced` / `worsened` can gate completion;
+- `pre_existing` is historical debt unless the user asked to clean it;
+- `unknown` requires source review rather than guessed provenance.
+
+Do not turn a bounded task into a repository-wide cleanup campaign because unrelated historical slop exists nearby.
+
+## Evidence-backed adjudication
+
+When a blocker is ambiguous but legitimate engineering is supported by repository/task evidence, record a narrow `JUSTIFIED` adjudication rather than weakening the rule globally.
+
+Default file:
+
+```text
+.codemium/runtime/slop-adjudications.json
+```
+
+Example:
+
+```json
+{
+  "schema_version": 1,
+  "decisions": [
+    {
+      "rule": "DUPLICATE_IMPLEMENTATION",
+      "path": "src/adapter.py",
+      "symbol": "normalize_value",
+      "decision": "JUSTIFIED",
+      "reason": "This implementation is intentionally isolated at the adapter boundary.",
+      "evidence": [
+        {"kind": "source", "path": "src/adapter.py"},
+        {"kind": "task", "detail": "the adapter must remain dependency-isolated"}
+      ]
+    }
+  ]
+}
+```
+
+Then re-run:
+
+```sh
+python engine/slop_guard.py --root . --adjudications .codemium/runtime/slop-adjudications.json --json
+```
+
+An adjudication must match the exact finding and include a substantive reason plus concrete evidence. Invalid/unmatched decisions do not waive anything. Accepted adjudication stays visible in the report and is excluded from blocking/risk calculation.
+
+Never use adjudication to bypass the **Underengineering Counter-Gate**.
 
 ## Cleanup
 
@@ -53,7 +102,8 @@ Report:
 
 - diff scope used;
 - pass/review/fail result;
-- introduced/worsened findings that matter;
+- finding provenance that matters;
+- adjudications accepted/invalid/unmatched;
 - any protected complexity intentionally retained;
 - cleanup performed, if any;
 - verification repeated after cleanup;

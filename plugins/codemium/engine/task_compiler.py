@@ -69,7 +69,7 @@ def compile_task(text: str, requested_depth: str = "auto", model: str | None = N
         "request": text, "objective": text.strip(), "expected_behavior": "derive from request/evidence before editing",
         "likely_domain": [], "acceptance": ["requested behavior is satisfied", "relevant verification passes", "no unrelated diff", "no material unexplained uncertainty"],
         "risk": r, "requested_depth": requested_depth.lower(), "depth": depth, "depth_reason": depth_reason,
-        "reasoning": reasoning, "change_policy": policy, "created_at": now_iso(), "working_set": [],
+        "reasoning": reasoning, "change_policy": policy, "created_at": now_iso(), "working_set": [], "cleanup_set": [],
     }
 
 

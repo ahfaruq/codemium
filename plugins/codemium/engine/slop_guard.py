@@ -14,9 +14,11 @@ from typing import Any
 from common import git, read_json, state_root, write_json
 
 SCHEMA_VERSION = 1
+ADJUDICATION_SCHEMA_VERSION = 1
 SOURCE_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx"}
 TEST_MARKERS = ("/test/", "/tests/", "/__tests__/", ".test.", ".spec.")
 MAX_UNTRACKED_BYTES = 2_000_000
+PROVENANCE_VALUES = {"introduced", "worsened", "pre_existing", "unknown"}
 BLOCKING_RULES = {
     "UNJUSTIFIED_SCOPE",
     "DUPLICATE_IMPLEMENTATION",
@@ -25,21 +27,26 @@ BLOCKING_RULES = {
 }
 SEVERITY_WEIGHT = {"BLOCKER": 25, "MAJOR": 12, "MINOR": 4, "INFO": 1}
 PROTECTED_RE = re.compile(
-    r"\b(auth(?:entication|orization)?|permission|role|validat(?:e|ion)|saniti[sz](?:e|ation)|"
+    r"(?<![A-Za-z0-9])(auth(?:enticate|entication)?|authoriz(?:e|ation)|permission|role|validat(?:e|ion)|saniti[sz](?:e|ation)|"
     r"rate.?limit|transaction|rollback|lock(?:ing)?|idempoten(?:t|cy)|retry|migration|compatib(?:ility|le)|"
-    r"integrity|csrf|xss|encrypt(?:ion|ed)?|decrypt(?:ion|ed)?|signature|nonce|secret|token)\b",
+    r"integrity|csrf|xss|encrypt(?:ion|ed)?|decrypt(?:ion|ed)?|signature|nonce|secret|token)(?=[^A-Za-z0-9]|$)",
     re.I,
 )
 DEBUG_STRONG_RE = re.compile(r"\b(?:debugger\s*;?|breakpoint\s*\(|pdb\.set_trace\s*\(|console\.(?:debug|trace)\s*\()")
 DEBUG_WEAK_RE = re.compile(r"\b(?:console\.log\s*\(|print\s*\()")
 TYPE_ESCAPE_RE = re.compile(r"(?:#\s*type:\s*ignore|@ts-ignore|@ts-nocheck|\bas\s+any\b|:\s*any\b)")
 PUBLIC_API_RE = re.compile(
-    r"^\s*(?:export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\b|__all__\s*=)")
+    r"^\s*(?:export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\b|__all__\s*=)"
+)
 BROAD_EXCEPTION_RE = re.compile(r"\b(?:except\s+(?:Exception|BaseException)\b|catch\s*\([^)]*\)\s*\{?)")
 NARRATIVE_COMMENT_RE = re.compile(
     r"^\s*(?:#|//)\s*(?:increment|decrement|set|return|check|initialize|initialise|create|call|loop|iterate|"
     r"assign|update|delete|remove|add|convert|parse|format|sort|filter|map|open|close|read|write)\b",
     re.I,
+)
+JS_TS_TOP_LEVEL_RE = re.compile(
+    r"^\s*(?:export\s+(?:default\s+)?)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)",
+    re.M,
 )
 
 
@@ -61,16 +68,19 @@ class Finding:
     evidence_class: str
     autofix: str
     reason: str
-    introduced: str = "introduced"
+    provenance: str = "unknown"
     line: int | None = None
     symbol: str | None = None
     evidence: dict[str, Any] = field(default_factory=dict)
+    adjudication: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
+        provenance = self.provenance if self.provenance in PROVENANCE_VALUES else "unknown"
         out = {
             "rule": self.rule,
             "path": self.path,
-            "introduced": self.introduced,
+            "provenance": provenance,
+            "introduced": provenance,
             "severity": self.severity,
             "confidence": round(self.confidence, 2),
             "evidence_class": self.evidence_class,
@@ -82,6 +92,8 @@ class Finding:
             out["line"] = self.line
         if self.symbol:
             out["symbol"] = self.symbol
+        if self.adjudication:
+            out["adjudication"] = self.adjudication
         return out
 
 
@@ -176,12 +188,6 @@ def parse_diff(text: str) -> dict[str, DiffFile]:
 
 
 def untracked_diff_files(root: Path) -> dict[str, DiffFile]:
-    """Represent safe, readable untracked files as added diff surfaces.
-
-    `git diff` does not include untracked files, but a newly generated source/config
-    file is exactly the kind of surface Slop Guard must not miss. Codemium's own
-    state remains excluded even when a repository has not yet ignored `.codemium/`.
-    """
     raw = git(root, "ls-files", "--others", "--exclude-standard") or ""
     out: dict[str, DiffFile] = {}
     for rel in raw.splitlines():
@@ -205,8 +211,20 @@ def untracked_diff_files(root: Path) -> dict[str, DiffFile]:
     return out
 
 
+def _cleanup_scope(task: dict) -> list[str]:
+    patterns = list(task.get("cleanup_set") or [])
+    for path, evidence in (task.get("working_set_evidence") or {}).items():
+        if any(str(item.get("kind") or item.get("class") or "").lower() == "cleanup" for item in evidence if isinstance(item, dict)):
+            if path not in patterns:
+                patterns.append(path)
+    return patterns
+
+
 def _task_scope(task: dict) -> list[str]:
     patterns = list(task.get("working_set") or [])
+    for p in _cleanup_scope(task):
+        if p not in patterns:
+            patterns.append(p)
     for p in (task.get("working_set_evidence") or {}).keys():
         if p not in patterns:
             patterns.append(p)
@@ -217,11 +235,14 @@ def classify_surface(path: str, task: dict, graph: dict) -> dict[str, Any]:
     graph_file = next((f for f in graph.get("files", []) if f.get("path") == path), {})
     if graph_file.get("is_test") or _is_test_path(path):
         return {"class": "TEST", "reason": "verification/test surface"}
+    cleanup = _cleanup_scope(task)
+    if cleanup and _allowed(path, cleanup):
+        return {"class": "CLEANUP", "reason": "explicitly recorded cleanup caused by the task change"}
     patterns = _task_scope(task)
     if patterns and not _allowed(path, patterns):
         return {"class": "UNJUSTIFIED", "reason": "changed path is outside the active task working set"}
     evidence = (task.get("working_set_evidence") or {}).get(path, [])
-    graph_reasons = [x for x in evidence if x.get("kind") == "graph"]
+    graph_reasons = [x for x in evidence if isinstance(x, dict) and x.get("kind") == "graph"]
     if graph_reasons:
         best = min(graph_reasons, key=lambda x: int(x.get("distance", 99)))
         distance = int(best.get("distance", 99))
@@ -271,21 +292,61 @@ def _intersects_added(symbol: dict, diff_file: DiffFile) -> bool:
     return any(start <= line <= end for line, _ in diff_file.added)
 
 
+def _load_text_at_ref(root: Path, ref: str, path: str) -> str | None:
+    return git(root, "show", f"{ref}:{path}")
+
+
+def _python_symbol_state(text: str) -> tuple[set[str], set[str]]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return set(), set()
+    symbols: set[str] = set()
+    forwarders: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            symbols.add(node.name)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and len(node.body) == 1:
+            stmt = node.body[0]
+            if isinstance(stmt, ast.Return) and isinstance(stmt.value, ast.Call):
+                forwarders.add(node.name)
+            elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+                forwarders.add(node.name)
+    return symbols, forwarders
+
+
+def _symbol_state(path: str, text: str | None) -> tuple[set[str], set[str]]:
+    if text is None:
+        return set(), set()
+    suffix = Path(path).suffix.lower()
+    if suffix == ".py":
+        return _python_symbol_state(text)
+    if suffix in {".js", ".jsx", ".ts", ".tsx"}:
+        return set(JS_TS_TOP_LEVEL_RE.findall(text)), set()
+    return set(), set()
+
+
 def _python_forwarders(path: Path) -> set[str]:
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except (OSError, SyntaxError, UnicodeDecodeError):
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
         return set()
-    out: set[str] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or len(node.body) != 1:
-            continue
-        stmt = node.body[0]
-        if isinstance(stmt, ast.Return) and isinstance(stmt.value, ast.Call):
-            out.add(node.name)
-        elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
-            out.add(node.name)
-    return out
+    return _python_symbol_state(text)[1]
+
+
+def _structural_provenance(root: Path, scope: dict[str, str], df: DiffFile, label: str, rule: str) -> str:
+    if df.status == "added":
+        return "introduced"
+    old_path = df.old_path or df.path
+    base_text = _load_text_at_ref(root, scope["base"], old_path)
+    if base_text is None:
+        return "unknown"
+    symbols, forwarders = _symbol_state(old_path, base_text)
+    if label not in symbols:
+        return "introduced"
+    if rule == "SINGLE_USE_FORWARDER" and label not in forwarders:
+        return "worsened"
+    return "pre_existing"
 
 
 def detect_line_findings(diff_files: dict[str, DiffFile]) -> list[Finding]:
@@ -294,24 +355,24 @@ def detect_line_findings(diff_files: dict[str, DiffFile]) -> list[Finding]:
         test_path = _is_test_path(path)
         for line, text in df.added:
             if DEBUG_STRONG_RE.search(text):
-                findings.append(Finding("DEBUG_RESIDUE", path, "MAJOR", 0.99, "DETERMINISTIC", "SAFE_MECHANICAL", "debugger/breakpoint residue was added", line=line, evidence={"line": text.strip()}))
+                findings.append(Finding("DEBUG_RESIDUE", path, "MAJOR", 0.99, "DETERMINISTIC", "SAFE_MECHANICAL", "debugger/breakpoint residue was added", "introduced", line=line, evidence={"line": text.strip()}))
             elif DEBUG_WEAK_RE.search(text) and not test_path:
-                findings.append(Finding("DEBUG_RESIDUE", path, "MINOR", 0.78, "DETERMINISTIC", "REVIEW_REQUIRED", "console/print output was added to production code", line=line, evidence={"line": text.strip()}))
+                findings.append(Finding("DEBUG_RESIDUE", path, "MINOR", 0.78, "DETERMINISTIC", "REVIEW_REQUIRED", "console/print output was added to production code", "introduced", line=line, evidence={"line": text.strip()}))
             if TYPE_ESCAPE_RE.search(text) and not test_path:
-                findings.append(Finding("UNJUSTIFIED_TYPE_ESCAPE", path, "MAJOR", 0.91, "DETERMINISTIC", "REVIEW_REQUIRED", "type-system escape hatch was added", line=line, evidence={"line": text.strip()}))
+                findings.append(Finding("UNJUSTIFIED_TYPE_ESCAPE", path, "MAJOR", 0.91, "DETERMINISTIC", "REVIEW_REQUIRED", "type-system escape hatch was added", "introduced", line=line, evidence={"line": text.strip()}))
             if NARRATIVE_COMMENT_RE.search(text) and len(text.strip()) <= 100 and not test_path:
-                findings.append(Finding("NARRATIVE_COMMENT", path, "MINOR", 0.66, "DETERMINISTIC", "SAFE_MECHANICAL", "comment appears to narrate an obvious operation rather than record rationale", line=line, evidence={"line": text.strip()}))
+                findings.append(Finding("NARRATIVE_COMMENT", path, "MINOR", 0.66, "DETERMINISTIC", "SAFE_MECHANICAL", "comment appears to narrate an obvious operation rather than record rationale", "introduced", line=line, evidence={"line": text.strip()}))
             if PUBLIC_API_RE.search(text) and not test_path:
-                findings.append(Finding("UNJUSTIFIED_PUBLIC_API", path, "MINOR", 0.72, "DETERMINISTIC", "REVIEW_REQUIRED", "public/exported API surface was added and requires task-level justification", line=line, evidence={"line": text.strip()}))
+                findings.append(Finding("UNJUSTIFIED_PUBLIC_API", path, "MINOR", 0.72, "DETERMINISTIC", "REVIEW_REQUIRED", "public/exported API surface was added and requires task-level justification", "introduced", line=line, evidence={"line": text.strip()}))
             if BROAD_EXCEPTION_RE.search(text) and not test_path:
                 nearby = [t for ln, t in df.added if line < ln <= line + 5]
                 if any(re.search(r"\b(return|continue|pass|default|fallback)\b", t, re.I) for t in nearby):
-                    findings.append(Finding("SPECULATIVE_FALLBACK", path, "MAJOR", 0.76, "DETERMINISTIC", "REVIEW_REQUIRED", "broad exception path with fallback-like behavior was added", line=line, evidence={"line": text.strip(), "nearby_added": [x.strip() for x in nearby[:5]]}))
+                    findings.append(Finding("SPECULATIVE_FALLBACK", path, "MAJOR", 0.76, "DETERMINISTIC", "REVIEW_REQUIRED", "broad exception path with fallback-like behavior was added", "introduced", line=line, evidence={"line": text.strip(), "nearby_added": [x.strip() for x in nearby[:5]]}))
     return findings
 
 
 def _load_json_at_ref(root: Path, ref: str, path: str) -> dict:
-    raw = git(root, "show", f"{ref}:{path}")
+    raw = _load_text_at_ref(root, ref, path)
     if raw is None:
         return {}
     try:
@@ -336,7 +397,7 @@ def detect_dependency_findings(root: Path, scope: dict[str, str], diff_files: di
                 findings.append(Finding(
                     "UNJUSTIFIED_DEPENDENCY", "package.json", "MAJOR", 0.98, "DETERMINISTIC", "REVIEW_REQUIRED",
                     f"new {section} entry requires evidence that project/stdlib/native capability cannot satisfy the task",
-                    evidence={"dependency": name, "version": new.get(name), "section": section},
+                    "introduced", evidence={"dependency": name, "version": new.get(name), "section": section},
                 ))
     for path, df in diff_files.items():
         name = Path(path).name.lower()
@@ -344,16 +405,16 @@ def detect_dependency_findings(root: Path, scope: dict[str, str], diff_files: di
             for line, text in df.added:
                 dep = text.strip()
                 if dep and not dep.startswith(("#", "-", "git+", "http://", "https://")):
-                    findings.append(Finding("UNJUSTIFIED_DEPENDENCY", path, "MAJOR", 0.92, "DETERMINISTIC", "REVIEW_REQUIRED", "new Python dependency entry requires necessity evidence", line=line, evidence={"dependency": dep}))
+                    findings.append(Finding("UNJUSTIFIED_DEPENDENCY", path, "MAJOR", 0.92, "DETERMINISTIC", "REVIEW_REQUIRED", "new Python dependency entry requires necessity evidence", "introduced", line=line, evidence={"dependency": dep}))
         elif name in {"go.mod", "cargo.toml", "gemfile"}:
             for line, text in df.added:
                 stripped = text.strip()
                 if stripped and not stripped.startswith(("#", "//", "[")):
-                    findings.append(Finding("UNJUSTIFIED_DEPENDENCY", path, "MINOR", 0.68, "DETERMINISTIC", "REVIEW_REQUIRED", "dependency-manifest addition requires review", line=line, evidence={"line": stripped}))
+                    findings.append(Finding("UNJUSTIFIED_DEPENDENCY", path, "MINOR", 0.68, "DETERMINISTIC", "REVIEW_REQUIRED", "dependency-manifest addition requires review", "introduced", line=line, evidence={"line": stripped}))
     return findings
 
 
-def detect_structural_findings(root: Path, graph: dict, idx: dict[str, Any], diff_files: dict[str, DiffFile]) -> list[Finding]:
+def detect_structural_findings(root: Path, scope: dict[str, str], graph: dict, idx: dict[str, Any], diff_files: dict[str, DiffFile]) -> list[Finding]:
     findings: list[Finding] = []
     for path, df in diff_files.items():
         symbols = [s for s in idx["symbols_by_path"].get(path, []) if _intersects_added(s, df)]
@@ -367,9 +428,6 @@ def detect_structural_findings(root: Path, graph: dict, idx: dict[str, Any], dif
             qualified = str(sym.get("qualified_name") or label)
             inbound = int(idx["inbound"].get(sid, 0))
             peers = [x for x in idx["symbols_by_label"].get(label, []) if x.get("id") != sid and x.get("path") != path and str(x.get("subtype") or "").lower() == subtype]
-            # Same-named methods/classes are routine across unrelated types and are too
-            # noisy for a blocking duplicate signal. Reserve the high-confidence gate
-            # for top-level functions, then require source review before consolidation.
             is_top_level_function = subtype == "function" and "." not in qualified
             if label and peers and is_top_level_function:
                 function_peers = [p for p in peers if "." not in str(p.get("qualified_name") or p.get("label") or "")]
@@ -377,6 +435,7 @@ def detect_structural_findings(root: Path, graph: dict, idx: dict[str, Any], dif
                     findings.append(Finding(
                         "DUPLICATE_IMPLEMENTATION", path, "MAJOR", 0.9, "STRUCTURAL", "REVIEW_REQUIRED",
                         "a newly changed top-level function shares the same repository-level function name with an existing implementation; inspect reuse before accepting duplication",
+                        _structural_provenance(root, scope, df, label, "DUPLICATE_IMPLEMENTATION"),
                         line=sym.get("line_start"), symbol=label,
                         evidence={"existing": [{"path": p.get("path"), "symbol": p.get("qualified_name") or p.get("label")} for p in function_peers[:5]], "inbound": inbound},
                     ))
@@ -384,18 +443,21 @@ def detect_structural_findings(root: Path, graph: dict, idx: dict[str, Any], dif
                 findings.append(Finding(
                     "SINGLE_USE_FORWARDER", path, "MINOR", 0.89, "STRUCTURAL", "REVIEW_REQUIRED",
                     "single-statement forwarding function has at most one inbound structural consumer",
+                    _structural_provenance(root, scope, df, label, "SINGLE_USE_FORWARDER"),
                     line=sym.get("line_start"), symbol=label, evidence={"inbound_consumers": inbound},
                 ))
             if inbound == 0 and subtype in {"function", "method", "class", "interface"} and not label.startswith("test"):
                 findings.append(Finding(
                     "NEW_DEAD_CODE", path, "MINOR", 0.64, "STRUCTURAL", "REVIEW_REQUIRED",
-                    "newly changed symbol has no inbound structural consumer; entrypoint/reflection use must be ruled out before removal",
+                    "changed symbol has no inbound structural consumer; entrypoint/reflection use must be ruled out before removal",
+                    _structural_provenance(root, scope, df, label, "NEW_DEAD_CODE"),
                     line=sym.get("line_start"), symbol=label, evidence={"inbound_consumers": 0},
                 ))
             if subtype in {"class", "interface"} and inbound <= 1 and int(idx["implementations"].get(sid, 0)) <= 1:
                 findings.append(Finding(
                     "GRATUITOUS_ABSTRACTION", path, "MINOR", 0.67, "STRUCTURAL", "REVIEW_REQUIRED",
-                    "new abstraction has limited structural consumers/implementations and needs architecture justification",
+                    "changed abstraction has limited structural consumers/implementations and needs architecture justification",
+                    _structural_provenance(root, scope, df, label, "GRATUITOUS_ABSTRACTION"),
                     line=sym.get("line_start"), symbol=label,
                     evidence={"inbound_consumers": inbound, "implementations": int(idx["implementations"].get(sid, 0))},
                 ))
@@ -406,7 +468,7 @@ def detect_structural_findings(root: Path, graph: dict, idx: dict[str, Any], dif
                 findings.append(Finding(
                     "UNNECESSARY_FILE", path, "MINOR", 0.7, "STRUCTURAL", "REVIEW_REQUIRED",
                     "new small file contains at most one changed symbol and little structural reuse evidence",
-                    evidence={"changed_symbols": len(symbols), "code_lines": len(code_lines), "inbound_consumers": inbound_total},
+                    "introduced", evidence={"changed_symbols": len(symbols), "code_lines": len(code_lines), "inbound_consumers": inbound_total},
                 ))
     return findings
 
@@ -415,7 +477,7 @@ def detect_scope_findings(classifications: dict[str, dict[str, Any]]) -> list[Fi
     out = []
     for path, info in classifications.items():
         if info.get("class") == "UNJUSTIFIED":
-            out.append(Finding("UNJUSTIFIED_SCOPE", path, "MAJOR", 0.99, "DETERMINISTIC", "REVIEW_REQUIRED", info.get("reason") or "changed surface is not justified by active task scope"))
+            out.append(Finding("UNJUSTIFIED_SCOPE", path, "MAJOR", 0.99, "DETERMINISTIC", "REVIEW_REQUIRED", info.get("reason") or "changed surface is not justified by active task scope", "introduced"))
     return out
 
 
@@ -465,12 +527,85 @@ def coverage(graph: dict, diff_files: dict[str, DiffFile]) -> dict[str, Any]:
     }
 
 
+def _load_adjudication_payload(root: Path, spec: str | None) -> dict[str, Any]:
+    if spec:
+        candidate = Path(spec)
+        if candidate.exists():
+            try:
+                return json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return {"schema_version": ADJUDICATION_SCHEMA_VERSION, "decisions": [], "error": "invalid adjudication file"}
+        try:
+            return json.loads(spec)
+        except json.JSONDecodeError:
+            return {"schema_version": ADJUDICATION_SCHEMA_VERSION, "decisions": [], "error": "invalid adjudication JSON"}
+    return read_json(state_root(root) / "runtime/slop-adjudications.json", {"schema_version": ADJUDICATION_SCHEMA_VERSION, "decisions": []})
+
+
+def _evidence_item_valid(root: Path, item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    kind = str(item.get("kind") or "source").lower()
+    if kind == "source":
+        path = str(item.get("path") or "")
+        return bool(path) and (root / path).exists()
+    if kind in {"task", "project_brain", "runtime", "test"}:
+        return bool(item.get("ref") or item.get("path") or item.get("detail"))
+    return False
+
+
+def apply_adjudications(root: Path, findings: list[Finding], payload: dict[str, Any]) -> dict[str, Any]:
+    decisions = payload.get("decisions", []) if isinstance(payload, dict) else []
+    accepted = invalid = unmatched = 0
+    for decision in decisions if isinstance(decisions, list) else []:
+        if not isinstance(decision, dict) or str(decision.get("decision") or "").upper() != "JUSTIFIED":
+            invalid += 1
+            continue
+        reason = str(decision.get("reason") or "").strip()
+        evidence = decision.get("evidence") or []
+        valid = len(reason) >= 12 and isinstance(evidence, list) and evidence and all(_evidence_item_valid(root, item) for item in evidence)
+        if not valid:
+            invalid += 1
+            continue
+        matched = False
+        for finding in findings:
+            if decision.get("rule") != finding.rule or decision.get("path") != finding.path:
+                continue
+            if decision.get("line") is not None and int(decision["line"]) != finding.line:
+                continue
+            if decision.get("symbol") and decision.get("symbol") != finding.symbol:
+                continue
+            finding.adjudication = {
+                "status": "accepted",
+                "decision": "JUSTIFIED",
+                "reason": reason,
+                "evidence": evidence,
+            }
+            matched = True
+        if matched:
+            accepted += 1
+        else:
+            unmatched += 1
+    return {
+        "schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "accepted": accepted,
+        "invalid": invalid,
+        "unmatched": unmatched,
+        "provided": len(decisions) if isinstance(decisions, list) else 0,
+        "source": "explicit/default runtime adjudication payload",
+    }
+
+
+def _is_justified(finding: Finding) -> bool:
+    return bool(finding.adjudication and finding.adjudication.get("status") == "accepted")
+
+
 def risk_score(findings: list[Finding], scoreable: bool) -> int | None:
     if not scoreable:
         return None
     total = 0.0
     for f in findings:
-        if f.introduced not in {"introduced", "worsened"}:
+        if f.provenance not in {"introduced", "worsened"} or _is_justified(f):
             continue
         total += SEVERITY_WEIGHT.get(f.severity, 1) * f.confidence
     return min(100, int(round(total)))
@@ -480,7 +615,7 @@ def dedupe_findings(findings: list[Finding]) -> list[Finding]:
     seen = set()
     out = []
     for f in findings:
-        key = (f.rule, f.path, f.line, f.symbol, f.reason)
+        key = (f.rule, f.path, f.line, f.symbol, f.reason, f.provenance)
         if key in seen:
             continue
         seen.add(key)
@@ -490,16 +625,18 @@ def dedupe_findings(findings: list[Finding]) -> list[Finding]:
 
 def verdict(findings: list[Finding], protected: dict[str, Any]) -> str:
     for f in findings:
-        if f.introduced in {"introduced", "worsened"} and f.confidence >= 0.85 and (f.severity == "BLOCKER" or f.rule in BLOCKING_RULES):
+        if _is_justified(f):
+            continue
+        if f.provenance in {"introduced", "worsened"} and f.confidence >= 0.85 and (f.severity == "BLOCKER" or f.rule in BLOCKING_RULES):
             return "fail"
     if protected["underengineering_gate"]["status"] != "pass":
         return "review"
-    if any(f.severity == "MAJOR" and f.confidence >= 0.6 for f in findings):
+    if any(not _is_justified(f) and f.provenance in {"introduced", "worsened", "unknown"} and f.severity == "MAJOR" and f.confidence >= 0.6 for f in findings):
         return "review"
     return "pass"
 
 
-def analyze(root: Path, base: str | None = None, head: str | None = None) -> dict[str, Any]:
+def analyze(root: Path, base: str | None = None, head: str | None = None, adjudications: str | None = None) -> dict[str, Any]:
     root = root.resolve()
     state = state_root(root)
     task = read_json(state / "tasks/active.json", {})
@@ -511,16 +648,18 @@ def analyze(root: Path, base: str | None = None, head: str | None = None) -> dic
             diff_files.setdefault(path, diff_file)
     classifications = {path: classify_surface(path, task, graph) for path in sorted(diff_files)}
     idx = graph_indexes(graph)
-    findings = []
+    findings: list[Finding] = []
     findings.extend(detect_scope_findings(classifications))
     findings.extend(detect_line_findings(diff_files))
     findings.extend(detect_dependency_findings(root, scope, diff_files))
-    findings.extend(detect_structural_findings(root, graph, idx, diff_files))
+    findings.extend(detect_structural_findings(root, scope, graph, idx, diff_files))
     findings = dedupe_findings(findings)
+    adjudication_summary = apply_adjudications(root, findings, _load_adjudication_payload(root, adjudications))
     protected = protected_complexity(diff_files)
     cov = coverage(graph, diff_files)
     status = verdict(findings, protected)
     classes = Counter(x.get("class") for x in classifications.values())
+    provenance_counts = Counter(f.provenance for f in findings)
     return {
         "schema_version": SCHEMA_VERSION,
         "status": status,
@@ -537,7 +676,9 @@ def analyze(root: Path, base: str | None = None, head: str | None = None) -> dic
             "unjustified": classes.get("UNJUSTIFIED", 0),
         },
         "surface_classification": classifications,
+        "finding_provenance": {k: provenance_counts.get(k, 0) for k in sorted(PROVENANCE_VALUES)},
         "findings": [f.as_dict() for f in findings],
+        "adjudication": adjudication_summary,
         "protected_complexity": protected,
         "underengineering_gate": protected["underengineering_gate"],
     }
@@ -556,17 +697,20 @@ def human_report(report: dict[str, Any]) -> str:
         f"Status: {report['status'].upper()}",
         "",
         "Surfaces: " + ", ".join(f"{k}={v}" for k, v in report["surfaces"].items()),
+        "Finding provenance: " + ", ".join(f"{k}={v}" for k, v in report["finding_provenance"].items()),
+        f"Adjudication: accepted={report['adjudication']['accepted']}, invalid={report['adjudication']['invalid']}, unmatched={report['adjudication']['unmatched']}",
         f"Underengineering gate: {report['underengineering_gate']['status'].upper()}",
     ]
     findings = report.get("findings", [])
     if findings:
-        lines.extend(["", "Introduced findings:"])
+        lines.extend(["", "Findings:"])
         for f in findings:
             loc = f"{f['path']}:{f['line']}" if f.get("line") else f["path"]
             symbol = f" [{f['symbol']}]" if f.get("symbol") else ""
-            lines.append(f"- {f['severity']} {f['rule']} @ {loc}{symbol} ({f['confidence']:.0%})")
+            adjudicated = " JUSTIFIED" if (f.get("adjudication") or {}).get("status") == "accepted" else ""
+            lines.append(f"- {f['severity']} {f['rule']} @ {loc}{symbol} [{f['provenance']}] ({f['confidence']:.0%}){adjudicated}")
     else:
-        lines.extend(["", "Introduced findings: none"])
+        lines.extend(["", "Findings: none"])
     return "\n".join(lines)
 
 
@@ -575,11 +719,12 @@ def main() -> None:
     ap.add_argument("--root", default=".")
     ap.add_argument("--base")
     ap.add_argument("--head")
+    ap.add_argument("--adjudications", help="JSON string or path; defaults to .codemium/runtime/slop-adjudications.json")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--write-state", action="store_true")
     ap.add_argument("--strict", action="store_true")
     ns = ap.parse_args()
-    report = analyze(Path(ns.root), ns.base, ns.head)
+    report = analyze(Path(ns.root), ns.base, ns.head, ns.adjudications)
     if ns.write_state:
         write_json(state_root(Path(ns.root)) / "runtime/slop-report.json", report)
     print(json.dumps(report, indent=2, ensure_ascii=False) if ns.json else human_report(report))

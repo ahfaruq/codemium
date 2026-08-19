@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "purpose": "Release calibration corpus for v0.9 blocking semantics; not a competitive performance benchmark.",
+  "cases": [
+    {
+      "id": "introduced_scope_blocks",
+      "expected_status": "fail",
+      "findings": [{"rule":"UNJUSTIFIED_SCOPE","path":"src/unrelated.py","severity":"MAJOR","confidence":0.99,"provenance":"introduced"}]
+    },
+    {
+      "id": "worsened_duplicate_blocks",
+      "expected_status": "fail",
+      "findings": [{"rule":"DUPLICATE_IMPLEMENTATION","path":"src/service.py","severity":"MAJOR","confidence":0.90,"provenance":"worsened"}]
+    },
+    {
+      "id": "introduced_dependency_blocks",
+      "expected_status": "fail",
+      "findings": [{"rule":"UNJUSTIFIED_DEPENDENCY","path":"package.json","severity":"MAJOR","confidence":0.98,"provenance":"introduced"}]
+    },
+    {
+      "id": "pre_existing_duplicate_does_not_block",
+      "expected_status": "pass",
+      "findings": [{"rule":"DUPLICATE_IMPLEMENTATION","path":"src/legacy.py","severity":"MAJOR","confidence":0.90,"provenance":"pre_existing"}]
+    },
+    {
+      "id": "justified_blocker_does_not_block",
+      "expected_status": "pass",
+      "findings": [{"rule":"DUPLICATE_IMPLEMENTATION","path":"src/adapter.py","severity":"MAJOR","confidence":0.90,"provenance":"introduced","justified":true}]
+    },
+    {
+      "id": "unknown_major_requires_review",
+      "expected_status": "review",
+      "findings": [{"rule":"SPECULATIVE_FALLBACK","path":"src/client.py","severity":"MAJOR","confidence":0.76,"provenance":"unknown"}]
+    },
+    {
+      "id": "low_confidence_blocker_requires_review_not_fail",
+      "expected_status": "review",
+      "findings": [{"rule":"UNJUSTIFIED_PUBLIC_API","path":"src/api.ts","severity":"MAJOR","confidence":0.72,"provenance":"introduced"}]
+    },
+    {
+      "id": "minor_comment_is_nonblocking",
+      "expected_status": "pass",
+      "findings": [{"rule":"NARRATIVE_COMMENT","path":"src/math.py","severity":"MINOR","confidence":0.66,"provenance":"introduced"}]
+    },
+    {
+      "id": "protected_removal_requires_review",
+      "expected_status": "review",
+      "protected_removal": true,
+      "findings": []
+    },
+    {
+      "id": "clean_diff_passes",
+      "expected_status": "pass",
+      "findings": []
+    }
+  ]
+}

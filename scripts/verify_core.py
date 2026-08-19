@@ -45,6 +45,7 @@ def main() -> None:
 
     fixture = TESTS / "test_core_fixture.py"
     slop_fixture = TESTS / "test_slop_guard.py"
+    calibration = ROOT / "benchmarks/calibrate_v09_blocking.py"
 
     brain = (ENGINE / "project_brain.py").read_text(encoding="utf-8")
     for phrase in ["GENERIC_REASONING", "TRANSIENT_IGNORE", "tasks/active.json", "host_profiles", "def capture(", "find_active_duplicate", "init(root, emit=False)", "def entry_freshness(", "NEEDS_REVALIDATION", "def revalidate("]:
@@ -81,8 +82,9 @@ def main() -> None:
 
     slop = (ENGINE / "slop_guard.py").read_text(encoding="utf-8")
     for phrase in [
-        "SCHEMA_VERSION = 1", "UNJUSTIFIED_SCOPE", "DUPLICATE_IMPLEMENTATION", "UNJUSTIFIED_DEPENDENCY",
-        "UNJUSTIFIED_PUBLIC_API", "protected_complexity", "underengineering_gate", "scoreable", "risk_score", "--strict",
+        "SCHEMA_VERSION = 1", "ADJUDICATION_SCHEMA_VERSION = 1", "PROVENANCE_VALUES", "UNJUSTIFIED_SCOPE",
+        "DUPLICATE_IMPLEMENTATION", "UNJUSTIFIED_DEPENDENCY", "UNJUSTIFIED_PUBLIC_API", "cleanup_set",
+        "protected_complexity", "underengineering_gate", "scoreable", "risk_score", "--adjudications", "--strict",
     ]:
         if phrase not in slop:
             fail(f"Anti-Slop contract missing: {phrase}")
@@ -102,6 +104,7 @@ def main() -> None:
 
     run_fixture(fixture, "host-agnostic core")
     run_fixture(slop_fixture, "v0.9 Slop Guard")
+    run_fixture(calibration, "v0.9 blocking calibration")
 
     print(json.dumps({
         "status": "pass", "version": version, "scope": "codemium-core",
@@ -115,7 +118,10 @@ def main() -> None:
             "automatic Project Brain initialization/capture",
             "generic task/depth contract",
             "task-aware Slop Guard + coverage honesty",
+            "finding provenance + evidence-backed adjudication",
+            "CLEANUP surface classification",
             "Underengineering Counter-Gate",
+            "blocking-rule calibration corpus",
             "host-agnostic core + Anti-Slop fixtures",
         ],
     }, indent=2))
