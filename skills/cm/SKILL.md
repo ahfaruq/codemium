@@ -1,6 +1,6 @@
 ---
 name: cm
-description: Use Codemium for software-engineering tasks that benefit from persistent project understanding, evidence-backed polyglot structural intelligence, bounded context, scoped changes, risk-aware testing, or explicit fast/deep/critical depth. Trigger for project-aware implementation, debugging, review, testing, refactoring, migration, security, cross-language JavaScript/TypeScript/TSX work, or when the user asks to reduce relearning/context waste without reducing engineering quality.
+description: Use Codemium for software-engineering tasks that benefit from persistent project understanding, evidence-backed polyglot structural intelligence, bounded context, scoped changes, risk-aware testing, v0.9 Anti-Slop / Slop Guard review, or explicit fast/deep/critical depth. Trigger for project-aware implementation, debugging, review, testing, refactoring, migration, security, cross-language JavaScript/TypeScript/TSX work, or when the user asks to reduce relearning/context waste without reducing engineering quality.
 argument-hint: "[fast|deep|critical] <coding task>"
 compatibility: "Claude Code, Gemini CLI, Cursor, OpenCode, and Agent Skills-compatible hosts"
 metadata:
@@ -9,7 +9,7 @@ metadata:
 
 # Codemium — portable Agent Skill
 
-Operate as a senior engineer who already knows this repository. Optimize for the **smallest justified engineering change** and minimum relearning, not minimum LOC.
+Operate as a senior engineer who already knows this repository. Optimize for the **minimum justified engineering surface** and minimum relearning, not minimum LOC.
 
 ## Resolve task and depth
 
@@ -85,7 +85,7 @@ Codemium ships a canonical Python engine. Use it when it reduces model work or s
 - Repository-root extension installs contain the canonical engine under `plugins/codemium/engine/`.
 - If the host exposes neither path reliably, preserve Codemium behavior using normal repository tools rather than guessing an extension path.
 
-Typical helper operations include Project Brain initialization/capture/freshness, repository Graph v3 refresh/query, parser health, graph-assisted Working Set ranking, symbol-aware impact, prioritized test mapping, cache checks, health, and telemetry. When available, `project_brain.py ... capture --entries <json-or-file>` is the preferred deterministic path for storing a small batch of durable facts.
+Typical helper operations include Project Brain initialization/capture/freshness, repository Graph v3 refresh/query, parser health, graph-assisted Working Set ranking, symbol-aware impact, prioritized test mapping, **Slop Guard**, cache checks, health, and telemetry. When available, `project_brain.py ... capture --entries <json-or-file>` is the preferred deterministic path for storing a small batch of durable facts.
 
 Do not run expensive helpers mechanically when the task is already obvious and local. Project Brain initialization/capture is different: it is lightweight state management and should happen when persistence is applicable.
 
@@ -103,10 +103,40 @@ Every changed hunk must trace to the requested task, a necessary dependency chan
 
 Minimal production code never means minimal tests. Verification follows behavior, failure modes, blast radius, and risk. Structurally related tests are candidates; confidence, actual source, and runtime/test evidence determine sufficiency.
 
+## Anti-Slop Intelligence — v0.9
+
+For normal source-changing work, run the task-aware **Slop Guard** near completion when `engine/slop_guard.py` is available. The goal is minimum justified engineering, not the smallest diff.
+
+Default Guard Mode is changed-surface-first:
+
+```text
+actual task diff
+→ changed symbols
+→ bounded graph evidence
+→ relevant source/tests
+```
+
+- Classify changed surfaces as `DIRECT`, `DEPENDENCY`, `CLEANUP`, or `TEST`. An internal `UNJUSTIFIED` surface must be justified with evidence or removed before completion.
+- Focus on slop introduced or worsened by the current task; do not convert unrelated historical debt into an unrequested cleanup project.
+- Prefer deterministic evidence, then Structural Graph v3 evidence, then evidence-backed reasoning for ambiguity.
+- Treat Slop Risk as informational. Honor coverage/scoreability and never fabricate a score when the helper cannot inspect enough of the changed source.
+- Resolve high-confidence blockers such as unjustified scope, duplicate implementation, unjustified dependency, or unjustified public API expansion before stopping.
+- Run the **Underengineering Counter-Gate** before accepting simplification. Preserve required authentication/authorization, validation/sanitization, rate limiting, transactions/locking/idempotency, retry behavior, data-integrity checks, migration/compatibility paths, security checks, and tests.
+- Only low-risk, high-confidence mechanical cleanup may be automatic. Abstraction/fallback/dependency/public-API/compatibility/test changes require review.
+- If cleanup changes source, re-run affected and impact-mapped tests, inspect the new actual diff, and run Slop Guard again. High-impact simplification requires a logically separate review pass.
+
+Typical portable invocation:
+
+```sh
+python engine/slop_guard.py --root . --json --write-state
+```
+
+Use `references/slop-policy.md` when a finding is ambiguous or cleanup could affect architecture/safety.
+
 ## Host reasoning
 
 Codemium engineering depth is portable. Vendor model/thinking controls remain host-owned unless a documented per-task mechanism exists and the host confirms the effective setting. Never claim a reasoning setting changed without confirmation.
 
 ## Completion
 
-Before stopping, classify Project Brain persistence as **captured**, **reused**, **none**, or **skipped by user constraint**. Revalidate any relevant `NEEDS_REVALIDATION` knowledge before materially relying on it. Then stop when requested behavior is satisfied, relevant verification passes, scope is clean, architecture/security constraints are preserved, persistence/freshness obligations are satisfied, and no material unexplained uncertainty remains. Continue only when you can name the unresolved risk or persistence obligation the next operation will reduce.
+Before stopping, classify Project Brain persistence as **captured**, **reused**, **none**, or **skipped by user constraint**. Revalidate any relevant `NEEDS_REVALIDATION` knowledge before materially relying on it. Then stop when requested behavior is satisfied, relevant verification passes, scope is clean, Slop Guard/justified-surface obligations are resolved, the Underengineering Counter-Gate is satisfied, architecture/security constraints are preserved, persistence/freshness obligations are satisfied, and no material unexplained uncertainty remains. Continue only when you can name the unresolved risk, unjustified surface, underengineering concern, or persistence obligation the next operation will reduce.
