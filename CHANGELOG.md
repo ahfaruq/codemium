@@ -2,6 +2,22 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.9.0 — Anti-Slop Intelligence
+
+- Added the task-aware **Justified Change Gate**, exposed publicly as **Slop Guard**, so source-changing work is reviewed for the minimum justified engineering surface before completion.
+- Added changed-surface classification for `DIRECT`, `DEPENDENCY`, explicit caused `CLEANUP`, `TEST`, and internal `UNJUSTIFIED` work, including safe/readable untracked files while excluding `.codemium/` state.
+- Added explicit finding provenance: `introduced`, `worsened`, `pre_existing`, and `unknown`. High-confidence blocker semantics focus on newly introduced/worsened engineering rather than turning historical debt into task scope.
+- Added deterministic base-revision comparison for structural provenance where source parsing can prove whether a suspicious symbol/property already existed.
+- Added evidence-backed `JUSTIFIED` adjudication through `.codemium/runtime/slop-adjudications.json` or `--adjudications`; decisions must match the finding and contain a substantive reason plus concrete source/task evidence.
+- Added the **Underengineering Counter-Gate** so simplification does not silently remove necessary authentication/authorization, validation/sanitization, rate limiting, transactions/locking/idempotency, retry, data-integrity, migration/compatibility, security, or test behavior.
+- Added deterministic line/dependency signals and Graph v3 structural signals for scope pollution, duplicate implementations, single-use forwarding helpers, unnecessary files/abstractions, debug residue, type escapes, speculative fallback, public API expansion, and related engineering noise.
+- Added analysis coverage and scoreability reporting. Slop Risk remains informational and is omitted when changed-source coverage is insufficient rather than fabricating precision.
+- Added `$cm-slop`, a shared Anti-Slop policy, normal `@Codemium` lifecycle integration, JSON/human reports, strict gating, and persisted transient Slop Guard reports.
+- Added regression fixtures for introduced/worsened/pre-existing provenance, evidence-backed adjudication, cleanup classification, untracked files, duplicate-signal precision, and protected-complexity removal.
+- Added `benchmarks/v09-blocking-calibration.json` plus `benchmarks/calibrate_v09_blocking.py` to keep release blocker semantics high-precision in Core CI.
+- Added the v0.9 Anti-Slop benchmark protocol while keeping competitive performance claims evidence-gated. Release calibration is not presented as a numeric agent-quality or efficiency benchmark.
+- Preserved v0.8 Polyglot Intelligence, Structural Graph v3, symbol-aware impact/test intelligence, Project Brain freshness/persistence, bounded Working Sets, and existing host adapters.
+
 ## 0.8.0 — Polyglot Intelligence
 
 - Added a first-class **parser abstraction** so repository extraction is selected by deterministic parser capability instead of being embedded in the graph builder.
