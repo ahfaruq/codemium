@@ -16,6 +16,7 @@ from common import git, read_json, state_root, write_json
 SCHEMA_VERSION = 1
 SOURCE_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx"}
 TEST_MARKERS = ("/test/", "/tests/", "/__tests__/", ".test.", ".spec.")
+MAX_UNTRACKED_BYTES = 2_000_000
 BLOCKING_RULES = {
     "UNJUSTIFIED_SCOPE",
     "DUPLICATE_IMPLEMENTATION",
@@ -172,6 +173,36 @@ def parse_diff(text: str) -> dict[str, DiffFile]:
             old_line += 1
             new_line += 1
     return files
+
+
+def untracked_diff_files(root: Path) -> dict[str, DiffFile]:
+    """Represent safe, readable untracked files as added diff surfaces.
+
+    `git diff` does not include untracked files, but a newly generated source/config
+    file is exactly the kind of surface Slop Guard must not miss. Codemium's own
+    state remains excluded even when a repository has not yet ignored `.codemium/`.
+    """
+    raw = git(root, "ls-files", "--others", "--exclude-standard") or ""
+    out: dict[str, DiffFile] = {}
+    for rel in raw.splitlines():
+        path = rel.strip().replace("\\", "/")
+        if not path or path == ".codemium" or path.startswith(".codemium/"):
+            continue
+        full = root / path
+        try:
+            data = full.read_bytes()
+        except OSError:
+            continue
+        if len(data) > MAX_UNTRACKED_BYTES or b"\x00" in data:
+            continue
+        text = data.decode("utf-8", errors="ignore")
+        out[path] = DiffFile(
+            path=path,
+            old_path=None,
+            status="added",
+            added=[(line_no, line) for line_no, line in enumerate(text.splitlines(), start=1)],
+        )
+    return out
 
 
 def _task_scope(task: dict) -> list[str]:
@@ -333,15 +364,22 @@ def detect_structural_findings(root: Path, graph: dict, idx: dict[str, Any], dif
             sid = sym.get("id")
             label = str(sym.get("label") or "")
             subtype = str(sym.get("subtype") or "").lower()
+            qualified = str(sym.get("qualified_name") or label)
             inbound = int(idx["inbound"].get(sid, 0))
             peers = [x for x in idx["symbols_by_label"].get(label, []) if x.get("id") != sid and x.get("path") != path and str(x.get("subtype") or "").lower() == subtype]
-            if label and peers:
-                findings.append(Finding(
-                    "DUPLICATE_IMPLEMENTATION", path, "MAJOR", 0.86, "STRUCTURAL", "REVIEW_REQUIRED",
-                    "a newly changed symbol shares the same repository-level symbol name/type with an existing implementation; inspect reuse before accepting duplication",
-                    line=sym.get("line_start"), symbol=label,
-                    evidence={"existing": [{"path": p.get("path"), "symbol": p.get("qualified_name") or p.get("label")} for p in peers[:5]], "inbound": inbound},
-                ))
+            # Same-named methods/classes are routine across unrelated types and are too
+            # noisy for a blocking duplicate signal. Reserve the high-confidence gate
+            # for top-level functions, then require source review before consolidation.
+            is_top_level_function = subtype == "function" and "." not in qualified
+            if label and peers and is_top_level_function:
+                function_peers = [p for p in peers if "." not in str(p.get("qualified_name") or p.get("label") or "")]
+                if function_peers:
+                    findings.append(Finding(
+                        "DUPLICATE_IMPLEMENTATION", path, "MAJOR", 0.9, "STRUCTURAL", "REVIEW_REQUIRED",
+                        "a newly changed top-level function shares the same repository-level function name with an existing implementation; inspect reuse before accepting duplication",
+                        line=sym.get("line_start"), symbol=label,
+                        evidence={"existing": [{"path": p.get("path"), "symbol": p.get("qualified_name") or p.get("label")} for p in function_peers[:5]], "inbound": inbound},
+                    ))
             if subtype in {"function", "method"} and label in py_forwarders and inbound <= 1:
                 findings.append(Finding(
                     "SINGLE_USE_FORWARDER", path, "MINOR", 0.89, "STRUCTURAL", "REVIEW_REQUIRED",
@@ -468,6 +506,9 @@ def analyze(root: Path, base: str | None = None, head: str | None = None) -> dic
     graph = read_json(state / "repository/graph.json", {})
     scope = resolve_diff_scope(root, base, head, task)
     diff_files = parse_diff(get_diff(root, scope))
+    if scope["head"] == "WORKTREE":
+        for path, diff_file in untracked_diff_files(root).items():
+            diff_files.setdefault(path, diff_file)
     classifications = {path: classify_surface(path, task, graph) for path in sorted(diff_files)}
     idx = graph_indexes(graph)
     findings = []
