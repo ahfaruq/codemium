@@ -33,7 +33,8 @@ def commit(root: Path, message: str = "initial") -> None:
 
 def main() -> None:
     # Introduced-slop fixture: task scope, line-level smells, dependency delta,
-    # duplicate implementation, and single-use forwarder must all be evidence-backed.
+    # duplicate implementation, single-use forwarder, and untracked source files
+    # must all be visible to the gate.
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         (root / "src").mkdir()
@@ -59,6 +60,7 @@ def main() -> None:
             encoding="utf-8",
         )
         (root / "src/unrelated.py").write_text("def untouched():\n    return 2\n", encoding="utf-8")
+        (root / "src/new_helper.py").write_text("def new_helper():\n    return True\n", encoding="utf-8")
         (root / "package.json").write_text(
             json.dumps({"dependencies": {"left-pad": "1.3.0"}}, indent=2) + "\n", encoding="utf-8"
         )
@@ -102,7 +104,9 @@ def main() -> None:
         ]:
             assert rule in rules, (rule, rules)
         assert report["status"] == "fail", report
-        assert report["surfaces"]["unjustified"] == 1
+        assert report["changed_files"] == 4, report["surface_classification"]
+        assert report["surfaces"]["unjustified"] == 2
+        assert report["surface_classification"]["src/new_helper.py"]["class"] == "UNJUSTIFIED"
         assert report["scoreable"] is True and report["risk_score"] is not None
         assert report["underengineering_gate"]["status"] == "pass"
 
@@ -151,7 +155,46 @@ def main() -> None:
         assert report["status"] == "review", report
         assert report["risk_score"] is None and report["scoreable"] is False
 
-    print("PASS: Codemium v0.9 Slop Guard deterministic + structural + underengineering fixture")
+    # Duplicate detection must stay high precision. Same-named methods on unrelated
+    # classes are common and must not trigger the blocking duplicate rule.
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "src").mkdir()
+        init_repo(root)
+        (root / "src/a.py").write_text(
+            "class A:\n    def save(self, value):\n        return value\n",
+            encoding="utf-8",
+        )
+        (root / "src/b.py").write_text("class B:\n    pass\n", encoding="utf-8")
+        commit(root)
+        (root / "src/b.py").write_text(
+            "class B:\n    def save(self, value):\n        return value\n",
+            encoding="utf-8",
+        )
+
+        state = root / ".codemium"
+        (state / "tasks").mkdir(parents=True)
+        (state / "repository").mkdir()
+        (state / "tasks/active.json").write_text(json.dumps({"working_set": ["src/b.py"]}), encoding="utf-8")
+        graph = {
+            "files": [
+                {"path": "src/a.py", "language": "python", "is_test": False, "parser": "python-ast", "capabilities": {"symbols": True}},
+                {"path": "src/b.py", "language": "python", "is_test": False, "parser": "python-ast", "capabilities": {"symbols": True}},
+            ],
+            "nodes": [
+                {"id": "s:a:save", "type": "SYMBOL", "subtype": "method", "label": "save", "qualified_name": "A.save", "path": "src/a.py", "line_start": 2, "line_end": 3},
+                {"id": "s:b:save", "type": "SYMBOL", "subtype": "method", "label": "save", "qualified_name": "B.save", "path": "src/b.py", "line_start": 2, "line_end": 3},
+            ],
+            "edges": [],
+        }
+        (state / "repository/graph.json").write_text(json.dumps(graph), encoding="utf-8")
+
+        p = run(sys.executable, ENGINE / "slop_guard.py", "--root", root, "--base", "HEAD", "--json")
+        report = json.loads(p.stdout)
+        duplicate_methods = [f for f in report["findings"] if f["rule"] == "DUPLICATE_IMPLEMENTATION" and f.get("symbol") == "save"]
+        assert duplicate_methods == [], duplicate_methods
+
+    print("PASS: Codemium v0.9 Slop Guard tracked/untracked + structural + underengineering fixture")
 
 
 if __name__ == "__main__":
