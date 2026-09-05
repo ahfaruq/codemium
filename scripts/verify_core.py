@@ -14,7 +14,7 @@ TESTS = ROOT / "plugins/codemium/tests"
 
 REQUIRED_ENGINE = [
     "common.py", "project_brain.py", "parsers.py", "repo_graph.py", "graph_query.py", "working_set.py", "impact.py",
-    "scope_guard.py", "slop_guard.py", "test_map.py", "cache.py", "telemetry.py", "health.py", "reasoning_profile.py", "task_compiler.py",
+    "scope_guard.py", "slop_guard.py", "execution_guard.py", "test_map.py", "cache.py", "telemetry.py", "health.py", "reasoning_profile.py", "task_compiler.py",
 ]
 
 
@@ -45,6 +45,7 @@ def main() -> None:
 
     fixture = TESTS / "test_core_fixture.py"
     slop_fixture = TESTS / "test_slop_guard.py"
+    execution_fixture = TESTS / "test_execution_guard.py"
     calibration = ROOT / "benchmarks/calibrate_v09_blocking.py"
 
     brain = (ENGINE / "project_brain.py").read_text(encoding="utf-8")
@@ -79,6 +80,9 @@ def main() -> None:
         fail("normal task compilation must auto-initialize Project Brain")
     if "apply_structural_escalation" not in compiler:
         fail("task compiler must consume structural risk")
+    for phrase in ["execution_policy", "evidence_delta_gate", "ui_stabilization_required", "repeated investigation either produces material evidence or stops"]:
+        if phrase not in compiler:
+            fail(f"v0.10 task execution contract missing: {phrase}")
 
     slop = (ENGINE / "slop_guard.py").read_text(encoding="utf-8")
     for phrase in [
@@ -89,21 +93,41 @@ def main() -> None:
         if phrase not in slop:
             fail(f"Anti-Slop contract missing: {phrase}")
 
+    execution = (ENGINE / "execution_guard.py").read_text(encoding="utf-8")
+    for phrase in [
+        "Every action must buy information or produce the solution.",
+        "unresolved_contradictions", "evidence_fingerprint", "REPEAT_SENSITIVE_ACTIONS",
+        "NEW_EVIDENCE", "NECESSARY_MUTATION", "REQUIRED_VERIFICATION", "NO_GAIN",
+        "unstabilized negative screenshot", "rejected_evidence_fingerprint", "--override-reason",
+    ]:
+        if phrase not in execution:
+            fail(f"Execution Intelligence contract missing: {phrase}")
+
     codex_skill = (ROOT / "plugins/codemium/skills/codemium/SKILL.md").read_text(encoding="utf-8")
     for phrase in [
         "Project Brain persistence contract", "Do **not** require the user to run `$cm-init` first", "Persistence gate",
         "captured", "skipped by user constraint", "Slop Guard", "Underengineering Counter-Gate",
+        "Execution Intelligence", "Evidence Delta Gate", "Every action must buy information or produce the solution.",
     ]:
         if phrase not in codex_skill:
             fail(f"Codex behavior missing: {phrase}")
 
     portable_skill = (ROOT / "skills/cm/SKILL.md").read_text(encoding="utf-8")
-    for phrase in ["minimum justified engineering", "Slop Guard", "Underengineering Counter-Gate"]:
+    for phrase in [
+        "minimum justified engineering", "Slop Guard", "Underengineering Counter-Gate",
+        "Execution Intelligence", "Evidence Delta Gate", "Every action must buy information or produce the solution.",
+    ]:
         if phrase not in portable_skill:
-            fail(f"portable Anti-Slop behavior missing: {phrase}")
+            fail(f"portable Codemium behavior missing: {phrase}")
+
+    execution_policy = (ROOT / "plugins/codemium/skills/codemium/references/execution-policy.md").read_text(encoding="utf-8")
+    for phrase in ["Evidence before mutation", "Contradiction Gate", "UI runtime truth order", "Hypothesis Ledger", "Evidence Delta Gate", "No arbitrary token/action budget"]:
+        if phrase not in execution_policy:
+            fail(f"Execution policy missing: {phrase}")
 
     run_fixture(fixture, "host-agnostic core")
     run_fixture(slop_fixture, "v0.9 Slop Guard")
+    run_fixture(execution_fixture, "v0.10 Execution Intelligence")
     run_fixture(calibration, "v0.9 blocking calibration")
 
     print(json.dumps({
@@ -116,13 +140,16 @@ def main() -> None:
             "incremental graph refresh",
             "symbol-aware impact/test mapping",
             "automatic Project Brain initialization/capture",
-            "generic task/depth contract",
+            "generic task/depth + execution-policy contract",
             "task-aware Slop Guard + coverage honesty",
             "finding provenance + evidence-backed adjudication",
             "CLEANUP surface classification",
             "Underengineering Counter-Gate",
+            "Execution Intelligence observation/contradiction/evidence-delta gates",
+            "UI stabilization + rejected-hypothesis protection",
+            "execution waste telemetry",
             "blocking-rule calibration corpus",
-            "host-agnostic core + Anti-Slop fixtures",
+            "host-agnostic core + Anti-Slop + Execution Intelligence fixtures",
         ],
     }, indent=2))
     print("PASS: Codemium core integrity")

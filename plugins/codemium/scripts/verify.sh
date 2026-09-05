@@ -4,7 +4,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 VERSION=$(cat "$ROOT/VERSION")
 [ "$VERSION" = "0.9.0" ] || { echo "FAIL: expected Codemium 0.9.0, got $VERSION" >&2; exit 1; }
 
-printf '%s\n' '== Codemium v0.9.0 full validation =='
+printf '%s\n' '== Codemium v0.9.0 + v0.10 development validation =='
 
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/hooks" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
 printf '%s\n' 'PASS: Python syntax'
@@ -14,7 +14,7 @@ python "$ROOT/scripts/verify_polyglot.py"
 python "$ROOT/scripts/verify_codex_plugin.py"
 python "$ROOT/scripts/doctor.py" --repo "$ROOT" >/dev/null
 python "$ROOT/benchmarks/calibrate_v09_blocking.py" >/dev/null
-printf '%s\n' 'PASS: core + Polyglot + Codex lifecycle + Anti-Slop calibration + doctor'
+printf '%s\n' 'PASS: core + Polyglot + Codex lifecycle + Anti-Slop calibration + Execution Intelligence + doctor'
 
 python "$ROOT/plugins/codemium/tests/test_fixture.py"
 printf '%s\n' 'PASS: host-agnostic compatibility fixture'
@@ -36,11 +36,17 @@ for phrase in ['Anti-Slop Intelligence','Justified Change Gate','minimum justifi
 policy=(root/'plugins/codemium/skills/codemium/references/slop-policy.md').read_text()
 for phrase in ['introduced','worsened','pre_existing','unknown','Evidence-backed adjudication','CLEANUP']:
     assert phrase in policy, phrase
+execution_prd=(root/'PRD-v0.10.md').read_text()
+for phrase in ['Execution Intelligence','Evidence Delta Gate','minimum justified investigation surface','Every action must buy information or produce the solution']:
+    assert phrase in execution_prd, phrase
+execution_policy=(root/'plugins/codemium/skills/codemium/references/execution-policy.md').read_text()
+for phrase in ['Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','No arbitrary token/action budget']:
+    assert phrase in execution_policy, phrase
 notes=(root/'RELEASE_NOTES-v0.9.0.md').read_text()
 for phrase in ['Codemium v0.9.0','Anti-Slop Intelligence','Slop Guard','Underengineering Counter-Gate']:
     assert phrase in notes, phrase
 changelog=(root/'CHANGELOG.md').read_text(); assert '## 0.9.0 — Anti-Slop Intelligence' in changelog
-print('PASS: v0.9 metadata and documentation contracts')
+print('PASS: v0.9 release metadata + v0.10 development documentation contracts')
 PYEOF
 
 TMPDIR=$(mktemp -d)
@@ -48,15 +54,19 @@ trap 'rm -rf "$TMPDIR"' EXIT
 python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" >/dev/null
 test -f "$TMPDIR/.cursor/skills/cm/engine/parsers.py"
 test -f "$TMPDIR/.cursor/skills/cm/engine/slop_guard.py"
+test -f "$TMPDIR/.cursor/skills/cm/engine/execution_guard.py"
 test -f "$TMPDIR/.cursor/skills/cm/references/slop-policy.md"
+test -f "$TMPDIR/.cursor/skills/cm/references/execution-policy.md"
 python "$ROOT/scripts/install_host.py" --host cursor --scope project --project "$TMPDIR" --uninstall >/dev/null
 test ! -e "$TMPDIR/.cursor/skills/cm"
 python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" >/dev/null
 test -f "$TMPDIR/.opencode/skills/cm/engine/parsers.py"
 test -f "$TMPDIR/.opencode/skills/cm/engine/slop_guard.py"
+test -f "$TMPDIR/.opencode/skills/cm/engine/execution_guard.py"
+test -f "$TMPDIR/.opencode/skills/cm/references/execution-policy.md"
 python "$ROOT/scripts/install_host.py" --host opencode --scope project --project "$TMPDIR" --uninstall >/dev/null
 test ! -e "$TMPDIR/.opencode/skills/cm"
-printf '%s\n' 'PASS: Cursor/OpenCode portable installer lifecycle + Slop Guard payload'
+printf '%s\n' 'PASS: Cursor/OpenCode portable installer lifecycle + Slop Guard + Execution Guard payload'
 
 python "$ROOT/benchmarks/render_numbers.py" "$ROOT/benchmarks/example-runs-v2.json" --svg "$TMPDIR/demo.svg" --markdown "$TMPDIR/demo.md" >/dev/null
 grep -q 'SYNTHETIC / DEMO DATA' "$TMPDIR/demo.svg"
