@@ -2,9 +2,9 @@ $ErrorActionPreference = "Stop"
 if (Test-Path variable:PSNativeCommandUseErrorActionPreference) { $PSNativeCommandUseErrorActionPreference = $false }
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
-if ($Version -ne "0.9.0") { throw "Expected Codemium 0.9.0, got $Version" }
+if ($Version -ne "0.10.0") { throw "Expected Codemium 0.10.0, got $Version" }
 
-Write-Host "== Codemium v0.9.0 + v0.10 development validation =="
+Write-Host "== Codemium v0.10.0 full validation =="
 $PyFiles = Get-ChildItem (Join-Path $Root "plugins\codemium\engine"),(Join-Path $Root "plugins\codemium\hooks"),(Join-Path $Root "plugins\codemium\tests"),(Join-Path $Root "benchmarks"),(Join-Path $Root "scripts") -Recurse -Filter *.py
 foreach ($File in $PyFiles) {
   python -m py_compile $File.FullName
@@ -34,7 +34,7 @@ if ($Codex.version -ne $Version -or $Claude.version -ne $Version -or $Gemini.ver
 $ClaudeEntry = @($ClaudeMarket.plugins | Where-Object { $_.name -eq "codemium" })
 if ($ClaudeEntry.Count -ne 1 -or $ClaudeEntry[0].version -ne $Version) { throw "Claude marketplace version mismatch" }
 $Readme = Get-Content (Join-Path $Root "README.md") -Raw
-foreach ($Phrase in @('Anti-Slop Intelligence','Slop Guard','Justified Change Gate','Underengineering Counter-Gate','finding provenance','Polyglot Intelligence','v0.9.0')) {
+foreach ($Phrase in @('Execution Intelligence','Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','Anti-Slop Intelligence','Slop Guard','Underengineering Counter-Gate','Polyglot Intelligence','v0.10.0')) {
   if (-not $Readme.Contains($Phrase)) { throw "README missing $Phrase" }
 }
 $Prd = Get-Content (Join-Path $Root "PRD-v0.9.md") -Raw
@@ -53,13 +53,13 @@ $ExecutionPolicy = Get-Content (Join-Path $Root "plugins\codemium\skills\codemiu
 foreach ($Phrase in @('Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','No arbitrary token/action budget')) {
   if (-not $ExecutionPolicy.Contains($Phrase)) { throw "Execution policy missing $Phrase" }
 }
-$Notes = Get-Content (Join-Path $Root "RELEASE_NOTES-v0.9.0.md") -Raw
-foreach ($Phrase in @('Codemium v0.9.0','Anti-Slop Intelligence','Slop Guard','Underengineering Counter-Gate')) {
+$Notes = Get-Content (Join-Path $Root "RELEASE_NOTES-v0.10.0.md") -Raw
+foreach ($Phrase in @('Codemium v0.10.0','Execution Intelligence','Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','Slop Guard','Underengineering Counter-Gate')) {
   if (-not $Notes.Contains($Phrase)) { throw "Release notes missing $Phrase" }
 }
 $Changelog = Get-Content (Join-Path $Root "CHANGELOG.md") -Raw
-if (-not $Changelog.Contains('## 0.9.0 — Anti-Slop Intelligence')) { throw "CHANGELOG missing v0.9.0" }
-Write-Host "PASS: v0.9 release metadata + v0.10 development documentation contracts"
+if (-not $Changelog.Contains('## 0.10.0 — Execution Intelligence')) { throw "CHANGELOG missing v0.10.0" }
+Write-Host "PASS: v0.10 release metadata and documentation contracts"
 
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("codemium-v010-" + [System.Guid]::NewGuid())
 New-Item -ItemType Directory -Path $TempDir | Out-Null
