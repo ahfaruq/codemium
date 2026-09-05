@@ -2,9 +2,9 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 VERSION=$(cat "$ROOT/VERSION")
-[ "$VERSION" = "0.9.0" ] || { echo "FAIL: expected Codemium 0.9.0, got $VERSION" >&2; exit 1; }
+[ "$VERSION" = "0.10.0" ] || { echo "FAIL: expected Codemium 0.10.0, got $VERSION" >&2; exit 1; }
 
-printf '%s\n' '== Codemium v0.9.0 + v0.10 development validation =='
+printf '%s\n' '== Codemium v0.10.0 full validation =='
 
 find "$ROOT/plugins/codemium/engine" "$ROOT/plugins/codemium/hooks" "$ROOT/plugins/codemium/tests" "$ROOT/benchmarks" "$ROOT/scripts" -name '*.py' -print0 | xargs -0 python -m py_compile
 printf '%s\n' 'PASS: Python syntax'
@@ -23,12 +23,12 @@ python - "$ROOT" <<'PYEOF'
 import json,sys
 from pathlib import Path
 root=Path(sys.argv[1]); version=(root/'VERSION').read_text().strip()
-assert version=='0.9.0'
+assert version=='0.10.0'
 for path in ['plugins/codemium/.codex-plugin/plugin.json','.claude-plugin/plugin.json','gemini-extension.json']:
     data=json.loads((root/path).read_text()); assert data['version']==version,(path,data.get('version'))
 market=json.loads((root/'.claude-plugin/marketplace.json').read_text()); entry=next(p for p in market['plugins'] if p['name']=='codemium'); assert entry['version']==version
 readme=(root/'README.md').read_text()
-for phrase in ['Anti-Slop Intelligence','Slop Guard','Justified Change Gate','Underengineering Counter-Gate','finding provenance','Polyglot Intelligence','v0.9.0']:
+for phrase in ['Execution Intelligence','Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','Anti-Slop Intelligence','Slop Guard','Underengineering Counter-Gate','Polyglot Intelligence','v0.10.0']:
     assert phrase in readme, phrase
 prd=(root/'PRD-v0.9.md').read_text()
 for phrase in ['Anti-Slop Intelligence','Justified Change Gate','minimum justified engineering surface','Underengineering Counter-Gate']:
@@ -42,11 +42,11 @@ for phrase in ['Execution Intelligence','Evidence Delta Gate','minimum justified
 execution_policy=(root/'plugins/codemium/skills/codemium/references/execution-policy.md').read_text()
 for phrase in ['Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','No arbitrary token/action budget']:
     assert phrase in execution_policy, phrase
-notes=(root/'RELEASE_NOTES-v0.9.0.md').read_text()
-for phrase in ['Codemium v0.9.0','Anti-Slop Intelligence','Slop Guard','Underengineering Counter-Gate']:
+notes=(root/'RELEASE_NOTES-v0.10.0.md').read_text()
+for phrase in ['Codemium v0.10.0','Execution Intelligence','Contradiction Gate','Evidence Delta Gate','Hypothesis Ledger','Slop Guard','Underengineering Counter-Gate']:
     assert phrase in notes, phrase
-changelog=(root/'CHANGELOG.md').read_text(); assert '## 0.9.0 — Anti-Slop Intelligence' in changelog
-print('PASS: v0.9 release metadata + v0.10 development documentation contracts')
+changelog=(root/'CHANGELOG.md').read_text(); assert '## 0.10.0 — Execution Intelligence' in changelog
+print('PASS: v0.10 release metadata and documentation contracts')
 PYEOF
 
 TMPDIR=$(mktemp -d)
