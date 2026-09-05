@@ -12,76 +12,200 @@
 
 <p align="center">
   <a href="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml"><img src="https://github.com/ahfaruq/codemium/actions/workflows/verify.yml/badge.svg" alt="Codemium Core" /></a>
-  <img src="https://img.shields.io/badge/version-v0.9.0-2F81F7" alt="Version v0.9.0" />
+  <img src="https://img.shields.io/badge/version-v0.10.0-2F81F7" alt="Version v0.10.0" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3FB950" alt="MIT License" /></a>
   <a href="https://github.com/sponsors/ahfaruq"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" alt="Sponsor Codemium" /></a>
 </p>
 
-<p align="center"><sub>Host-agnostic &nbsp;•&nbsp; Project-aware &nbsp;•&nbsp; Evidence-backed &nbsp;•&nbsp; Scope-disciplined &nbsp;•&nbsp; Verification-driven</sub></p>
+<p align="center"><sub>Host-agnostic &nbsp;•&nbsp; Project-aware &nbsp;•&nbsp; Evidence-backed &nbsp;•&nbsp; Execution-disciplined &nbsp;•&nbsp; Scope-disciplined</sub></p>
 
 ---
 
-Codemium is a host-agnostic engineering layer for long-running software projects. It helps coding agents preserve project understanding, inspect the right code, make the **minimum justified engineering change**, verify the real impact, and avoid adding engineering surface that the task never required.
+Codemium is a host-agnostic engineering layer for long-running software projects. It helps coding agents preserve project understanding, inspect the right code, avoid wasteful investigation loops, make the **minimum justified engineering change**, verify the real impact, and stop once the task is proven.
 
 > **Positioning:** the senior engineer who already knows your codebase.
 >
 > **Investigate once. Preserve what matters. Reuse it safely.**
 
-Codemium does not replace Codex, Claude Code, Gemini CLI, Cursor, or OpenCode. It gives those agents a shared engineering layer built from three complementary forms of intelligence:
+Codemium does not replace Codex, Claude Code, Gemini CLI, Cursor, or OpenCode. It gives those agents a shared engineering layer built from four complementary forms of intelligence:
 
 - **Project Brain** — durable engineering knowledge learned through verified work over time;
 - **Polyglot Intelligence** — deterministic structural understanding across supported repository languages;
-- **Anti-Slop Intelligence** — task-aware proof that changed engineering surface is justified.
+- **Anti-Slop Intelligence** — task-aware proof that changed engineering surface is justified;
+- **Execution Intelligence** — task-aware proof that the next investigation action is worth doing.
 
-The repository remains the source of truth. Tests/runtime evidence remain the proof of behavior. Project Brain is freshness-qualified memory. The structural graph is a derived navigation/impact index. Slop Guard is a changed-surface quality gate, not a replacement for source review.
+The repository remains the source of truth. Tests/runtime evidence remain the proof of behavior. Project Brain is freshness-qualified memory. Structural Graph v3 is a derived navigation/impact index. Slop Guard is a changed-surface quality gate. Execution Guard is a transient investigation-control layer. None of them outrank source/runtime truth.
 
-# Anti-Slop Intelligence — v0.9
+# Execution Intelligence — v0.10
 
-v0.9 adds the **Justified Change Gate**, exposed publicly as **Slop Guard**.
+v0.10 adds the **Evidence Delta Gate**, exposed through the deterministic **Execution Guard**.
 
-The question is not:
+The question is no longer only:
 
-> How few lines can the agent write?
+> Where should the agent look?
 
-It is:
+or:
 
-> **Does every changed engineering surface actually need to exist?**
+> What actually needs to change?
 
-Codemium optimizes for the **minimum justified engineering surface**.
+v0.10 adds:
+
+> **What should the agent do next, and will that action produce new evidence or the solution?**
+
+The core law is:
+
+> **Every action must buy information or produce the solution.**
+
+Codemium now targets both:
 
 ```text
+minimum justified investigation surface
++
+minimum justified engineering surface
+```
+
+without arbitrary token, time, or action budgets.
+
+## Execution lifecycle
+
+```text
+PROJECT BRAIN
+      │
+      ▼
 TASK CONTRACT
       │
       ▼
-PROJECT BRAIN + GRAPH
+STRUCTURAL GRAPH + WORKING SET
       │
       ▼
-BOUNDED WORKING SET
+OBSERVE
       │
       ▼
-IMPLEMENT + VERIFY
+HYPOTHESIS LEDGER
       │
       ▼
-ACTUAL DIFF
+CONTRADICTION GATE
+      │
+      ▼
+EVIDENCE DELTA GATE
+      │
+      ├── new evidence → continue
+      ├── necessary mutation → mutate
+      ├── required verification → verify
+      └── no gain → STOP / reconsider assumptions
+      │
+      ▼
+VERIFY
       │
       ▼
 SLOP GUARD
       │
-      ├── Scope justification
-      ├── Deterministic findings
-      ├── Graph v3 evidence
-      ├── Finding provenance
-      ├── Evidence-backed adjudication
-      └── Underengineering Counter-Gate
-      │
       ▼
-RE-VERIFY IF CLEANED
+UNDERENGINEERING COUNTER-GATE
       │
       ▼
 DONE
 ```
 
-## Changed-surface classification
+## Contradiction Gate
+
+Materially conflicting observations block mutation until the conflict is resolved or explicitly superseded by stronger evidence.
+
+A representative UI failure:
+
+```text
+DOM says dropdown is open
+        +
+early screenshot says not visible
+        ↓
+CONTRADICTION
+        ↓
+DO NOT mutate z-index yet
+        ↓
+stabilize UI / inspect geometry / computed style / visibility
+        ↓
+resolve evidence first
+```
+
+This prevents an agent from converting observation timing problems into speculative source changes.
+
+## UI stabilization
+
+For UI/runtime investigations, a negative screenshot is not automatically authoritative.
+
+When stronger state evidence says a transition has started, prefer:
+
+```text
+interaction
+→ DOM/accessibility state
+→ animation/render/network stabilization
+→ computed style / geometry / visibility
+→ screenshot
+```
+
+A screenshot captured before stabilization must not by itself justify a CSS/layout mutation.
+
+## Hypothesis Ledger
+
+Root-cause guesses become explicit execution state.
+
+Example:
+
+```text
+H1: dropdown is behind an overlay
+Expected evidence: computed stacking order places it below the overlay
+Result: REJECTED
+```
+
+Once rejected, the same hypothesis cannot be retried against unchanged evidence unless material new information reopens it.
+
+## Evidence Delta Gate
+
+Repeat-sensitive actions are compared against relevant evidence and repository state.
+
+If an equivalent action was already performed and nothing material changed, Codemium stops the repeat instead of allowing another no-gain loop.
+
+This applies to work such as:
+
+- repeated browser probes;
+- repeated equivalent searches/reads;
+- repeated hypothesis tests;
+- repeated builds;
+- repeated deployments;
+- repeated verification that adds no required coverage or confidence.
+
+There is intentionally no arbitrary action or token quota. Difficult engineering may require deep investigation. The stopping signal is **zero meaningful evidence delta**.
+
+## Action outcomes
+
+Execution Intelligence classifies task actions into:
+
+```text
+NEW_EVIDENCE
+NECESSARY_MUTATION
+REQUIRED_VERIFICATION
+NO_GAIN
+```
+
+`NO_GAIN` becomes visible execution waste instead of silently consuming more model/tool usage.
+
+Typical helper:
+
+```sh
+python plugins/codemium/engine/execution_guard.py --root . status
+```
+
+See [`PRD-v0.10.md`](PRD-v0.10.md) and [`plugins/codemium/skills/codemium/references/execution-policy.md`](plugins/codemium/skills/codemium/references/execution-policy.md).
+
+# Anti-Slop Intelligence — v0.9 foundation
+
+v0.9 introduced the **Justified Change Gate**, exposed publicly as **Slop Guard**.
+
+The question is:
+
+> **Does every changed engineering surface actually need to exist?**
+
+Codemium optimizes for the **minimum justified engineering surface**, not minimum LOC.
 
 Every changed surface should be attributable to:
 
@@ -93,13 +217,7 @@ Every changed surface should be attributable to:
 | `TEST` | verifies changed behavior |
 | `UNJUSTIFIED` | internal unresolved state; not valid at completion |
 
-Slop Guard analyzes the actual task diff and also includes safe/readable untracked files. `.codemium/` runtime/project state is excluded from source-slop analysis.
-
-`CLEANUP` is intentionally explicit. Codemium does not label unrelated historical debt as cleanup merely to make a diff look clean.
-
-## Finding provenance
-
-A finding records whether the suspicious property was:
+Finding provenance is explicit:
 
 ```text
 introduced
@@ -108,65 +226,17 @@ pre_existing
 unknown
 ```
 
-High-confidence completion blockers focus on **introduced** and **worsened** engineering. Pre-existing debt does not become part of the task simply because the current change touched the same file. Unknown major findings require review rather than fabricated certainty.
+High-confidence completion blockers focus on **introduced** and **worsened** engineering. Pre-existing debt does not become task scope merely because the current change touched the same file.
 
-## What Slop Guard can detect
+Slop Guard covers signals including unjustified scope, duplicate implementations, unnecessary dependencies, single-use forwarding helpers, unnecessary abstractions/files, debug residue, narrative comments, dead-code signals, speculative fallbacks, public API expansion, and type-system escapes.
 
-The initial v0.9 engine covers signals including:
-
-- unrelated changed surfaces / scope creep;
-- duplicate top-level implementation signals;
-- unnecessary new dependencies;
-- single-use forwarding helpers;
-- small unnecessary-file signals;
-- gratuitous abstraction signals;
-- debug residue;
-- obvious narrative comments;
-- new dead-code signals;
-- speculative fallback patterns;
-- unjustified public API expansion signals;
-- type-system escape hatches.
-
-These are evidence signals, not blanket style rules. A class, helper, fallback, dependency, or public API is not automatically slop simply because it exists.
-
-## Evidence-backed justification
-
-Ambiguous engineering may be legitimate. Instead of weakening a rule globally, Codemium supports narrow `JUSTIFIED` adjudication backed by concrete evidence.
-
-Default transient decision file:
-
-```text
-.codemium/runtime/slop-adjudications.json
-```
-
-Example:
-
-```json
-{
-  "schema_version": 1,
-  "decisions": [
-    {
-      "rule": "UNJUSTIFIED_PUBLIC_API",
-      "path": "src/api.ts",
-      "symbol": "createSession",
-      "decision": "JUSTIFIED",
-      "reason": "The repository-owned public adapter requires this export.",
-      "evidence": [
-        {"kind": "source", "path": "src/adapters/public.ts"},
-        {"kind": "task", "detail": "acceptance requires the public adapter surface"}
-      ]
-    }
-  ]
-}
-```
-
-An accepted decision must match the finding and contain a substantive reason plus valid evidence. It remains visible in the report, but is removed from blocker/risk calculation.
+Ambiguous engineering may be marked `JUSTIFIED` only with concrete source/task evidence. The aggregate Slop Risk score remains informational and coverage-honest.
 
 ## Underengineering Counter-Gate
 
 Anti-Slop must reject both over-engineering and unsafe under-engineering.
 
-Slop Guard does **not** blindly reward removal of:
+Codemium does **not** blindly reward removal of:
 
 - authentication / authorization;
 - validation / sanitization;
@@ -179,31 +249,17 @@ Slop Guard does **not** blindly reward removal of:
 - security controls;
 - tests.
 
-If a simplification removes protected-complexity signals, the gate requires review. Evidence-backed adjudication does not bypass this safety check.
-
-## Coverage honesty
-
-Slop Risk is informational, not implementation truth. Codemium reports changed-line and structural coverage and returns no aggregate score when coverage is insufficient rather than manufacturing precision.
-
-## Direct Anti-Slop review
-
-Normal `@Codemium` source-changing work runs Slop Guard near completion. Advanced users can invoke the focused skill directly:
-
-```text
-$cm-slop
-```
-
-Or run the deterministic engine:
+Typical helper:
 
 ```sh
 python plugins/codemium/engine/slop_guard.py --root . --json --write-state
 ```
 
+See [`PRD-v0.9.md`](PRD-v0.9.md) and [`plugins/codemium/skills/codemium/references/slop-policy.md`](plugins/codemium/skills/codemium/references/slop-policy.md).
+
 # Polyglot Intelligence — v0.8 foundation
 
-v0.9 retains Structural Graph v3 from v0.8: a parser-abstracted cross-language repository index with deep JavaScript/JSX, TypeScript, and TSX support through Tree-sitter while preserving Python AST extraction and deterministic fallback behavior.
-
-## Graph entities and relationships
+Structural Graph v3 is a parser-abstracted cross-language repository index with deep JavaScript/JSX, TypeScript, and TSX support through Tree-sitter while preserving Python AST extraction and deterministic fallback behavior.
 
 Minimum graph entities:
 
@@ -234,29 +290,26 @@ Relationship provenance is explicit:
 - **RESOLVED** — deterministically resolved from source structure/names;
 - **HEURISTIC** — fallback evidence that must not be presented as direct truth.
 
-Python uses standard-library AST extraction. JavaScript/JSX, TypeScript, and TSX can use Tree-sitter deep parsing when the optional Polyglot runtime is installed. Unsupported or unavailable deep parsers degrade to deterministic fallback rather than making the repository unusable.
-
-Install the optional runtime:
+Python uses standard-library AST extraction. JavaScript/JSX, TypeScript, and TSX can use Tree-sitter deep parsing when the optional runtime is installed.
 
 ```sh
 python -m pip install -r requirements-polyglot.txt
 ```
 
-The graph guides where to inspect. Source remains authoritative:
+The authority order remains:
 
 ```text
 Structural graph → navigation and impact hypotheses
 Source code       → implementation truth
 Tests/runtime     → behavioral proof
 Project Brain     → durable engineering knowledge, freshness-qualified
+Execution Guard   → transient action/investigation gate
 Slop Guard        → changed-surface justification gate
 ```
 
-## Symbol-aware impact and tests
+Git diff line ranges can map to changed symbols before bounded reverse traversal. Test Intelligence v3 uses structural `TESTS` relationships and fallback evidence to produce prioritized P0/P1/P2 verification candidates.
 
-Git diff line ranges can map to changed symbols before bounded reverse traversal. Callers, imports, imported symbols, references, inheritance, dependencies, tests, and cross-language edges contribute impact evidence.
-
-Test Intelligence v3 uses structural `TESTS` relationships and fallback evidence to produce prioritized P0/P1/P2 verification candidates. Actual test/runtime evidence determines sufficiency.
+See [`PRD-v0.8.md`](PRD-v0.8.md).
 
 # Project Brain
 
@@ -270,9 +323,9 @@ Useful durable entries include:
 - architecture patterns;
 - known bugs/risks.
 
-It does not store secrets, raw logs, tool transcripts, personal data, speculative hypotheses, or full conversation history.
+It does not store secrets, raw logs, tool transcripts, personal data, speculative hypotheses, transient Execution Guard observations, or full conversation history.
 
-## Freshness states
+Freshness states:
 
 - **FRESH** — supporting evidence still matches source;
 - **NEEDS_REVALIDATION** — supporting source changed or disappeared;
@@ -299,12 +352,15 @@ The normal engineering loop applies:
 - **Project Brain** — reuse durable knowledge when still fresh;
 - **Polyglot Intelligence** — use Graph v3 to narrow navigation and impact;
 - **Working Set Engine** — bound repository context around task evidence;
+- **Execution Guard** — require evidence-backed next actions and stop zero-delta loops;
+- **Contradiction Gate** — resolve material observation conflicts before mutation;
+- **Hypothesis Ledger** — prevent rejected guesses from silently cycling back;
+- **Evidence Delta Gate** — block equivalent repeat work when evidence/repository state did not change;
 - **Scope Guard** — keep every changed surface attributable to the task;
 - **Impact & Test Intelligence** — inspect likely dependents and prioritize verification;
 - **Slop Guard** — reject unresolved unjustified engineering before completion;
 - **Underengineering Counter-Gate** — preserve necessary complexity;
-- **Read/Search Reuse** — avoid repeated deterministic work when validity is provable;
-- **Stop Engine** — stop once behavior, verification, scope, Anti-Slop, freshness, and persistence gates are satisfied.
+- **Stop Engine** — stop once behavior, verification, execution, scope, Anti-Slop, freshness, and persistence gates are satisfied.
 
 # Quick start
 
@@ -315,7 +371,7 @@ codex plugin marketplace add ahfaruq/codemium --ref main
 codex plugin add codemium@codemium
 ```
 
-After installing/updating, review lifecycle hook trust with `/hooks` when required, then start a fresh session if plugin inventory is cached.
+After installing or refreshing the marketplace/plugin source, review lifecycle hook trust with `/hooks` when required, then start a fresh session if plugin inventory is cached.
 
 Use Codemium naturally:
 
@@ -346,7 +402,7 @@ $cm-slop
 | Cursor | **Beta** | Portable Agent Skill | `/cm` / skill picker |
 | OpenCode | **Beta** | Portable Agent Skill | `/cm` when exposed, otherwise skill tool/auto-selection |
 
-See [`INSTALL.md`](INSTALL.md) for installation and hook trust, [`HOSTS.md`](HOSTS.md) for the adapter contract, [`PRD-v0.9.md`](PRD-v0.9.md) for Anti-Slop requirements, [`PRD-v0.8.md`](PRD-v0.8.md) for Polyglot Intelligence, [`CHANGELOG.md`](CHANGELOG.md), and [`RELEASE_NOTES-v0.9.0.md`](RELEASE_NOTES-v0.9.0.md).
+See [`INSTALL.md`](INSTALL.md), [`HOSTS.md`](HOSTS.md), [`PRD-v0.10.md`](PRD-v0.10.md), [`CHANGELOG.md`](CHANGELOG.md), and [`RELEASE_NOTES-v0.10.0.md`](RELEASE_NOTES-v0.10.0.md).
 
 # Benchmark suite
 
@@ -354,7 +410,7 @@ Codemium keeps competitive performance claims separate from deterministic implem
 
 ## v0.8 competitive efficiency
 
-The existing v0.8 benchmark dashboard remains as historical benchmark evidence:
+The existing v0.8 dashboard remains historical benchmark evidence:
 
 <p align="center">
   <img src="assets/benchmark-v08-competitive.svg" alt="Codemium v0.8 competitive efficiency benchmark" width="100%" />
@@ -380,29 +436,23 @@ The existing v0.8 benchmark dashboard remains as historical benchmark evidence:
 | Imported-symbol edges | — | **`IMPORTS_SYMBOL`** |
 | Cross-language edge evidence | limited | **explicit** |
 
-## v0.8 impact & test intelligence
-
-<p align="center">
-  <img src="assets/benchmark-v08-impact-test.svg" alt="Codemium v0.8 impact and test intelligence benchmark" width="100%" />
-</p>
-
-The deterministic mixed-language fixture verifies JavaScript → TypeScript imported-symbol/call resolution, changed-line → changed-symbol impact seeding, cross-language dependent discovery, related-test confidence, and prioritized test plans.
-
 See [`benchmarks/V08_BENCHMARK_SUITE.md`](benchmarks/V08_BENCHMARK_SUITE.md).
 
 ## v0.9 Anti-Slop release calibration
 
-v0.9 adds a labeled blocker-semantics corpus and deterministic calibration runner:
+v0.9 retains a labeled blocker-semantics corpus and deterministic calibration runner:
 
 ```sh
 python benchmarks/calibrate_v09_blocking.py
 ```
 
-It protects the intended behavior for introduced/worsened blockers, pre-existing debt, evidence-backed justification, ambiguous findings, protected-complexity removal, and clean diffs.
+This is a release-quality gate, not a competitive AI performance benchmark.
 
-**This calibration is a release quality gate, not a competitive performance benchmark.** No numeric v0.9 Anti-Slop efficiency/quality improvement claim is published until representative multi-arm coding-agent runs are measured and retained as evidence.
+## v0.10 Execution Intelligence verification
 
-See [`benchmarks/V09_ANTISLOP_BENCHMARK.md`](benchmarks/V09_ANTISLOP_BENCHMARK.md).
+The deterministic Execution Guard fixture protects contradiction handling, UI stabilization, rejected-hypothesis reuse, evidence-delta stopping, and repeated build/deploy/probe behavior.
+
+No numeric v0.10 token/cost/time improvement claim is published from deterministic fixtures alone. Representative measured agent runs are required before publishing competitive efficiency claims.
 
 # Shared `.codemium/` state
 
@@ -425,13 +475,14 @@ See [`benchmarks/V09_ANTISLOP_BENCHMARK.md`](benchmarks/V09_ANTISLOP_BENCHMARK.m
 └── runtime/
     ├── cache.jsonl
     ├── operations.jsonl
+    ├── execution/
     ├── slop-report.json
     ├── slop-adjudications.json
     ├── persistence-gates/
     └── snapshots/
 ```
 
-Durable sanitized Project Brain knowledge is vendor-neutral. Repository graph/test maps, active task state, cache, Slop reports/adjudications, and persistence gates are transient/regenerable state and are ignored by Git by default.
+Durable sanitized Project Brain knowledge is vendor-neutral. Repository graph/test maps, active task state, cache, Execution Guard ledgers, Slop reports/adjudications, and persistence gates are transient/regenerable state and are ignored by Git by default.
 
 # Deterministic helpers
 
@@ -444,6 +495,7 @@ python plugins/codemium/engine/repo_graph.py build --root .
 python plugins/codemium/engine/graph_query.py --root . callers "refresh_session"
 python plugins/codemium/engine/working_set.py --root . --query "auth refresh" --top 8
 python plugins/codemium/engine/impact.py --root . --git-diff
+python plugins/codemium/engine/execution_guard.py --root . status
 python plugins/codemium/engine/slop_guard.py --root . --json --write-state
 python plugins/codemium/engine/health.py --root .
 ```
@@ -483,7 +535,7 @@ python scripts/install_host.py --host opencode
 python scripts/install_host.py --host opencode --scope project --project /path/to/project
 ```
 
-Portable installs copy the shared Agent Skill, Anti-Slop policy, and canonical deterministic engine.
+Portable installs copy the shared Agent Skill, Execution Intelligence policy, Anti-Slop policy, and canonical deterministic engine.
 
 # Verification model
 
@@ -493,7 +545,7 @@ Portable installs copy the shared Agent Skill, Anti-Slop policy, and canonical d
 python scripts/verify_core.py
 ```
 
-Core CI validates engine syntax, Project Brain invariants, Structural Intelligence contracts, task/depth behavior, Slop Guard mechanics, finding provenance, evidence-backed adjudication, CLEANUP classification, the Underengineering Counter-Gate, and v0.9 blocker calibration.
+Core CI validates engine syntax, Project Brain invariants, Structural Intelligence contracts, task/depth behavior, Execution Guard mechanics, the Contradiction Gate, Evidence Delta Gate, Hypothesis Ledger, Slop Guard mechanics, finding provenance, evidence-backed adjudication, CLEANUP classification, the Underengineering Counter-Gate, and v0.9 blocker calibration.
 
 It does not claim competitive AI quality or full host compatibility.
 
@@ -532,10 +584,13 @@ Windows:
 
 AI quality/performance claims remain evidence-gated and require representative measured agent runs. Deterministic CI/calibration results are not converted into performance claims.
 
-# v0.9 scope boundaries
+# v0.10 scope boundaries
 
-Codemium v0.9 is not:
+Codemium v0.10 is not:
 
+- a token-budget enforcer;
+- an arbitrary action-count limiter;
+- permission to skip required verification merely because an action appears expensive;
 - a generic linter replacement;
 - a code minimizer or code-golf tool;
 - a repository-wide desloppification pass on every task;
@@ -543,15 +598,17 @@ Codemium v0.9 is not:
 - GraphRAG/vector-database infrastructure;
 - an AI-authorship detector;
 - permission to remove defensive/security/compatibility/test complexity without behavioral evidence;
-- evidence for a numeric v0.9 competitive Anti-Slop improvement claim by itself.
+- evidence for a numeric v0.10 competitive efficiency improvement claim by itself.
 
-The product rule remains:
+The two product rules now work together:
 
+> **Every action must buy information or produce the solution.**
+>
 > **Everything the solution needs. Nothing it does not.**
 
 # Status
 
-`v0.9.0` introduces **Anti-Slop Intelligence** while preserving the v0.8 Polyglot Intelligence and Project Brain foundations. Slop Guard is task-aware, changed-surface-first, evidence-backed, provenance-aware, coverage-honest, and paired with an Underengineering Counter-Gate. Codex remains the stable/reference adapter; Claude Code, Gemini CLI, Cursor, and OpenCode share the same vendor-neutral core through their adapters.
+`v0.10.0` introduces **Execution Intelligence** while preserving v0.9 Anti-Slop Intelligence, v0.8 Polyglot Intelligence, and Project Brain. Execution Guard is task-aware, contradiction-aware, evidence-delta-driven, and designed to stop repeated no-gain investigation before mutation/build/deployment loops waste model/tool usage. Slop Guard still reviews the final changed surface, and the Underengineering Counter-Gate still protects necessary complexity. Codex remains the stable/reference adapter; Claude Code, Gemini CLI, Cursor, and OpenCode share the same vendor-neutral core through their adapters.
 
 # Support Codemium
 
