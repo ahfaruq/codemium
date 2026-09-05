@@ -2,6 +2,23 @@
 
 All notable Codemium changes are recorded here.
 
+## 0.10.0 — Execution Intelligence
+
+- Added **Execution Intelligence** so Codemium evaluates whether the next investigation action is justified instead of only optimizing repository context and final code scope.
+- Added the canonical `execution_guard.py` runtime helper with task-scoped observation, hypothesis, action, gate, and execution-waste ledgers under transient `.codemium/runtime/` state.
+- Added the **Contradiction Gate** so material conflicts between observations block mutation until stronger evidence resolves or supersedes the conflict.
+- Added UI stabilization protection so an early negative screenshot cannot by itself justify CSS/layout mutations when DOM/accessibility/runtime evidence indicates the UI transition is already active.
+- Added the **Hypothesis Ledger** so rejected root-cause hypotheses cannot be retried against unchanged evidence without a material reason to reopen them.
+- Added the **Evidence Delta Gate** to block equivalent repeat-sensitive probes, searches, builds, deployments, hypothesis tests, and verification actions when evidence and repository state have not materially changed.
+- Added action outcome classification for `NEW_EVIDENCE`, `NECESSARY_MUTATION`, `REQUIRED_VERIFICATION`, and `NO_GAIN`, plus execution-waste telemetry and investigation-efficiency proxies.
+- Extended task compilation with an `execution_policy`, including UI/runtime-sensitive stabilization guidance where applicable.
+- Integrated Execution Intelligence before mutation in the Codex and portable Agent Skill lifecycles while retaining v0.9 Slop Guard on the actual diff near completion.
+- Added `PRD-v0.10.md` and a shared `execution-policy.md` contract covering evidence authority, contradiction handling, hypothesis reuse, zero-delta stopping, and the explicit rejection of arbitrary token/action budgets.
+- Added a deterministic regression fixture for the dropdown/z-index timing failure: DOM says open, an early screenshot appears closed, speculative mutation is blocked, stabilized evidence resolves the contradiction, and repeated no-gain actions are prevented.
+- Updated Core and full Unix/Windows validation contracts to require Execution Guard, Execution Intelligence documentation, and portable host payloads.
+- Preserved v0.9 Anti-Slop Intelligence, the Underengineering Counter-Gate, v0.8 Polyglot Intelligence, Structural Graph v3, Project Brain freshness/persistence, symbol-aware impact/test intelligence, and existing host adapters.
+- Kept competitive token/cost/time improvement claims evidence-gated; deterministic Execution Intelligence fixtures are release-quality evidence, not a substitute for representative measured agent runs.
+
 ## 0.9.0 — Anti-Slop Intelligence
 
 - Added the task-aware **Justified Change Gate**, exposed publicly as **Slop Guard**, so source-changing work is reviewed for the minimum justified engineering surface before completion.
