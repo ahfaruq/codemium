@@ -11,6 +11,10 @@ from project_brain import init as init_project_brain
 from reasoning_profile import EFFORT_ORDER, HOSTS, resolve_reasoning_profile
 
 DEPTH_RANK = {"FAST": 0, "NORMAL": 1, "DEEP": 2, "CRITICAL": 3}
+UI_RUNTIME_TERMS = [
+    "z-index", "z index", "dropdown", "popover", "tooltip", "modal", "drawer",
+    "visibility", "stacking context", "animation", "transition", "overlay",
+]
 
 
 def classify(text: str) -> str:
@@ -43,7 +47,10 @@ def auto_depth(text: str, mode: str, task_risk: str) -> tuple[str, str]:
     floor, floor_reason = minimum_depth(text, mode, task_risk)
     if floor in {"CRITICAL", "DEEP"}: return floor, floor_reason
     t = text.lower()
-    trivial_terms = ["typo", "copy text", "label text", "css spacing", "padding", "margin", "font size", "color only"]
+    trivial_terms = [
+        "typo", "copy text", "label text", "css spacing", "padding", "margin", "font size", "color only",
+        "z-index", "z index", "dropdown", "tooltip", "popover", "stacking context",
+    ]
     if task_risk == "low" and any(x in t for x in trivial_terms): return "FAST", "localized low-risk change"
     if any(x in t for x in ["multi-module", "cross-module", "websocket", "queue", "webhook", "worker"]): return "DEEP", "cross-boundary behavior"
     return "NORMAL", "default project-aware depth"
@@ -60,16 +67,46 @@ def resolve_depth(text: str, mode: str, task_risk: str, requested: str = "auto")
     return desired, f"explicit {desired} override"
 
 
+def execution_policy(text: str, mode: str) -> dict:
+    t = text.lower()
+    ui_sensitive = any(term in t for term in UI_RUNTIME_TERMS)
+    return {
+        "enabled": True,
+        "evidence_before_mutation": mode in {"FIX", "REVIEW"},
+        "contradiction_gate": True,
+        "evidence_delta_gate": True,
+        "repeat_without_new_evidence": "block",
+        "hypothesis_revival_requires_new_evidence": True,
+        "ui_stabilization_required": ui_sensitive,
+        "action_value_rule": "NEW_EVIDENCE | NECESSARY_MUTATION | REQUIRED_VERIFICATION",
+    }
+
+
 def compile_task(text: str, requested_depth: str = "auto", model: str | None = None, host_effort: str | None = None, host: str | None = None) -> dict:
     mode = classify(text); r = risk(text, mode); depth, depth_reason = resolve_depth(text, mode, r, requested_depth)
     reasoning = resolve_reasoning_profile(depth, model=model, host_effort=host_effort, host=host)
-    policy = {"FIX": "root-cause fix; surgical scope; regression evidence", "TEST": "behavior/risk coverage; do not minimize justified cases", "REFACTOR": "behavior preservation; demonstrated complexity only", "REVIEW": "read-only unless explicitly asked to edit", "MIGRATION": "compatibility, data integrity, rollback", "SECURITY": "trust-boundary correctness outranks efficiency", "BUILD": "reuse-first; minimum justified architecture"}[mode]
+    policy = {
+        "FIX": "root-cause fix; evidence before mutation; surgical scope; regression evidence",
+        "TEST": "behavior/risk coverage; do not minimize justified cases",
+        "REFACTOR": "behavior preservation; demonstrated complexity only",
+        "REVIEW": "read-only unless explicitly asked to edit; evidence before mutation",
+        "MIGRATION": "compatibility, data integrity, rollback",
+        "SECURITY": "trust-boundary correctness outranks efficiency",
+        "BUILD": "reuse-first; minimum justified architecture",
+    }[mode]
     return {
         "id": "T" + now_iso().replace("-", "").replace(":", "").replace("T", "")[:14], "type": mode,
         "request": text, "objective": text.strip(), "expected_behavior": "derive from request/evidence before editing",
-        "likely_domain": [], "acceptance": ["requested behavior is satisfied", "relevant verification passes", "no unrelated diff", "no material unexplained uncertainty"],
+        "likely_domain": [], "acceptance": [
+            "requested behavior is satisfied",
+            "relevant verification passes",
+            "no unrelated diff",
+            "no material unexplained uncertainty",
+            "repeated investigation either produces material evidence or stops",
+        ],
         "risk": r, "requested_depth": requested_depth.lower(), "depth": depth, "depth_reason": depth_reason,
-        "reasoning": reasoning, "change_policy": policy, "created_at": now_iso(), "working_set": [], "cleanup_set": [],
+        "reasoning": reasoning, "change_policy": policy, "execution_policy": execution_policy(text, mode),
+        "created_at": now_iso(), "working_set": [], "cleanup_set": [],
     }
 
 
