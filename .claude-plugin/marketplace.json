@@ -8,8 +8,8 @@
     {
       "name": "codemium",
       "displayName": "Codemium",
-      "description": "Anti-Slop Intelligence, task-aware Slop Guard, Polyglot structural intelligence, bounded context, scoped changes, persistent Project Brain, and risk-aware verification for Claude Code.",
-      "version": "0.9.0",
+      "description": "Execution Intelligence, Anti-Slop Intelligence, Polyglot structural intelligence, bounded context, scoped changes, persistent Project Brain, and risk-aware verification for Claude Code.",
+      "version": "0.10.0",
       "author": {
         "name": "Codemium"
       },
