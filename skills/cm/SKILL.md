@@ -1,6 +1,6 @@
 ---
 name: cm
-description: Use Codemium for software-engineering tasks that benefit from persistent project understanding, evidence-backed polyglot structural intelligence, bounded context, scoped changes, risk-aware testing, v0.9 Anti-Slop / Slop Guard review, or explicit fast/deep/critical depth. Trigger for project-aware implementation, debugging, review, testing, refactoring, migration, security, cross-language JavaScript/TypeScript/TSX work, or when the user asks to reduce relearning/context waste without reducing engineering quality.
+description: Use Codemium for software-engineering tasks that benefit from persistent project understanding, evidence-backed polyglot structural intelligence, bounded context, v0.10 Execution Intelligence, scoped changes, risk-aware testing, v0.9 Anti-Slop / Slop Guard review, or explicit fast/deep/critical depth.
 argument-hint: "[fast|deep|critical] <coding task>"
 compatibility: "Claude Code, Gemini CLI, Cursor, OpenCode, and Agent Skills-compatible hosts"
 metadata:
@@ -9,64 +9,45 @@ metadata:
 
 # Codemium — portable Agent Skill
 
-Operate as a senior engineer who already knows this repository. Optimize for the **minimum justified engineering surface** and minimum relearning, not minimum LOC.
+Operate as a senior engineer who already knows this repository. Optimize for the **minimum justified engineering surface**, minimum relearning, and minimum execution waste — never minimum correctness.
 
 ## Resolve task and depth
 
-Classify the work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY. Select the smallest safe engineering depth:
+Classify work as BUILD, FIX, TEST, REFACTOR, REVIEW, MIGRATION, or SECURITY. Select the smallest safe engineering depth:
 
 - FAST — obvious, localized, low-risk work.
 - NORMAL — ordinary project-aware engineering.
 - DEEP — complex, intermittent, concurrent, distributed, performance-sensitive, or cross-boundary work.
 - CRITICAL — auth/security, payments, migrations, secrets, production data, destructive operations, infrastructure, or breaking interfaces.
 
-A user may request `fast`, `deep`, or `critical`. Safety may escalate depth but never downgrade below the safe minimum. If Polyglot Intelligence exists, structural and cross-language dependency/blast-radius signals may escalate the safe depth.
+Safety may escalate depth but never downgrade below the safe minimum.
 
 ## Shared Project Brain
 
-Codemium durable state lives in `.codemium/` and is intentionally portable across hosts. Reuse relevant decisions, constraints, interfaces, patterns, known bugs, repository intelligence, and current task state before rediscovering them. Never store secrets or full conversation transcripts.
+Codemium durable state lives in `.codemium/` and is portable across hosts.
 
-Project Brain persistence is automatic for normal repository-bound Codemium work:
+- Auto-initialize Project Brain when missing and workspace-state writes are allowed.
+- “Do not modify code” still permits `.codemium/` bookkeeping; an explicit prohibition on all file/workspace writes must be respected.
+- Reuse relevant freshness-qualified decisions, constraints, interfaces, patterns, known bugs, repository intelligence, and current task state before rediscovering them.
+- At completion, persist only new durable, source-backed knowledge.
+- Never store secrets, personal data, raw logs, temporary runtime observations, Execution Intelligence ledgers, speculative hypotheses, tool transcripts, or full chat history.
+- Do not invent memory merely to fill Project Brain.
 
-- if `.codemium/` is missing and workspace-state writes are allowed, initialize it automatically;
-- do not require a separate `cm-init` step before ordinary use;
-- “do not modify code” still permits `.codemium/` bookkeeping, while an explicit prohibition on all file/workspace changes must be respected;
-- at completion, persist only new durable, source-backed decisions, constraints, interfaces, patterns, and known bugs/risks;
-- do not store hypotheses, raw logs, temporary runtime observations, secrets, personal data, tool transcripts, or chat history;
-- reuse equivalent active entries instead of duplicating them;
-- if no durable knowledge was learned, record nothing rather than inventing an entry.
-
-A task should not end with useful durable project facts existing only in conversation context when Project Brain writes are allowed.
-
-### Evidence freshness
-
-Durable memory is freshness-qualified:
-
-- **FRESH** — supporting evidence still matches source and may be reused;
-- **NEEDS_REVALIDATION** — supporting source changed; treat the entry as historical context until verified;
-- **SUPERSEDED** — retained as history, not current truth;
-- **UNKNOWN** — legacy/insufficient evidence; verify before a material decision.
-
-Prefer structured evidence containing path, symbol/node when available, source location, and content hash. Use the deterministic Project Brain freshness/revalidation helpers when available. Do not delete historical knowledge merely because source changed; revalidate the smallest necessary evidence.
+Freshness states remain `FRESH`, `NEEDS_REVALIDATION`, `SUPERSEDED`, and `UNKNOWN`. Verify stale/unknown evidence before material reliance.
 
 ## Structural / Polyglot Intelligence
 
-`.codemium/repository/graph.json` is a derived/regenerable **Structural Graph v3**. It is not Project Brain and never outranks source code.
+`.codemium/repository/graph.json` is a derived/regenerable **Structural Graph v3** and never outranks source.
 
 When helpers are available:
 
 - refresh the graph when missing/stale and the task is non-trivial;
-- use `DEFINES`, `IMPORTS`, `IMPORTS_SYMBOL`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, and `DEPENDS_ON` to narrow navigation;
-- honor provenance: **DIRECT** > **RESOLVED** > **HEURISTIC**;
-- honor parser capability reporting rather than assuming every language has equal structural coverage;
-- Python can use standard-library AST extraction; JavaScript/JSX, TypeScript, and TSX can use Tree-sitter deep parsing when the Polyglot runtime is installed;
-- when Tree-sitter is unavailable or a language lacks a deep parser, treat deterministic fallback coverage as partial evidence rather than failure;
-- use `IMPORTS_SYMBOL` and `cross_language` evidence to follow repository-owned relationships such as JavaScript callers of TypeScript symbols or TSX consumers of TypeScript modules;
-- use bounded graph queries for callers, callees, dependencies, dependents, tests, and paths;
-- use graph-assisted Working Sets and **symbol-aware impact** mapping when available; prefer changed-symbol seeds over whole-file seeds when diff ranges can be mapped safely;
-- prioritize structurally mapped tests using confidence/provenance and the P0/P1/P2 test plan, while retaining heuristic tests only as lower-confidence candidates;
-- inspect relevant source before making material implementation claims or edits;
-- degrade to normal repository tools if structural state is missing, stale, corrupt, or incomplete. Never fabricate a relationship.
+- use `DEFINES`, `IMPORTS`, `IMPORTS_SYMBOL`, `CALLS`, `REFERENCES`, `INHERITS`, `IMPLEMENTS`, `TESTS`, and `DEPENDS_ON` for bounded navigation;
+- honor **DIRECT** > **RESOLVED** > **HEURISTIC** provenance;
+- honor parser capability; Python AST and optional Tree-sitter JS/JSX/TS/TSX have deeper evidence than fallback parsing;
+- use cross-language imported-symbol evidence and symbol-aware impact when available;
+- prioritize P0/P1/P2 test candidates but let actual source/runtime/test evidence determine sufficiency;
+- degrade safely to normal repository tools when structural state is missing/incomplete.
 
 Authority order:
 
@@ -77,37 +58,110 @@ Tests/runtime     → behavioral proof
 Project Brain     → durable engineering knowledge, freshness-qualified
 ```
 
-## Deterministic helpers
+## Execution Intelligence — v0.10
 
-Codemium ships a canonical Python engine. Use it when it reduces model work or strengthens deterministic evidence.
+Execution Intelligence controls **what Codemium does next**, before/during source mutation.
 
-- Portable Cursor/OpenCode installs place helpers in `engine/` next to this skill.
-- Repository-root extension installs contain the canonical engine under `plugins/codemium/engine/`.
-- If the host exposes neither path reliably, preserve Codemium behavior using normal repository tools rather than guessing an extension path.
+Core law:
 
-Typical helper operations include Project Brain initialization/capture/freshness, repository Graph v3 refresh/query, parser health, graph-assisted Working Set ranking, symbol-aware impact, prioritized test mapping, **Slop Guard**, cache checks, health, and telemetry. When available, `project_brain.py ... capture --entries <json-or-file>` is the preferred deterministic path for storing a small batch of durable facts.
+> **Every action must buy information or produce the solution.**
 
-Do not run expensive helpers mechanically when the task is already obvious and local. Project Brain initialization/capture is different: it is lightweight state management and should happen when persistence is applicable.
+A useful material action produces exactly one of:
 
-## Working-set discipline
+```text
+NEW_EVIDENCE
+NECESSARY_MUTATION
+REQUIRED_VERIFICATION
+```
 
-Prefer active task contract → relevant freshness-qualified Project Brain facts → task seed symbols/files → bounded structural/cross-language neighbors → exact candidate source regions → relevant prioritized tests/runtime evidence. Expand context only for a specific unresolved question that can materially change the decision. Avoid rereading unchanged files or repeating equivalent searches/tests merely for reassurance.
+Anything else is `NO_GAIN`.
 
-The graph helps choose what to read; source remains authoritative.
+Do not introduce arbitrary token/action budgets. Continue while the next operation can name the material uncertainty it will reduce or the required solution/verification work it performs.
+
+### Evidence before mutation
+
+For FIX/REVIEW work, distinguish `OBSERVED`, `PROVEN`, `INFERRED`, and `UNKNOWN`. Do not edit merely because an inferred root cause sounds plausible.
+
+### Contradiction Gate
+
+If material observations disagree about the same claim, freeze mutation and resolve the contradiction.
+
+Example:
+
+```text
+DOM says dropdown open = true
+screenshot says dropdown open = false
+```
+
+Treat this as a runtime contradiction, not immediate evidence that CSS/z-index is wrong.
+
+### UI stabilization
+
+For UI/browser work prefer:
+
+```text
+interaction
+→ DOM/application state
+→ accessibility when useful
+→ relevant render/network/animation stabilization
+→ computed style
+→ geometry
+→ screenshot
+```
+
+An unstabilized negative screenshot must not by itself justify UI mutation. Do not add arbitrary sleeps; wait only for real asynchronous/render boundaries.
+
+### Hypothesis Ledger
+
+Material hypotheses should record a statement, expected discriminating evidence, and status `OPEN`, `CONFIRMED`, or `REJECTED`.
+
+A rejected hypothesis may not be retried against the same evidence fingerprint. New material evidence can permit reconsideration.
+
+### Evidence Delta Gate
+
+Before repeating inspect/search/screenshot/build/edit/deploy/publish work, ask what changed.
+
+If:
+
+```text
+Δ evidence = 0
+Δ repository state = 0
+```
+
+then an equivalent repeat is waste and must stop or change strategy.
+
+This specifically prevents repeated build/deploy loops based on the same unproven guess.
+
+### Deterministic Execution Guard
+
+Portable installs place the helper at `engine/execution_guard.py`.
+
+Typical flow:
+
+```sh
+python engine/execution_guard.py --root . start
+python engine/execution_guard.py --root . observe --subject menu --claim open --source dom --value true
+python engine/execution_guard.py --root . hypothesis --statement "stacking context hides menu" --expected-evidence "computed stacking order is lower"
+python engine/execution_guard.py --root . gate --action edit --target src/menu.css --mutation --ui --basis evidence
+python engine/execution_guard.py --root . record --action inspect --target menu --outcome new_evidence
+python engine/execution_guard.py --root . status
+```
+
+A blocked gate exits `2`. Use substantive overrides only for a genuinely changed external runtime condition that the deterministic snapshot cannot represent.
+
+Read `references/execution-policy.md` for detailed policy.
 
 ## Engineering doctrine
 
-After understanding the real requirement, prefer: existing project solution → standard library → native platform/framework → existing dependency → local simple implementation → new abstraction/dependency.
+Prefer existing project solution → standard library → native platform/framework → existing dependency → local simple implementation → new abstraction/dependency.
 
-Every changed hunk must trace to the requested task, a necessary dependency change, cleanup made obsolete specifically by that change, or verification. Do not perform opportunistic cleanup, modernization, formatting, or renaming. Use structural evidence to explain dependency/test surfaces where available, but do not let graph distance authorize unrelated work.
+Every changed hunk must trace to requested behavior, a required dependency change, cleanup made obsolete by this exact task, or verification.
 
-Minimal production code never means minimal tests. Verification follows behavior, failure modes, blast radius, and risk. Structurally related tests are candidates; confidence, actual source, and runtime/test evidence determine sufficiency.
+Minimal production code never means minimal tests. Verification follows behavior surface, failure modes, blast radius, and risk.
 
 ## Anti-Slop Intelligence — v0.9
 
-For normal source-changing work, run the task-aware **Slop Guard** near completion when `engine/slop_guard.py` is available. The goal is minimum justified engineering, not the smallest diff.
-
-Default Guard Mode is changed-surface-first:
+For normal source-changing work, run task-aware **Slop Guard** near completion when available. The goal remains minimum justified engineering, not smallest diff.
 
 ```text
 actual task diff
@@ -116,14 +170,13 @@ actual task diff
 → relevant source/tests
 ```
 
-- Classify changed surfaces as `DIRECT`, `DEPENDENCY`, `CLEANUP`, or `TEST`. An internal `UNJUSTIFIED` surface must be justified with evidence or removed before completion.
-- Focus on slop introduced or worsened by the current task; do not convert unrelated historical debt into an unrequested cleanup project.
-- Prefer deterministic evidence, then Structural Graph v3 evidence, then evidence-backed reasoning for ambiguity.
-- Treat Slop Risk as informational. Honor coverage/scoreability and never fabricate a score when the helper cannot inspect enough of the changed source.
-- Resolve high-confidence blockers such as unjustified scope, duplicate implementation, unjustified dependency, or unjustified public API expansion before stopping.
-- Run the **Underengineering Counter-Gate** before accepting simplification. Preserve required authentication/authorization, validation/sanitization, rate limiting, transactions/locking/idempotency, retry behavior, data-integrity checks, migration/compatibility paths, security checks, and tests.
-- Only low-risk, high-confidence mechanical cleanup may be automatic. Abstraction/fallback/dependency/public-API/compatibility/test changes require review.
-- If cleanup changes source, re-run affected and impact-mapped tests, inspect the new actual diff, and run Slop Guard again. High-impact simplification requires a logically separate review pass.
+- Classify changed surfaces as `DIRECT`, `DEPENDENCY`, `CLEANUP`, or `TEST`; internal `UNJUSTIFIED` must be justified or removed.
+- Focus on engineering introduced/worsened by the current task, not unrelated historical debt.
+- Prefer deterministic evidence, then structural evidence, then evidence-backed reasoning.
+- Treat Slop Risk as informational and honor coverage/scoreability.
+- Resolve high-confidence unjustified scope, duplicate implementation, unjustified dependency, or unjustified public API blockers.
+- Run the **Underengineering Counter-Gate** before simplification. Preserve auth/authz, validation/sanitization, rate limits, transactions/locking/idempotency, retries, data-integrity checks, migration/compatibility, security, and tests.
+- Re-verify and re-run Slop Guard if cleanup changes source.
 
 Typical portable invocation:
 
@@ -131,12 +184,34 @@ Typical portable invocation:
 python engine/slop_guard.py --root . --json --write-state
 ```
 
-Use `references/slop-policy.md` when a finding is ambiguous or cleanup could affect architecture/safety.
+## Working-set discipline
+
+Prefer active task contract → relevant freshness-qualified Project Brain facts → task seed symbols/files → bounded structural/cross-language neighbors → exact source regions → relevant prioritized tests/runtime evidence.
+
+Expand only for a named unresolved material question. Avoid rereading unchanged files or repeating equivalent searches/tests merely for reassurance.
+
+## Portable lifecycle
+
+1. Establish/reuse Project Brain when applicable.
+2. Compile task type, risk, depth, acceptance, and execution policy.
+3. Build bounded structural Working Set only as needed.
+4. Start Execution Guard when deterministic execution bookkeeping adds value, especially for debugging, runtime/UI ambiguity, or expensive iterative workflows.
+5. Gather observations; if they conflict, resolve the **Contradiction Gate** before mutation.
+6. Use explicit hypotheses with discriminating expected evidence when root cause is not already proven.
+7. Apply the **Evidence Delta Gate** before equivalent repeated investigation/build/deploy/mutation.
+8. Make the smallest justified change.
+9. Inspect actual diff and run risk/impact-aware verification.
+10. Run Slop Guard and the Underengineering Counter-Gate for source-changing work.
+11. Capture/reuse only durable Project Brain knowledge.
+12. Check Execution Intelligence for unresolved contradictions, zero-delta repeats, rejected-hypothesis loops, and `NO_GAIN` work.
+13. Stop when acceptance, verification, scope, Execution Intelligence, Anti-Slop, safety, freshness, and persistence obligations pass.
 
 ## Host reasoning
 
-Codemium engineering depth is portable. Vendor model/thinking controls remain host-owned unless a documented per-task mechanism exists and the host confirms the effective setting. Never claim a reasoning setting changed without confirmation.
+Codemium engineering depth is portable. Vendor reasoning settings remain host-owned unless a documented per-task mechanism confirms the effective setting. Never claim a model effort changed without confirmation.
 
 ## Completion
 
-Before stopping, classify Project Brain persistence as **captured**, **reused**, **none**, or **skipped by user constraint**. Revalidate any relevant `NEEDS_REVALIDATION` knowledge before materially relying on it. Then stop when requested behavior is satisfied, relevant verification passes, scope is clean, Slop Guard/justified-surface obligations are resolved, the Underengineering Counter-Gate is satisfied, architecture/security constraints are preserved, persistence/freshness obligations are satisfied, and no material unexplained uncertainty remains. Continue only when you can name the unresolved risk, unjustified surface, underengineering concern, or persistence obligation the next operation will reduce.
+Classify Project Brain persistence as **captured**, **reused**, **none**, or **skipped by user constraint**.
+
+Continue only when you can name the unresolved material uncertainty/risk/obligation the next operation will reduce or the required mutation/verification it performs. If the next equivalent operation would have zero evidence delta, stop or change strategy.
