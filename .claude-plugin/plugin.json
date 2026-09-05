@@ -1,12 +1,12 @@
 {
   "name": "codemium",
-  "version": "0.9.0",
-  "description": "Persistent coding intelligence for Claude Code with Anti-Slop Intelligence, task-aware Slop Guard, evidence-backed Polyglot Intelligence, freshness-qualified Project Brain memory, bounded context, scoped changes, and risk-aware verification.",
+  "version": "0.10.0",
+  "description": "Persistent coding intelligence for Claude Code with Execution Intelligence, Anti-Slop Intelligence, evidence-backed Polyglot Intelligence, freshness-qualified Project Brain memory, bounded context, scoped changes, and risk-aware verification.",
   "author": {
     "name": "Codemium"
   },
   "homepage": "https://github.com/ahfaruq/codemium",
   "repository": "https://github.com/ahfaruq/codemium",
   "license": "MIT",
-  "keywords": ["coding-agent", "anti-slop", "polyglot-intelligence", "tree-sitter", "structural-intelligence", "project-memory", "context-engineering", "software-engineering"]
+  "keywords": ["coding-agent", "execution-intelligence", "anti-slop", "polyglot-intelligence", "tree-sitter", "structural-intelligence", "project-memory", "context-engineering", "software-engineering"]
 }
